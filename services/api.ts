@@ -14,10 +14,10 @@ import {
     NotificationPayload
 } from '../types';
 
-// In development, this will point to your local Node.js server.
-// In production, this will be the URL of your CloudPanel site.
-export const API_BASE_URL = 'http://localhost:3001/api';
-export const DOCS_BASE_URL = API_BASE_URL.replace('/api', '');
+// This setup is for a single-server deployment model where the backend
+// serves both the API and the frontend static files.
+export const API_BASE_URL = '/api';
+export const DOCS_BASE_URL = ''; // Docs are served from the same origin.
 
 interface DateRange {
   start: string;
@@ -48,14 +48,14 @@ const getAuthHeaders = (): HeadersInit => {
     return headers;
 };
 
-const buildUrlWithDateRange = (baseUrl: string, dateRange: DateRange): URL => {
-    const url = new URL(baseUrl);
+const buildUrlWithDateRange = (baseUrl: string, dateRange: DateRange): string => {
+    const url = new URL(baseUrl, window.location.origin);
     url.searchParams.append('startDate', dateRange.start);
     // Add 1 day to the end date on the client-side to make the backend query inclusive and simpler (using < end date).
     const inclusiveEndDate = new Date(dateRange.end);
     inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
     url.searchParams.append('endDate', inclusiveEndDate.toISOString().split('T')[0]);
-    return url;
+    return `${url.pathname}${url.search}`;
 };
 
 // --- AUTH ---
@@ -98,7 +98,7 @@ export const registerUser = async (data: RegistrationData) => {
 
 // --- NOTIFICATIONS ---
 export const getNotifications = async (lastCheck?: string): Promise<NotificationPayload> => {
-    const url = new URL(`${API_BASE_URL}/notifications`);
+    const url = new URL(`${API_BASE_URL}/notifications`, window.location.origin);
     if (lastCheck) {
         url.searchParams.append('lastCheck', lastCheck);
     }
@@ -131,7 +131,7 @@ export const updateB2BApplicationStatus = async (id: string, status: Application
 export const getShippingLabels = async (dateRange?: DateRange): Promise<ShippingLabel[]> => {
     let url = `${API_BASE_URL}/shipping/labels`;
     if (dateRange) {
-        url = buildUrlWithDateRange(url, dateRange).toString();
+        url = buildUrlWithDateRange(url, dateRange);
     }
     const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<ShippingLabel[]>(response);
@@ -159,7 +159,7 @@ export const updateShippingLabelStatus = async (id: string, status: ShippingStat
 export const getSales = async (dateRange?: DateRange): Promise<Sale[]> => {
     let url = `${API_BASE_URL}/data/sales`;
     if (dateRange) {
-        url = buildUrlWithDateRange(url, dateRange).toString();
+        url = buildUrlWithDateRange(url, dateRange);
     }
     const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<Sale[]>(response);
@@ -185,13 +185,13 @@ export const getShipments = getShippingLabels;
 // --- DASHBOARD & REPORTS ---
 export const getDashboardStats = async (dateRange: DateRange) => {
     const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/stats`, dateRange);
-    const response = await fetch(url.toString(), { headers: getAuthHeaders() });
+    const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<any>(response);
 };
 
 export const getSalesChartData = async (dateRange: DateRange) => {
     const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/sales-chart`, dateRange);
-    const response = await fetch(url.toString(), { headers: getAuthHeaders() });
+    const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<any[]>(response);
 };
 

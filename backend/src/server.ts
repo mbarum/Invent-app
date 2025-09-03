@@ -1,3 +1,7 @@
+
+
+
+// FIX: Changed express import to use default export and named types for better type resolution.
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -22,11 +26,19 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+// --- Production Build Paths ---
+// This points to the frontend's build output directory
+const frontendDistPath = path.join(__dirname, '..', '..', 'dist');
+
 // Middleware
 app.use(cors()); // Allow requests from your frontend
 app.use(express.json()); // Parse JSON bodies
 // Serve static files from the 'uploads' directory, making them accessible via URL
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// --- Serve Frontend Static Files (for production) ---
+app.use(express.static(frontendDistPath));
+
 
 // Extend Express Request type to include 'user' property from JWT payload
 declare global {
@@ -266,7 +278,6 @@ app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: Requ
         await db.query('UPDATE shipping_labels SET status = ? WHERE id = ?', [status, id]);
         const [[updatedLabel]] = await db.query<RowDataPacket[]>('SELECT * FROM shipping_labels WHERE id = ?', [id]);
         res.json(updatedLabel);
-// FIX: Added curly braces to the catch block to fix syntax error.
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating shipping label status' });
@@ -412,35 +423,11 @@ app.post('/api/dashboard/sales-target', authenticateToken, async (req: Request, 
     }
 });
 
-// --- SERVE FRONTEND ---
-// This must be after all API routes.
-
-// Define the path to the frontend files, which are in the project root,
-// one level above the 'backend' directory.
-const frontendPath = path.resolve(__dirname, '..', '..');
-
-// CORRECT ORDERING:
-// 1. Explicitly handle the main TSX file first to ensure correct Content-Type.
-// This is crucial for the in-browser transpilation to work correctly.
-app.get('/index.tsx', (req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'text/babel; charset=UTF-8');
-    res.sendFile(path.join(frontendPath, 'index.tsx'));
-});
-
-// 2. Serve other static assets like CSS, images, etc. from the root directory.
-// This will handle requests for files like favicon.svg.
-app.use(express.static(frontendPath));
-
-// 3. For any other non-API GET request, serve the main index.html file.
-// This is the standard fallback for a Single Page Application (SPA),
-// allowing client-side routing (like React Router) to take over.
-app.get('*', (req: Request, res: Response) => {
-    // Check if the request is likely for an API endpoint that wasn't matched.
-    // This prevents the SPA's HTML from being sent for a mistyped API call.
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ message: 'API endpoint not found.' });
-    }
-    res.sendFile(path.join(frontendPath, 'index.html'));
+// --- CATCH-ALL ROUTE for Frontend ---
+// This must be the LAST route defined. It sends the main index.html
+// file to the client, allowing React Router to handle the URL.
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
 

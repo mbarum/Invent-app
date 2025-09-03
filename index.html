@@ -45,30 +45,27 @@
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.542.0",
     "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
     "react-hot-toast": "https://aistudiocdn.com/react-hot-toast@^2.4.1",
-    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.2",
-    "cors": "https://aistudiocdn.com/cors@^2.8.5",
-    "express": "https://aistudiocdn.com/express@^5.1.0",
     "mysql2/": "https://aistudiocdn.com/mysql2@^3.14.4/",
+    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.2",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "cors": "https://aistudiocdn.com/cors@^2.8.5",
     "mysql2": "https://aistudiocdn.com/mysql2@^3.14.4",
     "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
+    "multer": "https://aistudiocdn.com/multer@^2.0.2",
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
-    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
-    "multer": "https://aistudiocdn.com/multer@^2.0.2",
-    "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0"
+    "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0",
+    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2"
   }
 }
 </script>
 </head>
   <body class="bg-gray-900 text-gray-100">
     <div id="root"></div>
-    <!-- Load Babel Standalone to transpile TSX in the browser -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- 
-      The script type is changed to "text/babel".
-      Babel will transpile this file before execution.
-      data-presets tells Babel to use presets for React (JSX) and TypeScript.
+      Load the main application script as a module.
+      The development server will automatically transpile the TSX file.
     -->
-    <script type="text/babel" data-presets="react,typescript" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
