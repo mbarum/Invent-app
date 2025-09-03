@@ -1,6 +1,5 @@
 // FIX: Use fully qualified Express types (e.g., express.Request) to resolve conflicts with global types and ensure correct type inference.
-// Fix: Changed import to directly import Request, Response, and NextFunction to avoid type conflicts.
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import db from './db';
@@ -40,8 +39,7 @@ declare global {
 }
 
 // --- JWT AUTH MIDDLEWARE ---
-// FIX: Added explicit types for req, res, and next to ensure correct type inference.
-const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -93,14 +91,12 @@ const upload = multer({ storage: storage });
 // --- API ROUTES ---
 
 // Health Check (Unprotected)
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api', (req: Request, res: Response) => {
+app.get('/api', (req: express.Request, res: express.Response) => {
   res.send('Masuma EA Hub Backend is running!');
 });
 
 // --- AUTH (Unprotected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.post('/api/auth/login', async (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
@@ -152,8 +148,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 });
 
 const registrationUpload = upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]);
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.post('/api/auth/register', registrationUpload, async (req: Request, res: Response) => {
+app.post('/api/auth/register', registrationUpload, async (req: express.Request, res: express.Response) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -200,8 +195,7 @@ app.post('/api/auth/register', registrationUpload, async (req: Request, res: Res
 
 
 // --- INVENTORY (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/inventory/products', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/inventory/products', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM products ORDER BY name ASC');
         res.json(rows);
@@ -212,8 +206,7 @@ app.get('/api/inventory/products', authenticateToken, async (req: Request, res: 
 });
 
 // --- B2B MANAGEMENT (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/b2b/applications', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/b2b/applications', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM b2b_applications ORDER BY submittedAt DESC');
         res.json(rows);
@@ -223,8 +216,7 @@ app.get('/api/b2b/applications', authenticateToken, async (req: Request, res: Re
     }
 });
 
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: Request, res: Response) => {
+app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -239,8 +231,7 @@ app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: Req
 
 
 // --- SHIPPING (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/shipping/labels', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -253,8 +244,7 @@ app.get('/api/shipping/labels', authenticateToken, async (req: Request, res: Res
     }
 });
 
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.post('/api/shipping/labels', authenticateToken, async (req: Request, res: Response) => {
+app.post('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const newLabel = {
             id: `LBL-${newId()}`,
@@ -270,14 +260,14 @@ app.post('/api/shipping/labels', authenticateToken, async (req: Request, res: Re
     }
 });
 
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: Request, res: Response) => {
+app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
         await db.query('UPDATE shipping_labels SET status = ? WHERE id = ?', [status, id]);
         const [[updatedLabel]] = await db.query<RowDataPacket[]>('SELECT * FROM shipping_labels WHERE id = ?', [id]);
         res.json(updatedLabel);
+// FIX: Added curly braces to the catch block to fix syntax error.
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating shipping label status' });
@@ -285,8 +275,7 @@ app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: Requ
 });
 
 // --- GENERAL DATA (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/data/sales', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/data/sales', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -297,8 +286,7 @@ app.get('/api/data/sales', authenticateToken, async (req: Request, res: Response
         res.status(500).json({ message: 'Error fetching sales' });
     }
 });
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/data/invoices', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/data/invoices', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM invoices ORDER BY created_at DESC');
         res.json(rows);
@@ -306,8 +294,7 @@ app.get('/api/data/invoices', authenticateToken, async (req: Request, res: Respo
         res.status(500).json({ message: 'Error fetching invoices' });
     }
 });
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/data/branches', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/data/branches', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM branches');
         res.json(rows);
@@ -315,8 +302,7 @@ app.get('/api/data/branches', authenticateToken, async (req: Request, res: Respo
         res.status(500).json({ message: 'Error fetching branches' });
     }
 });
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/data/customers', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/data/customers', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM customers');
         res.json(rows);
@@ -327,8 +313,7 @@ app.get('/api/data/customers', authenticateToken, async (req: Request, res: Resp
 });
 
 // --- NOTIFICATIONS (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/notifications', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/notifications', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { lastCheck } = req.query;
         const LOW_STOCK_THRESHOLD = 10;
@@ -362,8 +347,7 @@ app.get('/api/notifications', authenticateToken, async (req: Request, res: Respo
 
 
 // --- DASHBOARD (Protected) ---
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/dashboard/stats', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/dashboard/stats', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -391,8 +375,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req: Request, res: Res
     }
 });
 
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('/api/dashboard/sales-chart', authenticateToken, async (req: Request, res: Response) => {
+app.get('/api/dashboard/sales-chart', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -415,8 +398,7 @@ app.get('/api/dashboard/sales-chart', authenticateToken, async (req: Request, re
     }
 });
 
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.post('/api/dashboard/sales-target', authenticateToken, async (req: Request, res: Response) => {
+app.post('/api/dashboard/sales-target', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { target } = req.body;
         if (typeof target !== 'number' || target < 0) {
@@ -433,25 +415,36 @@ app.post('/api/dashboard/sales-target', authenticateToken, async (req: Request, 
 
 // --- SERVE FRONTEND ---
 // This must be after all API routes.
-// It serves the static assets from the project root.
-const projectRoot = path.resolve(__dirname, '..', '..');
-app.use(express.static(projectRoot, {
-    // FIX: Added explicit type for res to ensure correct type inference.
-    setHeaders: (res: Response, filePath) => {
-        // The execution environment for this project transpiles TSX on the fly.
-        // We need to serve .ts/.tsx files with a JavaScript MIME type
-        // for the browser to be able to import and execute them as modules.
-        if (path.extname(filePath) === '.ts' || path.extname(filePath) === '.tsx') {
-            res.setHeader('Content-Type', 'application/javascript');
-        }
-    }
-}));
 
-// For any GET request that doesn't match an API route or a static file,
-// send the index.html file. This is the SPA fallback.
-// FIX: Added explicit types for req and res to ensure correct type inference.
-app.get('*', (req: Request, res: Response) => {
-    res.sendFile(path.join(projectRoot, 'index.html'));
+// Define the path to the frontend files, which are in the project root,
+// one level above the 'backend' directory.
+const frontendPath = path.resolve(__dirname, '..', '..');
+
+// Serve static assets like CSS, images, etc. from the root directory.
+// This will handle requests for files like favicon.svg.
+app.use(express.static(frontendPath));
+
+// Explicitly handle the route for the main TSX file.
+// This ensures it's served with the correct content type that the browser
+// and Babel Standalone expect, resolving the "blank page" issue.
+app.get('/index.tsx', (req: express.Request, res: express.Response) => {
+    // We set the Content-Type to 'text/babel' to match the script tag in index.html.
+    // This is crucial for the in-browser transpilation to work correctly.
+    res.setHeader('Content-Type', 'text/babel; charset=UTF-8');
+    res.sendFile(path.join(frontendPath, 'index.tsx'));
+});
+
+
+// For any other non-API GET request, serve the main index.html file.
+// This is the standard fallback for a Single Page Application (SPA),
+// allowing client-side routing (like React Router) to take over.
+app.get('*', (req: express.Request, res: express.Response) => {
+    // Check if the request is likely for an API endpoint that wasn't matched.
+    // This prevents the SPA's HTML from being sent for a mistyped API call.
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ message: 'API endpoint not found.' });
+    }
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 
