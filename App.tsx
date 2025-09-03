@@ -1,46 +1,32 @@
-import React, { useState, useEffect } from 'react';
+
+
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Shipping from './pages/Shipping';
 import VinPicker from './pages/VinPicker';
 import Reports from './pages/Reports';
-import PlaceholderPage from './pages/PlaceholderPage';
+import Sales from './pages/Sales';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Inventory from './pages/Inventory';
 import B2BManagement from './pages/B2BManagement';
-import { checkAuth, loginUser } from './services/api';
+import Customers from './pages/Customers';
+import POS from './pages/POS';
+import Users from './pages/Users';
+import Invoices from './pages/Invoices';
+import Quotations from './pages/Quotations';
+import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import { LoaderCircle } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import { PERMISSIONS } from './config/permissions';
 
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const authStatus = await checkAuth();
-        setIsAuthenticated(authStatus);
-      } catch (error) {
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    verifyAuth();
-  }, []);
-
-  const handleLogin = async (email: string, password: string) => {
-    await loginUser(email, password);
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('authToken');
-    setIsAuthenticated(false);
-  };
+const AppContent: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -51,8 +37,41 @@ const App: React.FC = () => {
   }
 
   return (
+    <Routes>
+      {isAuthenticated ? (
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<ProtectedRoute permission={PERMISSIONS.VIEW_DASHBOARD}><Dashboard /></ProtectedRoute>} />
+          <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.VIEW_INVENTORY}><Inventory /></ProtectedRoute>} />
+          <Route path="pos" element={<ProtectedRoute permission={PERMISSIONS.CREATE_SALE}><POS /></ProtectedRoute>} />
+          <Route path="sales" element={<ProtectedRoute permission={PERMISSIONS.VIEW_REPORTS}><Sales /></ProtectedRoute>} />
+          <Route path="customers" element={<ProtectedRoute permission={PERMISSIONS.VIEW_CUSTOMERS}><Customers /></ProtectedRoute>} />
+          <Route path="b2b-management" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_B2B}><B2BManagement /></ProtectedRoute>} />
+          <Route path="users" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_USERS}><Users /></ProtectedRoute>} />
+          <Route path="invoices" element={<ProtectedRoute permission={PERMISSIONS.VIEW_REPORTS}><Invoices /></ProtectedRoute>} />
+          <Route path="quotations" element={<ProtectedRoute permission={PERMISSIONS.CREATE_SALE}><Quotations /></ProtectedRoute>} />
+          <Route path="shipping" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_SHIPPING}><Shipping /></ProtectedRoute>} />
+          <Route path="reports" element={<ProtectedRoute permission={PERMISSIONS.VIEW_REPORTS}><Reports /></ProtectedRoute>} />
+          <Route path="vin-picker" element={<ProtectedRoute permission={PERMISSIONS.USE_VIN_PICKER}><VinPicker /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute permission={PERMISSIONS.EDIT_SETTINGS}><Settings /></ProtectedRoute>} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+      ) : (
+        <>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="*" element={<Navigate to="/login" />} />
+        </>
+      )}
+    </Routes>
+  );
+};
+
+
+const App: React.FC = () => {
+  return (
     <HashRouter>
-      <Toaster
+       <Toaster
         position="top-right"
         toastOptions={{
           style: {
@@ -74,32 +93,9 @@ const App: React.FC = () => {
           },
         }}
       />
-      <Routes>
-        {isAuthenticated ? (
-          <Route path="/" element={<Layout onLogout={handleLogout} />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="pos" element={<PlaceholderPage title="Point of Sale" />} />
-            <Route path="sales" element={<PlaceholderPage title="Sales" />} />
-            <Route path="customers" element={<PlaceholderPage title="Customers" />} />
-            <Route path="invoices" element={<PlaceholderPage title="Invoices" />} />
-            <Route path="quotations" element={<PlaceholderPage title="Quotations" />} />
-            <Route path="shipping" element={<Shipping />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="vin-picker" element={<VinPicker />} />
-            <Route path="b2b-management" element={<B2BManagement />} />
-            <Route path="settings" element={<PlaceholderPage title="Settings" />} />
-            <Route path="profile" element={<PlaceholderPage title="Profile" />} />
-          </Route>
-        ) : (
-          <>
-            <Route path="/login" element={<Login onLogin={handleLogin} />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="*" element={<Navigate to="/login" />} />
-          </>
-        )}
-      </Routes>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </HashRouter>
   );
 };

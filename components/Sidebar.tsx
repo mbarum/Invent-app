@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -14,11 +15,14 @@ import {
   Settings,
   UserCircle,
   Briefcase,
+  UserCog,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
 
 const MasumaLogo = () => (
     <div className="text-gray-200">
-        <svg width="160" height="44" viewBox="0 0 160 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Masuma EA Hub Logo">
+        <svg width="160" height="44" viewBox="0 0 160 44" fill="none" xmlns="http://www.w.org/2000/svg" aria-label="Masuma EA Hub Logo">
             <text
                 x="0"
                 y="28"
@@ -57,22 +61,23 @@ const MasumaLogo = () => (
 
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/inventory', icon: Boxes, label: 'Inventory' },
-  { to: '/pos', icon: ShoppingCart, label: 'POS' },
-  { to: '/sales', icon: Receipt, label: 'Sales' },
-  { to: '/customers', icon: Users, label: 'Customers' },
-  { to: '/b2b-management', icon: Briefcase, label: 'B2B Accounts' },
-  { to: '/invoices', icon: FileText, label: 'Invoices' },
-  { to: '/quotations', icon: FileQuestion, label: 'Quotations' },
-  { to: '/shipping', icon: Truck, label: 'Shipping' },
-  { to: '/reports', icon: BarChart2, label: 'Reports' },
-  { to: '/vin-picker', icon: Car, label: 'VIN Picker' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: PERMISSIONS.VIEW_DASHBOARD },
+  { to: '/inventory', icon: Boxes, label: 'Inventory', permission: PERMISSIONS.VIEW_INVENTORY },
+  { to: '/pos', icon: ShoppingCart, label: 'POS', permission: PERMISSIONS.CREATE_SALE },
+  { to: '/sales', icon: Receipt, label: 'Sales', permission: PERMISSIONS.VIEW_REPORTS },
+  { to: '/customers', icon: Users, label: 'Customers', permission: PERMISSIONS.VIEW_CUSTOMERS },
+  { to: '/b2b-management', icon: Briefcase, label: 'B2B Accounts', permission: PERMISSIONS.MANAGE_B2B },
+  { to: '/users', icon: UserCog, label: 'Users', permission: PERMISSIONS.MANAGE_USERS },
+  { to: '/invoices', icon: FileText, label: 'Invoices', permission: PERMISSIONS.VIEW_REPORTS },
+  { to: '/quotations', icon: FileQuestion, label: 'Quotations', permission: PERMISSIONS.CREATE_SALE },
+  { to: '/shipping', icon: Truck, label: 'Shipping', permission: PERMISSIONS.MANAGE_SHIPPING },
+  { to: '/reports', icon: BarChart2, label: 'Reports', permission: PERMISSIONS.VIEW_REPORTS },
+  { to: '/vin-picker', icon: Car, label: 'VIN Picker', permission: PERMISSIONS.USE_VIN_PICKER },
 ];
 
 const bottomNavItems = [
-  { to: '/settings', icon: Settings, label: 'Settings' },
-  { to: '/profile', icon: UserCircle, label: 'Profile' },
+  { to: '/settings', icon: Settings, label: 'Settings', permission: PERMISSIONS.EDIT_SETTINGS },
+  { to: '/profile', icon: UserCircle, label: 'Profile', permission: null }, // All users can see their profile
 ];
 
 const NavItem: React.FC<{ to: string; icon: React.ElementType; label: string }> = ({ to, icon: Icon, label }) => (
@@ -92,6 +97,11 @@ const NavItem: React.FC<{ to: string; icon: React.ElementType; label: string }> 
 );
 
 const Sidebar: React.FC = () => {
+  const { hasPermission } = useAuth();
+
+  const accessibleNavItems = navItems.filter(item => hasPermission(item.permission));
+  const accessibleBottomNavItems = bottomNavItems.filter(item => item.permission === null || hasPermission(item.permission));
+
   return (
     <aside className="no-print w-64 bg-gray-800 flex flex-col p-4 border-r border-gray-700">
       <div className="px-3 py-4 mb-4">
@@ -99,14 +109,14 @@ const Sidebar: React.FC = () => {
       </div>
       <nav className="flex-1">
         <ul className="space-y-2">
-          {navItems.map((item) => (
+          {accessibleNavItems.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
         </ul>
       </nav>
       <nav>
         <ul className="space-y-2 pt-4 border-t border-gray-700">
-          {bottomNavItems.map((item) => (
+          {accessibleBottomNavItems.map((item) => (
             <NavItem key={item.to} {...item} />
           ))}
         </ul>

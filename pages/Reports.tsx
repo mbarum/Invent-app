@@ -1,7 +1,8 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Branch, Sale, Customer, ShippingLabel, ShippingStatus } from '../types';
+import { Branch, Sale, Customer, ShippingLabel, ShippingStatus, SaleItem } from '../types';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle } from 'lucide-react';
@@ -169,7 +170,8 @@ const Reports: React.FC = () => {
                       <TableCell className="font-mono">{sale.sale_no}</TableCell>
                       <TableCell>{customers.find(c => c.id === sale.customer_id)?.name || 'Unknown'}</TableCell>
                       <TableCell>{new Date(sale.created_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-center">{sale.items}</TableCell>
+                      {/* FIX: Render the number of items. The 'items' property can be a number (count) or an array (full data). */}
+                      <TableCell className="text-center">{typeof sale.items === 'number' ? sale.items : (Array.isArray(sale.items) ? sale.items.length : 0)}</TableCell>
                       <TableCell className="font-semibold text-right">
                           <div>{formatCurrency(sale.amount || 0)}</div>
                           {currentCurrency !== 'KES' && (

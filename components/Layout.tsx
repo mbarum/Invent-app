@@ -1,18 +1,14 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { Branch, BusinessApplication, Product, NotificationPayload } from '../types';
+import { Branch, NotificationPayload } from '../types';
 import toast from 'react-hot-toast';
-import { getNotifications } from '../services/api';
+import { getNotifications, getBranches } from '../services/api';
 import Button from './ui/Button';
-
-
-const mockBranches: Branch[] = [
-    { id: 1, name: 'Nairobi HQ', address: '123 Industrial Area, Nairobi, Kenya', phone: '+254700111222' },
-    { id: 2, name: 'Mombasa Port', address: '456 Port Road, Mombasa, Kenya', phone: '+254700333444' },
-    { id: 3, name: 'Kampala Branch', address: '789 Business Park, Kampala, Uganda', phone: '+256700555666' },
-];
+import { useAuth } from '../contexts/AuthContext';
+import { LoaderCircle } from 'lucide-react';
 
 // Base currency is KES
 const exchangeRates = {
@@ -21,18 +17,32 @@ const exchangeRates = {
     UGX: 29.15,  // 1 KES = 29.15 UGX
 };
 
-interface LayoutProps {
-  onLogout: () => void;
-}
-
-const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
-  const [currentBranch, setCurrentBranch] = useState<Branch>(mockBranches[0]);
+const Layout: React.FC = () => {
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [currentCurrency, setCurrentCurrency] = useState<string>('KES');
   
   // Notification state
   const lastCheckTimestamp = useRef<string | null>(null);
   const notifiedLowStock = useRef(new Set<string>());
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchBranchData = async () => {
+      try {
+        const branchesData = await getBranches();
+        setBranches(branchesData);
+        if (branchesData.length > 0) {
+          setCurrentBranch(branchesData[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch branches:", error);
+        toast.error("Could not load branch information.");
+      }
+    };
+    fetchBranchData();
+  }, []);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -95,22 +105,30 @@ const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
     };
     
     // Fetch immediately on load, then set interval
-    fetchNotifications();
-    const intervalId = setInterval(fetchNotifications, 20000); // Poll every 20 seconds
+    if (user) {
+        fetchNotifications();
+        const intervalId = setInterval(fetchNotifications, 20000); // Poll every 20 seconds
+        return () => clearInterval(intervalId);
+    }
+  }, [navigate, user]);
 
-    return () => clearInterval(intervalId);
-  }, [navigate]);
-
+  if (!currentBranch) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-900">
+        <LoaderCircle className="h-12 w-12 animate-spin text-orange-500" />
+        <span className="ml-4">Loading branch data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
       <Sidebar />
       <div className="flex flex-col flex-1">
         <Header 
-          branches={mockBranches}
+          branches={branches}
           currentBranch={currentBranch}
           onBranchChange={setCurrentBranch}
-          onLogout={onLogout}
           currencies={Object.keys(exchangeRates)}
           currentCurrency={currentCurrency}
           onCurrencyChange={setCurrentCurrency}

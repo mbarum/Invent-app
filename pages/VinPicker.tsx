@@ -4,29 +4,27 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { Search, LoaderCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-
-// Mock data for search results
-const mockParts = [
-    { partNumber: 'MS-1501', name: 'Oil Filter', compatibility: 'Toyota Camry 2018-2022', stock: 15 },
-    { partNumber: 'MB-8902', name: 'Brake Pads Set', compatibility: 'Toyota Camry 2018-2022', stock: 8 },
-    { partNumber: 'MA-2110', name: 'Air Filter', compatibility: 'Toyota Camry 2018-2022', stock: 22 },
-];
-
+import toast from 'react-hot-toast';
+import { getPartsByVin } from '../services/api';
 
 const VinPicker: React.FC = () => {
     const [vin, setVin] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<typeof mockParts | null>(null);
+    const [searchResults, setSearchResults] = useState<any[] | null>(null);
 
-    const handleSearch = () => {
-        if (!vin.trim()) return;
+    const handleSearch = async () => {
+        if (!vin.trim() || vin.length < 17) return;
         setIsSearching(true);
         setSearchResults(null);
-        // Simulate API call
-        setTimeout(() => {
-            setSearchResults(mockParts);
+        try {
+            const results = await getPartsByVin(vin);
+            setSearchResults(results);
+        } catch (error) {
+            toast.error("Failed to search for parts for this VIN.");
+            console.error(error);
+        } finally {
             setIsSearching(false);
-        }, 1500);
+        }
     };
 
     return (

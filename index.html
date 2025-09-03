@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Masuma EA Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
       @media print {
         @page {
@@ -16,6 +17,12 @@
            @page {
              size: A5;
              margin: 10mm;
+           }
+        }
+        .a4-page {
+           @page {
+             size: A4;
+             margin: 0;
            }
         }
         body {
@@ -55,7 +62,12 @@
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
     "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0",
-    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2"
+    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
+    "url": "https://aistudiocdn.com/url@^0.11.4",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "google-auth-library": "https://aistudiocdn.com/google-auth-library@^10.3.0",
+    "google-one-tap": "https://aistudiocdn.com/google-one-tap@^1.0.6"
   }
 }
 </script>

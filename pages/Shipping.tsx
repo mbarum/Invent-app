@@ -8,8 +8,10 @@ import Pagination from '../components/ui/Pagination';
 import { PlusCircle, Printer, X, LoaderCircle, AlertTriangle } from 'lucide-react';
 import { ShippingLabel, ShippingStatus, Branch, Customer, Sale, Invoice } from '../types';
 import ShippingLabelPrint from '../components/ShippingLabelPrint';
-import { getShippingLabels, getSales, getInvoices, getBranches, getCustomers, createShippingLabel, updateShippingLabelStatus } from '../services/api';
+import { getShippingLabels, getSales, getLegacyInvoices, getBranches, getCustomers, createShippingLabel, updateShippingLabelStatus, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
 
 const getStatusBadge = (status: ShippingStatus) => {
   switch (status) {
@@ -25,9 +27,12 @@ const getStatusBadge = (status: ShippingStatus) => {
 };
 
 const Shipping: React.FC = () => {
+  const { hasPermission } = useAuth();
+  const canManageShipping = hasPermission(PERMISSIONS.MANAGE_SHIPPING);
+
   const [labels, setLabels] = useState<ShippingLabel[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Pick<Invoice, 'id' | 'invoice_no'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +53,7 @@ const Shipping: React.FC = () => {
         const [labelsData, salesData, invoicesData] = await Promise.all([
           getShippingLabels(),
           getSales(),
-          getInvoices(),
+          getLegacyInvoices(),
         ]);
         setLabels(labelsData);
         setSales(salesData);
@@ -107,27 +112,51 @@ const Shipping: React.FC = () => {
         return;
     }
 
-    const source = type === 'sale' ? sales.find(s => s.id === numericId) : invoices.find(i => i.id === numericId);
-    if (!source) return;
+    try {
+        let branch: Branch | undefined;
+        let customer: Customer | undefined;
+        let sourceSaleId: number | undefined;
+        let sourceInvoiceId: number | undefined;
 
-    const [branches, customers] = await Promise.all([getBranches(), getCustomers()]);
-    const branch = branches.find(b => b.id === source.branch_id);
-    const customer = customers.find(c => c.id === source.customer_id);
+        if (type === 'sale') {
+            const sale = sales.find(s => s.id === numericId);
+            if (!sale) {
+                toast.error("Sale details not found.");
+                return;
+            }
+            // To get full branch/customer details, we still need to fetch them
+            const [branchesData, customersData] = await Promise.all([getBranches(), getCustomers()]);
+            branch = branchesData.find(b => b.id === sale.branch_id);
+            customer = customersData.find(c => c.id === sale.customer_id);
+            sourceSaleId = sale.id;
 
-    if (branch && customer) {
-        setFormData(prev => ({
-            ...prev,
-            sale_id: type === 'sale' ? source.id : undefined,
-            invoice_id: type === 'invoice' ? source.id : undefined,
-            from_branch_id: branch.id,
-            to_customer_id: customer.id,
-            from_name: branch.name,
-            from_address: branch.address,
-            from_phone: branch.phone,
-            to_name: customer.name,
-            to_address: customer.address,
-            to_phone: customer.phone,
-        }));
+        } else { // type === 'invoice'
+            const invoiceDetails = await getInvoiceDetails(numericId);
+            branch = invoiceDetails.branch;
+            customer = invoiceDetails.customer;
+            sourceInvoiceId = invoiceDetails.id;
+        }
+
+        if (branch && customer) {
+            setFormData(prev => ({
+                ...prev,
+                sale_id: sourceSaleId,
+                invoice_id: sourceInvoiceId,
+                from_branch_id: branch.id,
+                to_customer_id: customer.id,
+                from_name: branch.name,
+                from_address: branch.address,
+                from_phone: branch.phone,
+                to_name: customer.name,
+                to_address: customer.address,
+                to_phone: customer.phone,
+            }));
+        } else {
+             toast.error("Could not find complete branch or customer details.");
+        }
+    } catch(err) {
+        toast.error("Failed to auto-fill details from selection.");
+        console.error(err);
     }
   };
   
@@ -186,7 +215,7 @@ const Shipping: React.FC = () => {
               <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Actions</TableHead>
+              {canManageShipping && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,13 +226,15 @@ const Shipping: React.FC = () => {
                 <TableCell>{label.to_name}</TableCell>
                 <TableCell>{getStatusBadge(label.status)}</TableCell>
                 <TableCell>{new Date(label.created_at).toLocaleString()}</TableCell>
-                <TableCell className="space-x-2">
-                   <Button variant="ghost" size="sm" onClick={() => handlePrint(label, 'thermal')}><Printer className="h-4 w-4 mr-1"/> Thermal</Button>
-                   <Button variant="ghost" size="sm" onClick={() => handlePrint(label, 'a5')}><Printer className="h-4 w-4 mr-1"/> A5</Button>
-                   {label.status !== ShippingStatus.SHIPPED && (
-                    <Button variant="secondary" size="sm" onClick={() => handleMarkShipped(label.id)}>Mark Shipped</Button>
-                   )}
-                </TableCell>
+                {canManageShipping && (
+                  <TableCell className="space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => handlePrint(label, 'thermal')}><Printer className="h-4 w-4 mr-1"/> Thermal</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handlePrint(label, 'a5')}><Printer className="h-4 w-4 mr-1"/> A5</Button>
+                    {label.status !== ShippingStatus.SHIPPED && (
+                      <Button variant="secondary" size="sm" onClick={() => handleMarkShipped(label.id)}>Mark Shipped</Button>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -217,9 +248,11 @@ const Shipping: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Shipping Labels</h1>
-          <Button onClick={handleCreateLabel}>
-            <PlusCircle className="mr-2 h-5 w-5" /> Create Shipping Label
-          </Button>
+          {canManageShipping && (
+            <Button onClick={handleCreateLabel}>
+              <PlusCircle className="mr-2 h-5 w-5" /> Create Shipping Label
+            </Button>
+          )}
         </div>
 
         <Card>

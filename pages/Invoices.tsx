@@ -1,0 +1,235 @@
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
+import Pagination from '../components/ui/Pagination';
+import Modal from '../components/ui/Modal';
+import { Printer, Eye, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
+import { Invoice, InvoiceStatus, Branch } from '../types';
+import { getInvoices, getInvoiceDetails } from '../services/api';
+import toast from 'react-hot-toast';
+import InvoicePrint from '../components/InvoicePrint';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+interface OutletContextType {
+  currentBranch: Branch;
+  currentCurrency: string;
+  exchangeRates: { [key: string]: number };
+}
+
+const getStatusBadge = (status: InvoiceStatus) => {
+  let badgeClasses = '';
+  switch (status) {
+    case InvoiceStatus.UNPAID:
+      badgeClasses = 'bg-yellow-400/10 text-yellow-400 ring-yellow-400/20';
+      break;
+    case InvoiceStatus.PAID:
+      badgeClasses = 'bg-green-500/10 text-green-400 ring-green-500/20';
+      break;
+    case InvoiceStatus.VOID:
+      badgeClasses = 'bg-red-400/10 text-red-400 ring-red-400/30';
+      break;
+    default:
+      badgeClasses = 'bg-gray-400/10 text-gray-400 ring-gray-400/20';
+      break;
+  }
+  return <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${badgeClasses}`}>{status}</span>;
+};
+
+
+const Invoices: React.FC = () => {
+    const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+    
+    const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+    const [isPrintView, setIsPrintView] = useState(false);
+
+    const fetchInvoices = async () => {
+        try {
+            setLoading(true);
+            const data = await getInvoices(statusFilter as InvoiceStatus);
+            setInvoices(data);
+            setError(null);
+        } catch (err) {
+            setError("Failed to load invoices.");
+            toast.error("Failed to load invoices.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchInvoices();
+    }, [statusFilter]);
+    
+    useEffect(() => {
+        if (isPrintView && viewingInvoice) {
+            const printTarget = document.getElementById('invoice-print-frame');
+            if (printTarget) {
+                 setTimeout(() => {
+                    window.print();
+                    setIsPrintView(false);
+                }, 500);
+            }
+        }
+    }, [isPrintView, viewingInvoice]);
+
+    const formatCurrency = (amount: number) => {
+        const rate = exchangeRates[currentCurrency] || 1;
+        const convertedAmount = amount * rate;
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currentCurrency,
+        }).format(convertedAmount);
+    };
+
+    const handleViewInvoice = async (invoiceId: number) => {
+        try {
+            const detailedInvoice = await getInvoiceDetails(invoiceId);
+            setViewingInvoice(detailedInvoice);
+        } catch (err) {
+            toast.error("Failed to load invoice details.");
+        }
+    };
+    
+    const handlePrintInvoice = () => {
+        setIsPrintView(true);
+    };
+    
+    const handleDownloadPdf = async () => {
+        const element = document.getElementById('invoice-preview-content');
+        if (!element || !viewingInvoice) return;
+        
+        const toastId = toast.loading('Generating PDF...', { duration: 5000 });
+        
+        try {
+            const canvas = await html2canvas(element, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const imgProps= pdf.getImageProperties(imgData);
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Invoice-${viewingInvoice.invoice_no}.pdf`);
+            toast.success('PDF downloaded!', { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to generate PDF.', { id: toastId });
+        }
+    };
+
+
+    const paginatedInvoices = invoices.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const renderContent = () => {
+        if (loading) return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
+        if (error) return <div className="flex justify-center items-center p-8 text-red-400"><AlertTriangle className="w-6 h-6 mr-2" /> {error}</div>;
+        if (invoices.length === 0) return <div className="text-center p-8 text-gray-400">No invoices found for the selected filter.</div>;
+
+        return (
+            <>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Invoice #</TableHead>
+                                <TableHead>Customer</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Due Date</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Amount</TableHead>
+                                <TableHead>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedInvoices.map((invoice) => (
+                                <TableRow key={invoice.id}>
+                                    <TableCell className="font-mono">{invoice.invoice_no}</TableCell>
+                                    <TableCell>{invoice.customerName}</TableCell>
+                                    <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
+                                    <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                                    <TableCell className="text-right font-semibold">{formatCurrency(invoice.amount || 0)}</TableCell>
+                                    <TableCell className="space-x-2">
+                                        <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice.id)}>
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(invoices.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                />
+            </>
+        );
+    };
+
+    return (
+        <>
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold">Invoices</h1>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Invoice Records</CardTitle>
+                    <CardDescription>View, print, and track the status of all invoices.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center mb-4">
+                        <Select
+                            label="Filter by Status"
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value as InvoiceStatus | 'All')}
+                            className="w-full sm:w-48"
+                        >
+                            <option value="All">All Statuses</option>
+                            <option value={InvoiceStatus.UNPAID}>Unpaid</option>
+                            <option value={InvoiceStatus.PAID}>Paid</option>
+                            <option value={InvoiceStatus.VOID}>Void</option>
+                        </Select>
+                    </div>
+                    {renderContent()}
+                </CardContent>
+            </Card>
+        </div>
+
+        {viewingInvoice && (
+            <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice.invoice_no}`} className="max-w-4xl">
+                 <div className="flex space-x-2 mb-4">
+                    <Button onClick={handlePrintInvoice} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                    <Button onClick={handleDownloadPdf}>
+                        <Download className="mr-2 h-4 w-4" /> Download PDF
+                    </Button>
+                </div>
+                <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
+                    <div id="invoice-preview-content">
+                        <InvoicePrint invoice={viewingInvoice} isPreview={true} />
+                    </div>
+                </div>
+            </Modal>
+        )}
+        
+        {isPrintView && <div id="invoice-print-frame"><InvoicePrint invoice={viewingInvoice} /></div>}
+        </>
+    );
+};
+
+export default Invoices;

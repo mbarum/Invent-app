@@ -1,18 +1,21 @@
+
 import React from 'react';
 import { ChevronDown, Bell, LogOut } from 'lucide-react';
 import { Branch } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
     branches: Branch[];
     currentBranch: Branch;
     onBranchChange: (branch: Branch) => void;
-    onLogout: () => void;
     currencies: string[];
     currentCurrency: string;
     onCurrencyChange: (currency: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ branches, currentBranch, onBranchChange, onLogout, currencies, currentCurrency, onCurrencyChange }) => {
+const Header: React.FC<HeaderProps> = ({ branches, currentBranch, onBranchChange, currencies, currentCurrency, onCurrencyChange }) => {
+  const { user, logout } = useAuth();
+  
   return (
     <header className="no-print bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex items-center justify-between">
       <div>
@@ -61,14 +64,14 @@ const Header: React.FC<HeaderProps> = ({ branches, currentBranch, onBranchChange
         <div className="flex items-center space-x-3">
           <img
             className="w-10 h-10 rounded-full"
-            src="https://picsum.photos/100"
+            src={`https://ui-avatars.com/api/?name=${user?.name}&background=f97316&color=fff`}
             alt="User avatar"
           />
           <div>
-            <div className="font-medium">John Doe</div>
-            <div className="text-sm text-gray-400">Admin</div>
+            <div className="font-medium">{user?.name}</div>
+            <div className="text-sm text-gray-400">{user?.role}</div>
           </div>
-          <button onClick={onLogout} className="p-2 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white" title="Logout">
+          <button onClick={logout} className="p-2 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white" title="Logout">
             <LogOut className="w-5 h-5" />
           </button>
         </div>

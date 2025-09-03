@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
@@ -9,6 +10,8 @@ import { CheckCircle, XCircle, LoaderCircle, AlertTriangle, FileText } from 'luc
 import { BusinessApplication, ApplicationStatus } from '../types';
 import { getB2BApplications, updateB2BApplicationStatus, DOCS_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
 
 const getStatusBadge = (status: ApplicationStatus) => {
   let badgeClasses = '';
@@ -35,6 +38,9 @@ const getStatusBadge = (status: ApplicationStatus) => {
 };
 
 const B2BManagement: React.FC = () => {
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission(PERMISSIONS.MANAGE_B2B);
+
   const [applications, setApplications] = useState<BusinessApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +179,7 @@ const B2BManagement: React.FC = () => {
     }
     return (
       <>
-        {selectedApplications.length > 0 && (
+        {canManage && selectedApplications.length > 0 && (
           <div className="mb-4 p-3 bg-gray-700/50 border border-gray-600 rounded-lg flex items-center justify-between">
             <span className="text-sm font-medium">{selectedApplications.length} application(s) selected</span>
             <div className="space-x-2">
@@ -190,7 +196,7 @@ const B2BManagement: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
+              {canManage && <TableHead className="w-12">
                  <input
                   ref={selectAllCheckboxRef}
                   type="checkbox"
@@ -200,19 +206,19 @@ const B2BManagement: React.FC = () => {
                   disabled={pendingAppIdsInView.length === 0}
                   title={pendingAppIdsInView.length > 0 ? "Select all pending applications" : "No pending applications to select"}
                 />
-              </TableHead>
+              </TableHead>}
               <TableHead>Business Name</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Submitted On</TableHead>
               <TableHead>Documents</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              {canManage && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedApplications.map((app) => (
               <TableRow key={app.id} className={selectedApplications.includes(app.id) ? 'bg-orange-600/10' : ''}>
-                <TableCell>
+                {canManage && <TableCell>
                   {app.status === ApplicationStatus.PENDING && (
                     <input
                       type="checkbox"
@@ -222,7 +228,7 @@ const B2BManagement: React.FC = () => {
                       aria-label={`Select application from ${app.businessName}`}
                     />
                   )}
-                </TableCell>
+                </TableCell>}
                 <TableCell>
                   <div className="font-medium">{app.businessName}</div>
                   <div className="text-xs text-gray-400">KRA: {app.kraPin}</div>
@@ -261,7 +267,7 @@ const B2BManagement: React.FC = () => {
                   </div>
                 </TableCell>
                 <TableCell>{getStatusBadge(app.status)}</TableCell>
-                <TableCell>
+                {canManage && <TableCell>
                   {app.status === ApplicationStatus.PENDING ? (
                     <div className="flex space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(app.id, ApplicationStatus.APPROVED)} className="text-gray-300 hover:text-green-400">
@@ -274,7 +280,7 @@ const B2BManagement: React.FC = () => {
                   ) : (
                       <span className="text-xs text-gray-500">Actioned</span>
                   )}
-                </TableCell>
+                </TableCell>}
               </TableRow>
             ))}
           </TableBody>
