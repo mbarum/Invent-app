@@ -75,7 +75,6 @@ const bottomNavItems = [
   { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
-// Fix: Correctly type NavItem as a React.FC to allow the 'key' prop to be passed without TypeScript errors.
 const NavItem: React.FC<{ to: string; icon: React.ElementType; label: string }> = ({ to, icon: Icon, label }) => (
   <li>
     <NavLink

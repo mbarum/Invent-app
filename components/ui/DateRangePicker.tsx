@@ -1,7 +1,4 @@
-
-
 import React, { useState } from 'react';
-// FIX: Import 'toast' from 'react-hot-toast' to resolve "Cannot find name 'toast'" error.
 import toast from 'react-hot-toast';
 import Input from './Input';
 import Button from './Button';

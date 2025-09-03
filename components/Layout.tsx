@@ -1,4 +1,3 @@
-// FIX: Import `useState` from 'react' to resolve the "Cannot find name 'useState'" error on line 18.
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';

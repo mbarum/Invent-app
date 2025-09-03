@@ -1,9 +1,5 @@
-
-
-
-
-// FIX: Use aliased imports for Express types to resolve conflicts with global Request/Response types.
-import express, { Request as ExpressRequest, Response as ExpressResponse, NextFunction as ExpressNextFunction } from 'express';
+// FIX: Use fully qualified Express types (e.g., express.Request) to resolve conflicts with global types and ensure correct type inference.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import db from './db';
@@ -43,7 +39,7 @@ declare global {
 }
 
 // --- JWT AUTH MIDDLEWARE ---
-const authenticateToken = (req: ExpressRequest, res: ExpressResponse, next: ExpressNextFunction) => {
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -95,12 +91,12 @@ const upload = multer({ storage: storage });
 // --- API ROUTES ---
 
 // Health Check (Unprotected)
-app.get('/api', (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api', (req: express.Request, res: express.Response) => {
   res.send('Masuma EA Hub Backend is running!');
 });
 
 // --- AUTH (Unprotected) ---
-app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) => {
+app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
@@ -152,7 +148,7 @@ app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) =>
 });
 
 const registrationUpload = upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]);
-app.post('/api/auth/register', registrationUpload, async (req: ExpressRequest, res: ExpressResponse) => {
+app.post('/api/auth/register', registrationUpload, async (req: express.Request, res: express.Response) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -199,7 +195,7 @@ app.post('/api/auth/register', registrationUpload, async (req: ExpressRequest, r
 
 
 // --- INVENTORY (Protected) ---
-app.get('/api/inventory/products', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/inventory/products', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM products ORDER BY name ASC');
         res.json(rows);
@@ -210,7 +206,7 @@ app.get('/api/inventory/products', authenticateToken, async (req: ExpressRequest
 });
 
 // --- B2B MANAGEMENT (Protected) ---
-app.get('/api/b2b/applications', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/b2b/applications', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM b2b_applications ORDER BY submittedAt DESC');
         res.json(rows);
@@ -220,7 +216,7 @@ app.get('/api/b2b/applications', authenticateToken, async (req: ExpressRequest, 
     }
 });
 
-app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -235,7 +231,7 @@ app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: Exp
 
 
 // --- SHIPPING (Protected) ---
-app.get('/api/shipping/labels', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -248,7 +244,7 @@ app.get('/api/shipping/labels', authenticateToken, async (req: ExpressRequest, r
     }
 });
 
-app.post('/api/shipping/labels', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.post('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const newLabel = {
             id: `LBL-${newId()}`,
@@ -264,7 +260,7 @@ app.post('/api/shipping/labels', authenticateToken, async (req: ExpressRequest, 
     }
 });
 
-app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -278,7 +274,7 @@ app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: Expr
 });
 
 // --- GENERAL DATA (Protected) ---
-app.get('/api/data/sales', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/data/sales', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -289,7 +285,7 @@ app.get('/api/data/sales', authenticateToken, async (req: ExpressRequest, res: E
         res.status(500).json({ message: 'Error fetching sales' });
     }
 });
-app.get('/api/data/invoices', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/data/invoices', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM invoices ORDER BY created_at DESC');
         res.json(rows);
@@ -297,7 +293,7 @@ app.get('/api/data/invoices', authenticateToken, async (req: ExpressRequest, res
         res.status(500).json({ message: 'Error fetching invoices' });
     }
 });
-app.get('/api/data/branches', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/data/branches', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM branches');
         res.json(rows);
@@ -305,7 +301,7 @@ app.get('/api/data/branches', authenticateToken, async (req: ExpressRequest, res
         res.status(500).json({ message: 'Error fetching branches' });
     }
 });
-app.get('/api/data/customers', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/data/customers', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM customers');
         res.json(rows);
@@ -316,7 +312,7 @@ app.get('/api/data/customers', authenticateToken, async (req: ExpressRequest, re
 });
 
 // --- NOTIFICATIONS (Protected) ---
-app.get('/api/notifications', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/notifications', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { lastCheck } = req.query;
         const LOW_STOCK_THRESHOLD = 10;
@@ -350,7 +346,7 @@ app.get('/api/notifications', authenticateToken, async (req: ExpressRequest, res
 
 
 // --- DASHBOARD (Protected) ---
-app.get('/api/dashboard/stats', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/dashboard/stats', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -378,7 +374,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req: ExpressRequest, r
     }
 });
 
-app.get('/api/dashboard/sales-chart', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/dashboard/sales-chart', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -401,7 +397,7 @@ app.get('/api/dashboard/sales-chart', authenticateToken, async (req: ExpressRequ
     }
 });
 
-app.post('/api/dashboard/sales-target', authenticateToken, async (req: ExpressRequest, res: ExpressResponse) => {
+app.post('/api/dashboard/sales-target', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
         const { target } = req.body;
         if (typeof target !== 'number' || target < 0) {
@@ -414,6 +410,18 @@ app.post('/api/dashboard/sales-target', authenticateToken, async (req: ExpressRe
         console.error('Error updating sales target:', error);
         res.status(500).json({ message: 'Failed to update sales target' });
     }
+});
+
+// --- SERVE FRONTEND ---
+// This must be after all API routes.
+// It serves the static assets from the project root.
+const projectRoot = path.resolve(__dirname, '..', '..');
+app.use(express.static(projectRoot));
+
+// For any GET request that doesn't match an API route or a static file,
+// send the index.html file. This is the SPA fallback.
+app.get('*', (req: express.Request, res: express.Response) => {
+    res.sendFile(path.join(projectRoot, 'index.html'));
 });
 
 
