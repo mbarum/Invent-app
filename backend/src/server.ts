@@ -1,5 +1,4 @@
-// FIX: Use fully qualified Express types (e.g., express.Request) to resolve conflicts with global types and ensure correct type inference.
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import db from './db';
@@ -39,7 +38,7 @@ declare global {
 }
 
 // --- JWT AUTH MIDDLEWARE ---
-const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -91,12 +90,12 @@ const upload = multer({ storage: storage });
 // --- API ROUTES ---
 
 // Health Check (Unprotected)
-app.get('/api', (req: express.Request, res: express.Response) => {
+app.get('/api', (req: Request, res: Response) => {
   res.send('Masuma EA Hub Backend is running!');
 });
 
 // --- AUTH (Unprotected) ---
-app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
@@ -148,7 +147,7 @@ app.post('/api/auth/login', async (req: express.Request, res: express.Response) 
 });
 
 const registrationUpload = upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]);
-app.post('/api/auth/register', registrationUpload, async (req: express.Request, res: express.Response) => {
+app.post('/api/auth/register', registrationUpload, async (req: Request, res: Response) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -195,7 +194,7 @@ app.post('/api/auth/register', registrationUpload, async (req: express.Request, 
 
 
 // --- INVENTORY (Protected) ---
-app.get('/api/inventory/products', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/inventory/products', authenticateToken, async (req: Request, res: Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM products ORDER BY name ASC');
         res.json(rows);
@@ -206,7 +205,7 @@ app.get('/api/inventory/products', authenticateToken, async (req: express.Reques
 });
 
 // --- B2B MANAGEMENT (Protected) ---
-app.get('/api/b2b/applications', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/b2b/applications', authenticateToken, async (req: Request, res: Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM b2b_applications ORDER BY submittedAt DESC');
         res.json(rows);
@@ -216,7 +215,7 @@ app.get('/api/b2b/applications', authenticateToken, async (req: express.Request,
     }
 });
 
-app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -231,7 +230,7 @@ app.patch('/api/b2b/applications/:id/status', authenticateToken, async (req: exp
 
 
 // --- SHIPPING (Protected) ---
-app.get('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/shipping/labels', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -244,7 +243,7 @@ app.get('/api/shipping/labels', authenticateToken, async (req: express.Request, 
     }
 });
 
-app.post('/api/shipping/labels', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.post('/api/shipping/labels', authenticateToken, async (req: Request, res: Response) => {
     try {
         const newLabel = {
             id: `LBL-${newId()}`,
@@ -260,7 +259,7 @@ app.post('/api/shipping/labels', authenticateToken, async (req: express.Request,
     }
 });
 
-app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -275,7 +274,7 @@ app.patch('/api/shipping/labels/:id/status', authenticateToken, async (req: expr
 });
 
 // --- GENERAL DATA (Protected) ---
-app.get('/api/data/sales', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/data/sales', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -286,7 +285,7 @@ app.get('/api/data/sales', authenticateToken, async (req: express.Request, res: 
         res.status(500).json({ message: 'Error fetching sales' });
     }
 });
-app.get('/api/data/invoices', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/data/invoices', authenticateToken, async (req: Request, res: Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM invoices ORDER BY created_at DESC');
         res.json(rows);
@@ -294,7 +293,7 @@ app.get('/api/data/invoices', authenticateToken, async (req: express.Request, re
         res.status(500).json({ message: 'Error fetching invoices' });
     }
 });
-app.get('/api/data/branches', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/data/branches', authenticateToken, async (req: Request, res: Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM branches');
         res.json(rows);
@@ -302,7 +301,7 @@ app.get('/api/data/branches', authenticateToken, async (req: express.Request, re
         res.status(500).json({ message: 'Error fetching branches' });
     }
 });
-app.get('/api/data/customers', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/data/customers', authenticateToken, async (req: Request, res: Response) => {
     try {
         const [rows] = await db.query('SELECT * FROM customers');
         res.json(rows);
@@ -313,7 +312,7 @@ app.get('/api/data/customers', authenticateToken, async (req: express.Request, r
 });
 
 // --- NOTIFICATIONS (Protected) ---
-app.get('/api/notifications', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/notifications', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { lastCheck } = req.query;
         const LOW_STOCK_THRESHOLD = 10;
@@ -347,7 +346,7 @@ app.get('/api/notifications', authenticateToken, async (req: express.Request, re
 
 
 // --- DASHBOARD (Protected) ---
-app.get('/api/dashboard/stats', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/dashboard/stats', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -375,7 +374,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req: express.Request, 
     }
 });
 
-app.get('/api/dashboard/sales-chart', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.get('/api/dashboard/sales-chart', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { startDate, endDate } = req.query;
         const dateFilter = createDateFilter('created_at', startDate, endDate);
@@ -398,7 +397,7 @@ app.get('/api/dashboard/sales-chart', authenticateToken, async (req: express.Req
     }
 });
 
-app.post('/api/dashboard/sales-target', authenticateToken, async (req: express.Request, res: express.Response) => {
+app.post('/api/dashboard/sales-target', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { target } = req.body;
         if (typeof target !== 'number' || target < 0) {
@@ -420,25 +419,22 @@ app.post('/api/dashboard/sales-target', authenticateToken, async (req: express.R
 // one level above the 'backend' directory.
 const frontendPath = path.resolve(__dirname, '..', '..');
 
-// Serve static assets like CSS, images, etc. from the root directory.
-// This will handle requests for files like favicon.svg.
-app.use(express.static(frontendPath));
-
-// Explicitly handle the route for the main TSX file.
-// This ensures it's served with the correct content type that the browser
-// and Babel Standalone expect, resolving the "blank page" issue.
-app.get('/index.tsx', (req: express.Request, res: express.Response) => {
-    // We set the Content-Type to 'text/babel' to match the script tag in index.html.
-    // This is crucial for the in-browser transpilation to work correctly.
+// CORRECT ORDERING:
+// 1. Explicitly handle the main TSX file first to ensure correct Content-Type.
+// This is crucial for the in-browser transpilation to work correctly.
+app.get('/index.tsx', (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'text/babel; charset=UTF-8');
     res.sendFile(path.join(frontendPath, 'index.tsx'));
 });
 
+// 2. Serve other static assets like CSS, images, etc. from the root directory.
+// This will handle requests for files like favicon.svg.
+app.use(express.static(frontendPath));
 
-// For any other non-API GET request, serve the main index.html file.
+// 3. For any other non-API GET request, serve the main index.html file.
 // This is the standard fallback for a Single Page Application (SPA),
 // allowing client-side routing (like React Router) to take over.
-app.get('*', (req: express.Request, res: express.Response) => {
+app.get('*', (req: Request, res: Response) => {
     // Check if the request is likely for an API endpoint that wasn't matched.
     // This prevents the SPA's HTML from being sent for a mistyped API call.
     if (req.path.startsWith('/api/')) {
