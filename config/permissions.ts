@@ -1,4 +1,5 @@
-import { UserRole } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { UserRole } from '@masuma-ea/types';
 
 // This holds public configuration variables for the frontend.
 // In a production build process, these values would typically be

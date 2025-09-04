@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { ChevronDown, Bell, LogOut } from 'lucide-react';
-import { Branch } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Branch } from '@masuma-ea/types';
 import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {

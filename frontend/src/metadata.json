@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Masuma EA Hub",
+  "description": "A production-grade, web-based Point of Sale (POS), inventory management, and shipping sticker generation system for Masuma Autoparts East Africa. It supports multi-branch and multi-country operations with multi-currency pricing and reporting, and integrates with Supabase for backend services.",
+  "requestFramePermissions": []
+}

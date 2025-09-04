@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
@@ -8,11 +6,13 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Pagination from '../components/ui/Pagination';
 import { Upload, Download, LoaderCircle, AlertTriangle, PlusCircle, Edit } from 'lucide-react';
-import { Product } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Product } from '@masuma-ea/types';
 import { getProducts, createProduct, importProducts, updateProduct } from '../services/api';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
+// FIX: Changed import path for `permissions` to allow module resolution by removing the file extension.
 import { PERMISSIONS } from '../config/permissions';
 import Select from '../components/ui/Select';
 

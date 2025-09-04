@@ -1,57 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Masuma EA Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuma EA Hub - Project Setup</title>
     <style>
-      @media print {
-        @page {
-          size: 100mm 150mm;
-          margin: 0;
-        }
-        .a5-page {
-           @page {
-             size: A5;
-             margin: 10mm;
-           }
-        }
-        .a4-page {
-           @page {
-             size: A4;
-             margin: 0;
-           }
-        }
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .no-print {
-          display: none !important;
-        }
-        .print-area {
-          display: block !important;
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-        }
-      }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #111827; color: #f3f4f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 1rem; }
+        .container { text-align: center; max-width: 600px; padding: 2rem; border: 1px solid #374151; border-radius: 0.5rem; background-color: #1f2937; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+        h1 { color: #f97316; font-size: 1.875rem; font-weight: bold; }
+        p { margin: 1rem 0; line-height: 1.6; color: #d1d5db; }
+        code { font-family: 'Courier New', Courier, monospace; background-color: #374151; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 1.1rem; color: #fb923c; }
+        a { color: #fb923c; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .info { font-size: 0.875rem; color: #6b7280; margin-top: 2rem; }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "react": "https://aistudiocdn.com/react@^19.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.8.2",
+    "react-hot-toast": "https://aistudiocdn.com/react-hot-toast@^2.6.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.542.0",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
-    "react-hot-toast": "https://aistudiocdn.com/react-hot-toast@^2.4.1",
+    "google-one-tap": "https://aistudiocdn.com/google-one-tap@^1.0.6",
     "mysql2/": "https://aistudiocdn.com/mysql2@^3.14.4/",
     "dotenv": "https://aistudiocdn.com/dotenv@^17.2.2",
     "express": "https://aistudiocdn.com/express@^5.1.0",
@@ -63,21 +35,26 @@
     "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
     "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0",
     "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
-    "url": "https://aistudiocdn.com/url@^0.11.4",
-    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
-    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
     "google-auth-library": "https://aistudiocdn.com/google-auth-library@^10.3.0",
-    "google-one-tap": "https://aistudiocdn.com/google-one-tap@^1.0.6"
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.2",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "vite": "https://aistudiocdn.com/vite@^7.1.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "knex": "https://aistudiocdn.com/knex@^3.1.0",
+    "zustand": "https://aistudiocdn.com/zustand@^5.0.8"
   }
 }
 </script>
 </head>
-  <body class="bg-gray-900 text-gray-100">
-    <div id="root"></div>
-    <!-- 
-      Load the main application script as a module.
-      The development server will automatically transpile the TSX file.
-    -->
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body>
+    <div class="container">
+        <h1>Project Restructured Successfully</h1>
+        <p>This application now uses a modern development server (Vite) for a better and faster local development experience.</p>
+        <p>To view and work on the app, please run the following command in your terminal:</p>
+        <code>npm run dev</code>
+        <p>Then, open your browser and go to <a href="http://localhost:5173">http://localhost:5173</a>.</p>
+        <p class="info">This <code>index.html</code> file is a placeholder. The actual development entry point is now <code>/frontend/index.html</code>, served by Vite.</p>
+    </div>
+</body>
 </html>

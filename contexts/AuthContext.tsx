@@ -1,6 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
-import { User } from '../types';
-import { loginUser, loginWithGoogle } from '../services/api';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { User } from '@masuma-ea/types';
+import { loginUser, loginWithGoogle as apiLoginWithGoogle } from '../services/api';
+// FIX: Changed import path for `permissions` to allow module resolution by removing the file extension.
 import { ROLES } from '../config/permissions';
 
 interface AuthContextType {
@@ -40,60 +42,67 @@ const decodeToken = (token: string): User | null => {
   }
 };
 
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const token = sessionStorage.getItem('authToken');
-    if (token) {
-      const decodedUser = decodeToken(token);
-      setUser(decodedUser);
-    }
-    setIsLoading(false);
-  }, []);
-  
-  const handleLogin = async (email: string, pass: string) => {
-    const { token } = await loginUser(email, pass);
-    sessionStorage.setItem('authToken', token);
-    const decodedUser = decodeToken(token);
-    setUser(decodedUser);
-  };
+    useEffect(() => {
+        try {
+            const token = sessionStorage.getItem('authToken');
+            if (token) {
+                const decodedUser = decodeToken(token);
+                setUser(decodedUser);
+            }
+        } catch (error) {
+            console.error("Auth initialization error", error);
+            setUser(null);
+            sessionStorage.removeItem('authToken');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
-  const handleGoogleLogin = async (googleToken: string) => {
-      const { token } = await loginWithGoogle(googleToken);
-      sessionStorage.setItem('authToken', token);
-      const decodedUser = decodeToken(token);
-      setUser(decodedUser);
-  };
+    const handleLogin = (token: string) => {
+        sessionStorage.setItem('authToken', token);
+        const decodedUser = decodeToken(token);
+        setUser(decodedUser);
+    };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('authToken');
-    setUser(null);
-  };
+    const login = async (email: string, pass: string) => {
+        const { token } = await loginUser(email, pass);
+        handleLogin(token);
+    };
 
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
-    const userPermissions = ROLES[user.role];
-    return userPermissions?.includes(permission) || false;
-  };
-  
-  const value = useMemo(() => ({
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login: handleLogin,
-    loginWithGoogle: handleGoogleLogin,
-    logout: handleLogout,
-    hasPermission
-  }), [user, isLoading]);
+    const loginWithGoogle = async (googleToken: string) => {
+        const { token } = await apiLoginWithGoogle(googleToken);
+        handleLogin(token);
+    };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+    const logout = () => {
+        sessionStorage.removeItem('authToken');
+        setUser(null);
+        // Navigate to login page, usually handled in App component
+    };
+
+    const hasPermission = useMemo(() => (permission: string | null): boolean => {
+        if (permission === null) return true; // Permissions with null are public to logged-in users
+        if (!user || !user.role) return false;
+        const userPermissions = ROLES[user.role] || [];
+        return userPermissions.includes(permission);
+    }, [user]);
+
+
+    const value = {
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        loginWithGoogle,
+        logout,
+        hasPermission,
+    };
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

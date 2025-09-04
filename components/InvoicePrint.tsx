@@ -1,5 +1,6 @@
 import React from 'react';
-import { Invoice } from '../types';
+// FIX: Add file extension to import from 'types' to fix module resolution error.
+import { Invoice } from '../types.ts';
 
 interface InvoicePrintProps {
   invoice: Invoice | null;

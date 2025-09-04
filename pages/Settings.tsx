@@ -1,10 +1,12 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { getSettings, updateSettings } from '../services/api';
-import { AppSettings } from '../types';
+// FIX: Explicitly add file extension to assist module resolver.
+import { AppSettings } from '../types.ts';
 import toast from 'react-hot-toast';
 import { LoaderCircle, AlertTriangle, Save } from 'lucide-react';
 
@@ -109,7 +111,8 @@ const Settings: React.FC = () => {
                 <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>M-Pesa C2B Integration</CardTitle>
-                        <CardDescription>Configure settings for STK Push payments. This is a simulation.</CardDescription>
+                        {/* FIX: Updated description to reflect live credentials. */}
+                        <CardDescription>Enter your live Safaricom Daraja API credentials for STK Push payments.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input label="Paybill / Till Number" name="mpesaPaybill" value={settings.mpesaPaybill || ''} onChange={handleInputChange} />

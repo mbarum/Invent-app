@@ -5,7 +5,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import Input from '../components/ui/Input';
 import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle } from 'lucide-react';
-import { Sale, Customer, Branch } from '../types';
+// FIX: Explicitly add file extension to assist module resolver.
+import { Sale, Customer, Branch } from '../types.ts';
 import { getSales, getCustomers } from '../services/api';
 import DateRangePicker from '../components/ui/DateRangePicker';
 

@@ -1,3 +1,4 @@
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
 import { 
     ApplicationStatus, 
     BusinessApplication, 
@@ -13,8 +14,14 @@ import {
     ShippingStatus,
     NotificationPayload,
     User,
-    AppSettings
-} from '../types';
+    AppSettings,
+    DashboardStats,
+    SalesChartDataPoint,
+    VinSearchResult,
+    SalePayload,
+    QuotationPayload,
+    MpesaPayload
+} from '@masuma-ea/types';
 
 // This setup is for a single-server deployment model where the backend
 // serves both the API and the frontend static files.
@@ -199,17 +206,6 @@ export const updateCurrentUserPassword = async (data: { currentPassword?: string
 
 
 // --- POS ---
-interface SalePayload {
-    customerId: number;
-    branchId: number;
-    items: { productId: string; quantity: number; unitPrice: number }[];
-    discount: number;
-    totalAmount: number;
-    taxAmount: number;
-    paymentMethod: string;
-    invoiceId?: number;
-}
-
 export const createSale = async (payload: SalePayload): Promise<Sale> => {
     const response = await fetch(`${API_BASE_URL}/pos/sales`, {
         method: 'POST',
@@ -259,7 +255,7 @@ export const getQuotationDetails = async (id: number): Promise<Quotation> => {
     return handleResponse<Quotation>(response);
 };
 
-export const createQuotation = async (payload: any): Promise<Quotation> => {
+export const createQuotation = async (payload: QuotationPayload): Promise<Quotation> => {
     const response = await fetch(`${API_BASE_URL}/quotations`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -355,16 +351,16 @@ export const updateSettings = async (data: AppSettings): Promise<AppSettings> =>
 
 
 // --- DASHBOARD & REPORTS ---
-export const getDashboardStats = async (dateRange: DateRange) => {
+export const getDashboardStats = async (dateRange: DateRange): Promise<DashboardStats> => {
     const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/stats`, dateRange);
     const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<any>(response);
+    return handleResponse<DashboardStats>(response);
 };
 
-export const getSalesChartData = async (dateRange: DateRange) => {
+export const getSalesChartData = async (dateRange: DateRange): Promise<SalesChartDataPoint[]> => {
     const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/sales-chart`, dateRange);
     const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<any[]>(response);
+    return handleResponse<SalesChartDataPoint[]>(response);
 };
 
 export const updateSalesTarget = async (target: number): Promise<{ salesTarget: number }> => {
@@ -377,13 +373,13 @@ export const updateSalesTarget = async (target: number): Promise<{ salesTarget: 
 };
 
 // --- VIN PICKER ---
-export const getPartsByVin = async (vin: string): Promise<any[]> => {
+export const getPartsByVin = async (vin: string): Promise<VinSearchResult[]> => {
     const response = await fetch(`${API_BASE_URL}/vin-picker/${vin}`, { headers: getAuthHeaders() });
-    return handleResponse<any[]>(response);
+    return handleResponse<VinSearchResult[]>(response);
 };
 
 // --- M-PESA PAYMENTS ---
-export const initiateMpesaPayment = async (payload: any): Promise<{ checkoutRequestId: string }> => {
+export const initiateMpesaPayment = async (payload: MpesaPayload): Promise<{ checkoutRequestId: string }> => {
     const response = await fetch(`${API_BASE_URL}/payments/mpesa/initiate`, {
         method: 'POST',
         headers: getAuthHeaders(),

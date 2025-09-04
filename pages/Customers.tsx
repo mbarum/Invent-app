@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
@@ -10,7 +8,8 @@ import Pagination from '../components/ui/Pagination';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle } from 'lucide-react';
-import { Customer, Sale } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Customer, Sale } from '@masuma-ea/types';
 import { getCustomers, getSales, createCustomer } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -21,7 +20,8 @@ interface CustomerSegmentData extends Customer {
     lastPurchaseDate: Date | null;
 }
 
-type NewCustomerData = Omit<Customer, 'id' | 'totalSpending' | 'totalOrders' | 'lastPurchaseDate'>;
+// FIX: Corrected NewCustomerData to Omit from Customer type correctly.
+type NewCustomerData = Omit<Customer, 'id'>;
 
 type SortKey = 'name' | 'totalOrders' | 'totalSpending' | 'lastPurchaseDate';
 type SortDirection = 'ascending' | 'descending';

@@ -7,7 +7,8 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { PlusCircle, LoaderCircle, AlertTriangle, Search, X, Minus, Plus, RefreshCw, Check, Send, Eye, Printer, Download } from 'lucide-react';
-import { Quotation, QuotationStatus, Branch, Customer, Product } from '../types';
+// FIX: Explicitly add file extension to assist module resolver.
+import { Quotation, QuotationStatus, Branch, Customer, Product } from '../types.ts';
 import { getQuotations, createQuotation, getCustomers, getProducts, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';

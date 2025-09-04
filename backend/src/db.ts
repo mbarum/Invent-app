@@ -1,29 +1,27 @@
-import mysql from 'mysql2/promise';
+import knex from 'knex';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create a connection pool. This is more efficient than creating a single connection for every query.
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT) || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+const db = knex({
+  client: 'mysql2',
+  connection: {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  },
+  pool: { min: 2, max: 10 }
 });
 
-console.log('Attempting to connect to MySQL database...');
+console.log('Attempting to connect to MySQL database via Knex...');
 
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ Database connected successfully!');
-    connection.release();
-  })
-  .catch(err => {
-    console.error('❌ Database connection failed:', err.message);
-  });
+db.raw('SELECT 1+1 AS result').then(() => {
+    console.log('✅ Database connected successfully via Knex!');
+}).catch(err => {
+    console.error('❌ Knex database connection failed:', err.message);
+});
 
-export default pool;
+
+export default db;

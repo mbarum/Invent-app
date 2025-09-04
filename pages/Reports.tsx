@@ -1,8 +1,7 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Branch, Sale, Customer, ShippingLabel, ShippingStatus, SaleItem } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Branch, Sale, Customer, ShippingLabel, ShippingStatus, SaleItem } from '@masuma-ea/types';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle } from 'lucide-react';

@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { Branch, NotificationPayload } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Branch, NotificationPayload } from '@masuma-ea/types';
 import toast from 'react-hot-toast';
 import { getNotifications, getBranches } from '../services/api';
 import Button from './ui/Button';

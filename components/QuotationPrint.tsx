@@ -1,5 +1,6 @@
 import React from 'react';
-import { Quotation } from '../types';
+// FIX: Explicitly add file extension to assist module resolver.
+import { Quotation } from '../types.ts';
 
 interface QuotationPrintProps {
   quotation: Quotation | null;

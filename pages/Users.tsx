@@ -7,7 +7,8 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { PlusCircle, Edit, LoaderCircle, AlertTriangle } from 'lucide-react';
-import { User, UserRole } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { User, UserRole } from '@masuma-ea/types';
 import { getUsers, createUser, updateUser } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -235,7 +236,7 @@ const Users: React.FC = () => {
                     )}
                     <div className="flex justify-end space-x-2 pt-2">
                         <Button variant="secondary" type="button" onClick={handleCloseModal}>Cancel</Button>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit">Save User</Button>
                     </div>
                 </form>
             </Modal>

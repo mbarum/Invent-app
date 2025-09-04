@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
@@ -7,10 +6,12 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import { CheckCircle, XCircle, LoaderCircle, AlertTriangle, FileText } from 'lucide-react';
-import { BusinessApplication, ApplicationStatus } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { BusinessApplication, ApplicationStatus } from '@masuma-ea/types';
 import { getB2BApplications, updateB2BApplicationStatus, DOCS_BASE_URL } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+// FIX: Changed import path for `permissions` to allow module resolution by removing the file extension.
 import { PERMISSIONS } from '../config/permissions';
 
 const getStatusBadge = (status: ApplicationStatus) => {

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Masuma EA Hub</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      @media print {
+        @page {
+          size: 100mm 150mm;
+          margin: 0;
+        }
+        .a5-page {
+           @page {
+             size: A5;
+             margin: 10mm;
+           }
+        }
+        .a4-page {
+           @page {
+             size: A4;
+             margin: 0;
+           }
+        }
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-area {
+          display: block !important;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

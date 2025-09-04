@@ -1,12 +1,15 @@
 {
-  "name": "masuma-hub-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "Backend server for Masuma EA Hub application.",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "db:migrate:make": "knex migrate:make -x ts --migrations-directory src/db/migrations",
+    "db:migrate:latest": "knex migrate:latest --knexfile knexfile.ts",
+    "db:migrate:rollback": "knex migrate:rollback --knexfile knexfile.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,7 +23,9 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.6.5",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "knex": "^3.1.0",
+    "@masuma-ea/types": "workspace:*"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -28,8 +33,9 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^1.4.11",
-    "@types/node": "^2.10.4",
+    "@types/node": "^20.12.12",
     "@types/uuid": "^9.0.7",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"
   }

@@ -6,11 +6,13 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import { PlusCircle, Printer, X, LoaderCircle, AlertTriangle } from 'lucide-react';
-import { ShippingLabel, ShippingStatus, Branch, Customer, Sale, Invoice } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { ShippingLabel, ShippingStatus, Branch, Customer, Sale, Invoice } from '@masuma-ea/types';
 import ShippingLabelPrint from '../components/ShippingLabelPrint';
 import { getShippingLabels, getSales, getLegacyInvoices, getBranches, getCustomers, createShippingLabel, updateShippingLabelStatus, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+// FIX: Changed import path for `permissions` to allow module resolution by removing the file extension.
 import { PERMISSIONS } from '../config/permissions';
 
 const getStatusBadge = (status: ShippingStatus) => {

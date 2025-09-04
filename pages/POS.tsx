@@ -5,7 +5,8 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import Select from '../components/ui/Select';
-import { Product, Customer, Branch, Invoice, InvoiceStatus, Sale } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { Product, Customer, Branch, Invoice, InvoiceStatus, Sale } from '@masuma-ea/types';
 import { getProducts, getCustomers, createSale, getInvoices, getInvoiceDetails, initiateMpesaPayment, getMpesaPaymentStatus } from '../services/api';
 // FIX: Import CheckCircle and XCircle icons.
 import { User, Search, X, Plus, Minus, Percent, Printer, LoaderCircle, FileText, Ban, Download, Phone, CheckCircle, XCircle } from 'lucide-react';

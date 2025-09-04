@@ -1,39 +1,20 @@
 {
-  "name": "copy-of-masuma-ea-hub",
+  "name": "masuma-ea-hub-monorepo",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "description": "Monorepo for Masuma EA Hub frontend and backend.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "postinstall": "npm install --workspaces --if-present",
+    "dev": "concurrently \"npm:dev --workspace=backend\" \"npm:dev --workspace=frontend\"",
+    "build": "npm run build --workspace=@masuma-ea/types && npm run build --workspace=frontend",
+    "start": "npm start --workspace=backend"
   },
-  "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.8.2",
-    "lucide-react": "^0.542.0",
-    "recharts": "^3.1.2",
-    "react-hot-toast": "^2.4.1",
-    "mysql2": "^3.14.4",
-    "dotenv": "^17.2.2",
-    "express": "^5.1.0",
-    "cors": "^2.8.5",
-    "uuid": "^11.1.0",
-    "multer": "^2.0.2",
-    "path": "^0.12.7",
-    "fs": "^0.0.1-security",
-    "bcrypt": "^6.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "url": "^0.11.4",
-    "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1",
-    "google-auth-library": "^10.3.0",
-    "google-one-tap": "^1.0.6"
-  },
+  "workspaces": [
+    "frontend",
+    "backend",
+    "packages/types"
+  ],
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "concurrently": "^8.2.2"
   }
 }

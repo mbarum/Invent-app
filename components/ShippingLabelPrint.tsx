@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { ShippingLabel } from '../types';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+import { ShippingLabel } from '@masuma-ea/types';
 
 interface ShippingLabelPrintProps {
   label: ShippingLabel | null;
