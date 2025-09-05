@@ -1,6 +1,6 @@
 import React from 'react';
-// FIX: Explicitly add file extension to assist module resolver.
-import { Quotation } from '../types.ts';
+// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
+import { Quotation } from '@masuma-ea/types';
 
 interface QuotationPrintProps {
   quotation: Quotation | null;

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { Knex } from 'knex';
 import dotenv from 'dotenv';
 import path from 'path';

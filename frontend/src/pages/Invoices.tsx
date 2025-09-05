@@ -7,7 +7,6 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { Printer, Eye, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
-// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
 import { Invoice, InvoiceStatus, Branch } from '@masuma-ea/types';
 import { getInvoices, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';

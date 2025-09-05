@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
 import { Product, Customer, Branch, Sale, Invoice, ShippingLabel } from '@masuma-ea/types';
-import { getProducts, getCustomers, getBranches, getSales, getLegacyInvoices, getShippingLabels } from '../services/api';
+// FIX: Changed getLegacyInvoices to getUnpaidInvoiceSnippets to match the exported function from api.ts
+import { getProducts, getCustomers, getBranches, getSales, getUnpaidInvoiceSnippets, getShippingLabels } from '../services/api';
 
 interface SharedDataState {
   products: Product[];
@@ -34,7 +36,7 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
         getCustomers(),
         getBranches(),
         getSales(),
-        getLegacyInvoices(),
+        getUnpaidInvoiceSnippets(),
         getShippingLabels(),
       ]);
       set({ products, customers, branches, sales, legacyInvoices, shippingLabels, isInitialDataLoaded: true });

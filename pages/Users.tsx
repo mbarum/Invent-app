@@ -7,7 +7,7 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { PlusCircle, Edit, LoaderCircle, AlertTriangle } from 'lucide-react';
-// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
+// FIX: Changed import path for `types' to allow module resolution by removing the file extension.
 import { User, UserRole } from '@masuma-ea/types';
 import { getUsers, createUser, updateUser } from '../services/api';
 import toast from 'react-hot-toast';
@@ -194,7 +194,8 @@ const Users: React.FC = () => {
                                 className="w-full sm:w-56"
                             >
                                 <option value="All">All Roles</option>
-                                {Object.values(UserRole).map(role => (
+                                {/* FIX: Cast Object.values to UserRole[] to fix 'unknown' type error */}
+                                {(Object.values(UserRole) as UserRole[]).map(role => (
                                     <option key={role} value={role}>{role}</option>
                                 ))}
                             </Select>
@@ -224,7 +225,8 @@ const Users: React.FC = () => {
                         <p className="text-xs text-gray-400">Password management is not available in this form. Please use a password reset feature.</p>
                     )}
                     <Select label="Role" name="role" value={formData.role || ''} onChange={handleInputChange} required>
-                        {Object.values(UserRole).map(role => (
+                        {/* FIX: Cast Object.values to UserRole[] to fix 'unknown' type error */}
+                        {(Object.values(UserRole) as UserRole[]).map(role => (
                             <option key={role} value={role}>{role}</option>
                         ))}
                     </Select>

@@ -1,5 +1,4 @@
 import React from 'react';
-// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
 import { Invoice } from '@masuma-ea/types';
 
 interface InvoicePrintProps {
@@ -19,7 +18,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
     if (!invoice) return null;
     
     const subtotal = (invoice.items || []).reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
-    // FIX: Calculate tax amount based on settings, but for now, it's total - subtotal.
+    // Tax is now stored on the sale record, but we can derive it for display if needed
     const taxAmount = (invoice.amount || 0) - subtotal; 
 
     const containerClasses = isPreview ? "bg-white text-black p-8 font-sans w-full" : "print-area a4-page";

@@ -1,12 +1,13 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { getSettings, updateSettings } from '../services/api';
-// FIX: Explicitly add file extension to assist module resolver.
-import { AppSettings } from '../types.ts';
+// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
+import { AppSettings } from '@masuma-ea/types';
 import toast from 'react-hot-toast';
 import { LoaderCircle, AlertTriangle, Save } from 'lucide-react';
 

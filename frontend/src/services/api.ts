@@ -59,10 +59,7 @@ const getAuthHeaders = (): HeadersInit => {
 const buildUrlWithDateRange = (baseUrl: string, dateRange: DateRange): string => {
     const url = new URL(baseUrl, window.location.origin);
     url.searchParams.append('startDate', dateRange.start);
-    // Add 1 day to the end date on the client-side to make the backend query inclusive and simpler (using < end date).
-    const inclusiveEndDate = new Date(dateRange.end);
-    inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
-    url.searchParams.append('endDate', inclusiveEndDate.toISOString().split('T')[0]);
+    url.searchParams.append('endDate', dateRange.end);
     return `${url.pathname}${url.search}`;
 };
 
@@ -304,9 +301,8 @@ export const getSales = async (dateRange?: DateRange): Promise<Sale[]> => {
     return handleResponse<Sale[]>(response);
 };
 
-// This function is now deprecated in favor of the more specific getInvoices.
-// It is kept for backwards compatibility with the Shipping page.
-export const getLegacyInvoices = async (): Promise<Pick<Invoice, 'id'| 'invoice_no'>[]> => {
+// Returns a list of unpaid invoices with minimal data for dropdowns.
+export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id'| 'invoice_no'>[]> => {
     const response = await fetch(`${API_BASE_URL}/data/invoices`, { headers: getAuthHeaders() });
     return handleResponse<Pick<Invoice, 'id'| 'invoice_no'>[]>(response);
 };

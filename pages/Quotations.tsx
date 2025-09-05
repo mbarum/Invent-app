@@ -7,8 +7,8 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { PlusCircle, LoaderCircle, AlertTriangle, Search, X, Minus, Plus, RefreshCw, Check, Send, Eye, Printer, Download } from 'lucide-react';
-// FIX: Explicitly add file extension to assist module resolver.
-import { Quotation, QuotationStatus, Branch, Customer, Product } from '../types.ts';
+// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
+import { Quotation, QuotationStatus, Branch, Customer, Product, QuotationPayload } from '@masuma-ea/types';
 import { getQuotations, createQuotation, getCustomers, getProducts, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';
@@ -192,7 +192,7 @@ const Quotations: React.FC = () => {
             return;
         }
         try {
-            const payload = {
+            const payload: QuotationPayload = {
                 customerId: selectedCustomer.id,
                 branchId: currentBranch.id,
                 items: cart.map(item => ({ productId: item.product.id, quantity: item.quantity, unitPrice: item.product.retailPrice })),

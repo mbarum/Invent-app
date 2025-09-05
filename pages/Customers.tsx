@@ -14,7 +14,13 @@ import { getCustomers, getSales, createCustomer } from '../services/api';
 import toast from 'react-hot-toast';
 
 // Enriched customer data type
-interface CustomerSegmentData extends Customer {
+// FIX: Rewrote interface to explicitly include properties from Customer to resolve typing issue.
+interface CustomerSegmentData {
+    id: number;
+    name: string;
+    address: string;
+    phone: string;
+    kraPin?: string;
     totalSpending: number;
     totalOrders: number;
     lastPurchaseDate: Date | null;

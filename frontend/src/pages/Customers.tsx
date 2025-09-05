@@ -8,18 +8,25 @@ import Pagination from '../components/ui/Pagination';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle } from 'lucide-react';
+// FIX: Changed import path for `types` to allow module resolution by removing the file extension.
 import { Customer, Sale } from '@masuma-ea/types';
-import { createCustomer } from '../services/api';
+import { getCustomers, getSales, createCustomer } from '../services/api';
 import toast from 'react-hot-toast';
-import { useDataStore } from '../store/dataStore';
 
 // Enriched customer data type
-interface CustomerSegmentData extends Customer {
+// FIX: Rewrote interface to explicitly include properties from Customer to resolve typing issue.
+interface CustomerSegmentData {
+    id: number;
+    name: string;
+    address: string;
+    phone: string;
+    kraPin?: string;
     totalSpending: number;
     totalOrders: number;
     lastPurchaseDate: Date | null;
 }
 
+// FIX: Corrected NewCustomerData to Omit from Customer type correctly.
 type NewCustomerData = Omit<Customer, 'id'>;
 
 type SortKey = 'name' | 'totalOrders' | 'totalSpending' | 'lastPurchaseDate';
@@ -37,10 +44,9 @@ interface OutletContextType {
 
 const Customers: React.FC = () => {
     const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
-    
-    // Get data from Zustand store
-    const { customers: rawCustomers, sales, isInitialDataLoaded, refetchCustomers } = useDataStore();
     const [customers, setCustomers] = useState<CustomerSegmentData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     // Filtering and sorting state
     const [searchTerm, setSearchTerm] = useState('');
@@ -57,27 +63,38 @@ const Customers: React.FC = () => {
     const [newCustomer, setNewCustomer] = useState<NewCustomerData>({ name: '', phone: '', address: '', kraPin: ''});
 
     useEffect(() => {
-        if (isInitialDataLoaded) {
-            const salesByCustomerId = sales.reduce<Record<number, Sale[]>>((acc, sale) => {
-                if (!acc[sale.customer_id]) acc[sale.customer_id] = [];
-                acc[sale.customer_id].push(sale);
-                return acc;
-            }, {});
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const [customersData, salesData] = await Promise.all([getCustomers(), getSales()]);
 
-            const enrichedCustomers = rawCustomers.map((customer): CustomerSegmentData => {
-                const customerSales = salesByCustomerId[customer.id] || [];
-                const totalSpending = customerSales.reduce((sum, s) => sum + (s.amount || 0), 0);
-                const totalOrders = customerSales.length;
-                const lastPurchaseDate = customerSales.length > 0
-                    ? new Date(Math.max(...customerSales.map(s => new Date(s.created_at).getTime())))
-                    : null;
+                const salesByCustomerId = salesData.reduce<Record<number, Sale[]>>((acc, sale) => {
+                    if (!acc[sale.customer_id]) acc[sale.customer_id] = [];
+                    acc[sale.customer_id].push(sale);
+                    return acc;
+                }, {});
 
-                return { ...customer, totalSpending, totalOrders, lastPurchaseDate };
-            });
+                const enrichedCustomers = customersData.map((customer): CustomerSegmentData => {
+                    const customerSales = salesByCustomerId[customer.id] || [];
+                    const totalSpending = customerSales.reduce((sum, s) => sum + (s.amount || 0), 0);
+                    const totalOrders = customerSales.length;
+                    const lastPurchaseDate = customerSales.length > 0
+                        ? new Date(Math.max(...customerSales.map(s => new Date(s.created_at).getTime())))
+                        : null;
 
-            setCustomers(enrichedCustomers);
-        }
-    }, [isInitialDataLoaded, rawCustomers, sales]);
+                    return { ...customer, totalSpending, totalOrders, lastPurchaseDate };
+                });
+
+                setCustomers(enrichedCustomers);
+            } catch (err) {
+                setError("Failed to load customer data.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const formatCurrency = (amount: number) => {
         const rate = exchangeRates[currentCurrency] || 1;
@@ -166,8 +183,14 @@ const Customers: React.FC = () => {
     const handleAddCustomer = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await createCustomer(newCustomer);
-            await refetchCustomers(); // Refetch all customers to update store
+            const addedCustomer = await createCustomer(newCustomer);
+            const newCustomerWithStats: CustomerSegmentData = {
+                ...addedCustomer,
+                totalSpending: 0,
+                totalOrders: 0,
+                lastPurchaseDate: null,
+            };
+            setCustomers(prev => [newCustomerWithStats, ...prev]);
             setAddModalOpen(false);
             setNewCustomer({ name: '', phone: '', address: '', kraPin: ''});
             toast.success('Customer added successfully!');
@@ -200,7 +223,8 @@ const Customers: React.FC = () => {
     );
 
     const renderContent = () => {
-        if (!isInitialDataLoaded) return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
+        if (loading) return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
+        if (error) return <div className="flex justify-center items-center p-8 text-red-400"><AlertTriangle className="w-6 h-6 mr-2" /> {error}</div>;
         if (customers.length > 0 && paginatedCustomers.length === 0) {
             return <div className="text-center p-8 text-gray-400">No customers found matching your criteria.</div>;
         }

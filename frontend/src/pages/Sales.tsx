@@ -5,7 +5,6 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import Input from '../components/ui/Input';
 import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle } from 'lucide-react';
-// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
 import { Sale, Customer, Branch } from '@masuma-ea/types';
 import { getSales, getCustomers } from '../services/api';
 import DateRangePicker from '../components/ui/DateRangePicker';

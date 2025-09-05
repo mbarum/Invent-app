@@ -133,7 +133,9 @@ const Quotations: React.FC = () => {
     const handleDownloadPdf = async () => {
         const element = document.getElementById('quotation-preview-content');
         if (!element || !viewingQuotation) return;
+        
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
+        
         try {
             const canvas = await html2canvas(element, { scale: 2 });
             const imgData = canvas.toDataURL('image/png');

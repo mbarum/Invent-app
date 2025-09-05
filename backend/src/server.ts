@@ -695,9 +695,10 @@ apiRouter.get('/data/sales', async (req: Request, res: Response) => {
             db.raw('(SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) as items')
         );
 
-    if (startDate && endDate) { 
+    if (startDate && endDate) {
+        // Inclusive of start and end date
         query.where('s.created_at', '>=', startDate as string)
-             .where('s.created_at', '<', endDate as string);
+             .where('s.created_at', '<=', `${endDate as string} 23:59:59`);
     }
     query.orderBy('s.created_at', 'desc');
     const sales = await query;
@@ -863,9 +864,9 @@ apiRouter.get('/invoices/:id', authorizeRole(VIEW_FINANCIALS_ROLES), async (req:
 apiRouter.get('/dashboard/stats', async (req: Request, res: Response) => {
     const { startDate, endDate } = req.query as { startDate: string, endDate: string };
     try {
-        const sales = await db('sales').whereBetween('created_at', [startDate, endDate]).sum('total_amount as total').count('id as count').first();
-        const customers = await db('sales').whereBetween('created_at', [startDate, endDate]).countDistinct('customer_id as count').first();
-        const shipments = await db('shipping_labels').whereBetween('created_at', [startDate, endDate]).count('id as total').sum(db.raw('CASE WHEN status="Draft" THEN 1 ELSE 0 END as pending')).first();
+        const sales = await db('sales').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).sum('total_amount as total').count('id as count').first();
+        const customers = await db('sales').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).countDistinct('customer_id as count').first();
+        const shipments = await db('shipping_labels').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).count('id as total').sum(db.raw('CASE WHEN status="Draft" THEN 1 ELSE 0 END as pending')).first();
         const settings = await getAppSettings(db);
         res.json({ totalRevenue: sales?.total || 0, totalSales: sales?.count || 0, activeCustomers: customers?.count || 0, totalShipments: shipments?.total || 0, pendingShipments: shipments?.pending || 0, salesTarget: settings.salesTarget });
     } catch(error) {
@@ -892,7 +893,7 @@ apiRouter.get('/dashboard/sales-chart', async (req: Request, res: Response) => {
         .select(db.raw('DATE(created_at) as name'))
         .sum('total_amount as revenue')
         .count('id as sales')
-        .whereBetween('created_at', [startDate, endDate])
+        .where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`)
         .groupBy('name')
         .orderBy('name', 'asc');
     res.json(data);
