@@ -1,19 +1,21 @@
+
+
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Pagination from '../components/ui/Pagination';
-import { Upload, Download, LoaderCircle, AlertTriangle, PlusCircle, Edit } from 'lucide-react';
-import { Product } from '@masuma-ea/types';
-import { createProduct, importProducts, updateProduct } from '../services/api';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import Button from '../components/ui/Button.tsx';
+import Input from '../components/ui/Input.tsx';
+import Pagination from '../components/ui/Pagination.tsx';
+import { Upload, Download, LoaderCircle, PlusCircle, Edit } from 'lucide-react';
+import { Product, UserRole } from '@masuma-ea/types';
+import { createProduct, importProducts, updateProduct } from '../services/api.ts';
 import toast from 'react-hot-toast';
-import Modal from '../components/ui/Modal';
-import { useAuth } from '../contexts/AuthContext';
-import { PERMISSIONS } from '../config/permissions';
-import Select from '../components/ui/Select';
-import { useDataStore } from '../store/dataStore';
+import Modal from '../components/ui/Modal.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { PERMISSIONS } from '../config/permissions.ts';
+import Select from '../components/ui/Select.tsx';
+import { useDataStore } from '../store/dataStore.ts';
 
 interface OutletContextType {
   currentCurrency: string;
@@ -22,10 +24,29 @@ interface OutletContextType {
 
 type ProductFormData = Omit<Product, 'id'>;
 
+const exportToCsv = (filename: string, headers: string[], data: Product[]) => {
+    const csvContent = [
+        headers.join(','),
+        ...data.map(p => headers.map(h => p[h as keyof Product]).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf--8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+
 const Inventory: React.FC = () => {
     const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
-    const { hasPermission } = useAuth();
+    const { user, hasPermission } = useAuth();
     const canManageInventory = hasPermission(PERMISSIONS.MANAGE_INVENTORY);
+    const isB2B = user?.role === UserRole.B2B_CLIENT;
     
     // Get products and refetcher from Zustand store
     const { products, refetchProducts, isInitialDataLoaded } = useDataStore();
@@ -40,7 +61,6 @@ const Inventory: React.FC = () => {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     
     const [productForm, setProductForm] = useState<ProductFormData>({ partNumber: '', name: '', retailPrice: 0, wholesalePrice: 0, stock: 0 });
-    const [importFile, setImportFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<ProductFormData[]>([]);
 
     const formatCurrency = (amount: number) => {
@@ -53,8 +73,8 @@ const Inventory: React.FC = () => {
     };
 
     const filteredProducts = products.filter(product => {
-        const matchesSearch = product.partNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (product.partNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (product.name || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         if (!matchesSearch) return false;
 
@@ -108,28 +128,39 @@ const Inventory: React.FC = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImportFile(file);
             const reader = new FileReader();
             reader.onload = (event) => {
                 const text = event.target?.result as string;
                 try {
                     const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-                    const headers = lines.shift()?.split(',').map(h => h.trim()) || [];
+                    const headerLine = lines.shift();
+                    if (!headerLine) throw new Error("CSV is empty or has no header.");
+
+                    const headers = headerLine.split(',').map(h => h.trim());
+                    const requiredHeaders = ['partNumber', 'name', 'retailPrice', 'wholesalePrice', 'stock'];
+                    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+                    if(missingHeaders.length > 0) {
+                        throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
+                    }
+
                     const data = lines.map(line => {
                         const values = line.split(',');
-                        return headers.reduce((obj, header, index) => {
+                        const productData: Partial<ProductFormData> = {};
+                        headers.forEach((header, index) => {
                             const value = values[index]?.trim() || '';
-                            if (header === 'retailPrice' || header === 'wholesalePrice' || header === 'stock') {
-                                obj[header] = Number(value);
-                            } else {
-                                obj[header] = value;
+                            if (requiredHeaders.includes(header)) {
+                                if (header === 'retailPrice' || header === 'wholesalePrice' || header === 'stock') {
+                                    (productData as any)[header] = Number(value);
+                                } else {
+                                    (productData as any)[header] = value;
+                                }
                             }
-                            return obj;
-                        }, {} as any);
+                        });
+                        return productData as ProductFormData;
                     });
                     setParsedData(data);
-                } catch (parseError) {
-                    toast.error("Failed to parse CSV file. Please check its format.");
+                } catch (parseError: any) {
+                    toast.error(`CSV Parse Error: ${parseError.message}`);
                     setParsedData([]);
                 }
             };
@@ -147,7 +178,6 @@ const Inventory: React.FC = () => {
             toast.success(`${parsedData.length} products imported successfully!`);
             await refetchProducts();
             setImportModalOpen(false);
-            setImportFile(null);
             setParsedData([]);
         } catch (err: any) {
             toast.error(`Import failed: ${err.message}`);
@@ -156,20 +186,7 @@ const Inventory: React.FC = () => {
     
     const handleExport = () => {
         const headers = ['partNumber', 'name', 'retailPrice', 'wholesalePrice', 'stock'];
-        const csvContent = [
-            headers.join(','),
-            ...filteredProducts.map(p => headers.map(h => p[h as keyof Product]).join(','))
-        ].join('\n');
-    
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'inventory_export.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        exportToCsv('inventory_export', headers, filteredProducts);
         toast.success("Inventory exported!");
     };
     
@@ -187,8 +204,14 @@ const Inventory: React.FC = () => {
                     <TableRow>
                         <TableHead>Part Number</TableHead>
                         <TableHead>Product Name</TableHead>
-                        <TableHead className="text-right">Retail Price ({currentCurrency})</TableHead>
-                        <TableHead className="text-right">Wholesale Price ({currentCurrency})</TableHead>
+                        {isB2B ? (
+                            <TableHead className="text-right">Wholesale Price ({currentCurrency})</TableHead>
+                        ) : (
+                            <>
+                                <TableHead className="text-right">Retail Price ({currentCurrency})</TableHead>
+                                <TableHead className="text-right">Wholesale Price ({currentCurrency})</TableHead>
+                            </>
+                        )}
                         <TableHead className="text-right">Stock</TableHead>
                         {canManageInventory && <TableHead>Actions</TableHead>}
                     </TableRow>
@@ -198,14 +221,20 @@ const Inventory: React.FC = () => {
                         <TableRow key={product.id}>
                             <TableCell className="font-mono">{product.partNumber}</TableCell>
                             <TableCell>{product.name}</TableCell>
-                            <TableCell className="text-right font-medium">
-                                <div>{formatCurrency(product.retailPrice)}</div>
-                                {currentCurrency !== 'KES' && <div className="text-xs text-gray-400 font-normal">KES {product.retailPrice.toLocaleString()}</div>}
-                            </TableCell>
-                            <TableCell className="text-right font-semibold text-orange-400">
-                                <div>{formatCurrency(product.wholesalePrice)}</div>
-                                {currentCurrency !== 'KES' && <div className="text-xs text-gray-400 font-normal">KES {product.wholesalePrice.toLocaleString()}</div>}
-                            </TableCell>
+                             {isB2B ? (
+                                <TableCell className="text-right font-semibold text-orange-400">
+                                    <div>{formatCurrency(product.wholesalePrice)}</div>
+                                </TableCell>
+                             ) : (
+                                <>
+                                <TableCell className="text-right font-medium">
+                                    <div>{formatCurrency(product.retailPrice)}</div>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-orange-400">
+                                    <div>{formatCurrency(product.wholesalePrice)}</div>
+                                </TableCell>
+                                </>
+                             )}
                             <TableCell className="text-right">{product.stock}</TableCell>
                             {canManageInventory && <TableCell><Button variant="ghost" size="sm" onClick={() => handleOpenModal(product)}><Edit className="h-4 w-4" /></Button></TableCell>}
                         </TableRow>

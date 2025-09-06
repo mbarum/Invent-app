@@ -103,12 +103,12 @@ const VinPicker: React.FC = () => {
             {/* Embedded Tool */}
             <div className="flex flex-col h-[70vh]">
                 <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-xl font-semibold">Masuma.ru Official Picker</h2>
+                    <h2 className="text-xl font-semibold">Masuma.parts Official Picker</h2>
                     <p className="text-sm text-gray-400">For advanced lookup</p>
                 </div>
                 <div className="flex-1 rounded-lg overflow-hidden border border-gray-700">
                     <iframe
-                        src="https://masuma.ru/#vin-picker"
+                        src="https://masuma.parts/"
                         title="Masuma VIN Picker"
                         className="w-full h-full"
                         style={{ border: 0 }}

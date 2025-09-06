@@ -6,6 +6,7 @@ export enum UserRole {
   WAREHOUSE_CLERK = 'Warehouse / Store Clerk',
   ACCOUNTANT = 'Accountant / Finance Officer',
   AUDITOR = 'Auditor',
+  B2B_CLIENT = 'B2B Client',
 }
 
 export interface User {
@@ -17,6 +18,7 @@ export interface User {
   businessName?: string;
   status: 'Active' | 'Inactive';
   password?: string;
+  customer_id?: number;
 }
 
 
@@ -261,4 +263,54 @@ export interface QuotationPayload {
     branchId: number;
     items: { productId: string; quantity: number; unitPrice: number }[];
     validUntil: string;
+}
+
+export interface FastMovingProduct {
+  id: string;
+  partNumber: string;
+  name: string;
+  currentStock: number;
+  totalSold: number;
+}
+
+// --- B2B Stock Request Feature ---
+export enum StockRequestStatus {
+  PENDING = 'Pending',
+  APPROVED = 'Approved',
+  REJECTED = 'Rejected',
+  SHIPPED = 'Shipped',
+}
+
+export interface StockRequestItem {
+  id: number;
+  stock_request_id: number;
+  product_id: string;
+  quantity: number;
+  wholesale_price_at_request: number;
+  // Denormalized for display
+  product?: Product;
+}
+
+export interface StockRequest {
+  id: number;
+  b2b_user_id: string;
+  branch_id: number;
+  status: StockRequestStatus;
+  created_at: string;
+  updated_at: string;
+  items: StockRequestItem[];
+  // Denormalized for display
+  user?: Pick<User, 'name' | 'email'>;
+  branch?: Pick<Branch, 'name'>;
+  total_amount?: number;
+}
+
+// --- Audit Log Feature ---
+export interface AuditLog {
+    id: number;
+    user_id: string;
+    action: string;
+    details: Record<string, any>;
+    created_at: string;
+    user_name?: string; // Denormalized
 }

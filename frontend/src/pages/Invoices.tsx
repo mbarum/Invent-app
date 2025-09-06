@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import Button from '../components/ui/Button';
-import Select from '../components/ui/Select';
-import Pagination from '../components/ui/Pagination';
-import Modal from '../components/ui/Modal';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import Button from '../components/ui/Button.tsx';
+import Select from '../components/ui/Select.tsx';
+import Pagination from '../components/ui/Pagination.tsx';
+import Modal from '../components/ui/Modal.tsx';
 import { Printer, Eye, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
 import { Invoice, InvoiceStatus, Branch } from '@masuma-ea/types';
-import { getInvoices, getInvoiceDetails } from '../services/api';
+import { getInvoices, getInvoiceDetails } from '../services/api.ts';
 import toast from 'react-hot-toast';
-import InvoicePrint from '../components/InvoicePrint';
+import InvoicePrint from '../components/InvoicePrint.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -103,7 +103,7 @@ const Invoices: React.FC = () => {
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
         
         try {
-            const canvas = await html2canvas(element, { scale: 2 });
+            const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();

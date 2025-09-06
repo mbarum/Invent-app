@@ -20,6 +20,10 @@ const config: { [key: string]: Knex.Config } = {
       directory: './src/db/migrations',
       extension: 'ts',
     },
+    seeds: {
+      directory: './src/db/seeds',
+      extension: 'ts',
+    }
   },
   production: {
     client: 'mysql2',
@@ -34,6 +38,10 @@ const config: { [key: string]: Knex.Config } = {
       directory: './src/db/migrations',
       extension: 'ts',
     },
+    seeds: {
+      directory: './src/db/seeds',
+      extension: 'ts',
+    }
   },
 };
 

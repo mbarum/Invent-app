@@ -1,13 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import { Mail, Lock, LoaderCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card.tsx';
+import Input from '../components/ui/Input.tsx';
+import Button from '../components/ui/Button.tsx';
+import { Lock, LoaderCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../contexts/AuthContext';
-import type { CredentialResponse } from 'google-one-tap';
-import { GOOGLE_CLIENT_ID } from '../config/permissions';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { GOOGLE_CLIENT_ID } from '../config/permissions.ts';
 
 const GoogleLogo = () => (
     <svg className="mr-2 h-5 w-5" viewBox="0 0 48 48" aria-hidden="true">
@@ -18,14 +18,6 @@ const GoogleLogo = () => (
     </svg>
 );
 
-// FIX: Declare the google object on the window to satisfy TypeScript
-declare global {
-    interface Window {
-        google: any;
-    }
-}
-
-
 const Login: React.FC = () => {
     const navigate = useNavigate();
     const { login, loginWithGoogle } = useAuth();
@@ -33,7 +25,7 @@ const Login: React.FC = () => {
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
     useEffect(() => {
-        const handleGoogleCredentialResponse = async (response: CredentialResponse) => {
+        const handleGoogleCredentialResponse = async (response: google.accounts.id.CredentialResponse) => {
             setIsGoogleLoading(true);
             try {
                 if (response.credential) {

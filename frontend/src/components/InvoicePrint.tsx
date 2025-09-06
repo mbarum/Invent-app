@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Invoice } from '@masuma-ea/types';
 
@@ -5,14 +6,6 @@ interface InvoicePrintProps {
   invoice: Invoice | null;
   isPreview?: boolean;
 }
-
-const MasumaLogoBlack = () => (
-     <svg width="150" height="50" viewBox="0 0 162 43" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-black">
-        <path d="M29.5391 3.51367L19.4932 26.248L9.44727 3.51367H0.939453V42.5H8.32422V14.6309L16.2051 33.7285H22.7832L30.6641 14.6309V42.5H38.0488V3.51367H29.5391Z" fill="currentColor"/>
-        <path d="M64.7175 3.51367H48.4206V42.5H55.8054V25.2793H64.0906C71.321 25.2793 75.321 20.6533 75.321 14.3965C75.321 8.13965 71.321 3.51367 64.0906 3.51367H64.7175ZM64.0906 18.5723H55.8054V10.2207H64.0906C67.3181 10.2207 68.6413 11.959 68.6413 14.3965C68.6413 16.834 67.3181 18.5723 64.0906 18.5723Z" fill="currentColor"/>
-    </svg>
-);
-
 
 const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false }) => {
     if (!invoice) return null;
@@ -29,8 +22,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
                 {/* Header */}
                 <div className="flex justify-between items-start pb-4 border-b-2 border-black">
                     <div>
-                        <MasumaLogoBlack />
-                        <p className="text-sm font-bold mt-2">{invoice.branch?.name}</p>
+                        
+                        <p className="text-sm font-bold mt-2">Masuma Autoparts East Africa LTD</p>
                         <p className="text-xs">{invoice.branch?.address}</p>
                         <p className="text-xs">{invoice.branch?.phone}</p>
                     </div>
@@ -85,8 +78,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
 
                 {/* Footer */}
                 <div className="text-center text-xs text-gray-600 mt-12 pt-4 border-t border-gray-300">
-                    <p>Thank you for your business!</p>
-                    <p>Please make all cheques payable to {invoice.branch?.name}.</p>
+                    <p>Please make all cheques payable to Masuma Autoparts East Africa LTD.</p>
+                    <p className="font-semibold mt-1">Genuine Masuma Parts – Quality You Can Trust</p>
                 </div>
 
             </div>

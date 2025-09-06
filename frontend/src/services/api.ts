@@ -20,6 +20,7 @@ import {
     SalePayload,
     QuotationPayload,
     MpesaPayload,
+    FastMovingProduct,
 } from '@masuma-ea/types';
 
 // This setup is for a single-server deployment model where the backend
@@ -30,6 +31,13 @@ export const DOCS_BASE_URL = ''; // Docs are served from the same origin.
 interface DateRange {
   start: string;
   end: string;
+}
+
+// Custom type for the new transaction history endpoint
+export interface CustomerTransactions {
+    sales: Sale[];
+    invoices: Invoice[];
+    quotations: Quotation[];
 }
 
 /**
@@ -149,6 +157,15 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<{
         body: JSON.stringify(products),
     });
     return handleResponse<{ message: string }>(response);
+};
+
+export const getFastMovingProducts = async (dateRange: DateRange, branchId?: number): Promise<FastMovingProduct[]> => {
+    let url = buildUrlWithDateRange(`${API_BASE_URL}/inventory/fast-moving`, dateRange);
+    if (branchId) {
+        url += `&branchId=${branchId}`;
+    }
+    const response = await fetch(url, { headers: getAuthHeaders() });
+    return handleResponse<FastMovingProduct[]>(response);
 };
 
 // --- B2B MANAGEMENT ---
@@ -312,9 +329,32 @@ export const getBranches = async (): Promise<Branch[]> => {
     return handleResponse<Branch[]>(response);
 };
 
+export const createBranch = async (data: Omit<Branch, 'id'>): Promise<Branch> => {
+    const response = await fetch(`${API_BASE_URL}/data/branches`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse<Branch>(response);
+};
+
+export const updateBranch = async (id: number, data: Partial<Omit<Branch, 'id'>>): Promise<Branch> => {
+    const response = await fetch(`${API_BASE_URL}/data/branches/${id}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse<Branch>(response);
+};
+
 export const getCustomers = async (): Promise<Customer[]> => {
     const response = await fetch(`${API_BASE_URL}/data/customers`, { headers: getAuthHeaders() });
     return handleResponse<Customer[]>(response);
+};
+
+export const getCustomerTransactions = async (id: number): Promise<CustomerTransactions> => {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/transactions`, { headers: getAuthHeaders() });
+    return handleResponse<CustomerTransactions>(response);
 };
 
 export const createCustomer = async (data: Omit<Customer, 'id'>): Promise<Customer> => {
@@ -345,14 +385,20 @@ export const updateSettings = async (data: AppSettings): Promise<AppSettings> =>
 
 
 // --- DASHBOARD & REPORTS ---
-export const getDashboardStats = async (dateRange: DateRange): Promise<DashboardStats> => {
-    const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/stats`, dateRange);
+export const getDashboardStats = async (dateRange: DateRange, branchId?: number): Promise<DashboardStats> => {
+    let url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/stats`, dateRange);
+    if(branchId) {
+        url += `&branchId=${branchId}`;
+    }
     const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<DashboardStats>(response);
 };
 
-export const getSalesChartData = async (dateRange: DateRange): Promise<SalesChartDataPoint[]> => {
-    const url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/sales-chart`, dateRange);
+export const getSalesChartData = async (dateRange: DateRange, branchId?: number): Promise<SalesChartDataPoint[]> => {
+    let url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/sales-chart`, dateRange);
+    if(branchId) {
+        url += `&branchId=${branchId}`;
+    }
     const response = await fetch(url, { headers: getAuthHeaders() });
     return handleResponse<SalesChartDataPoint[]>(response);
 };

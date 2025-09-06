@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, Bell, LogOut } from 'lucide-react';
 import { Branch } from '@masuma-ea/types';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 interface HeaderProps {
     branches: Branch[];

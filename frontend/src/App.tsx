@@ -1,30 +1,33 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Shipping from './pages/Shipping';
-import VinPicker from './pages/VinPicker';
-import Reports from './pages/Reports';
-import Sales from './pages/Sales';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Inventory from './pages/Inventory';
-import B2BManagement from './pages/B2BManagement';
-import Customers from './pages/Customers';
-import POS from './pages/POS';
-import Users from './pages/Users';
-import Invoices from './pages/Invoices';
-import Quotations from './pages/Quotations';
-import Settings from './pages/Settings';
-import Profile from './pages/Profile';
+import Layout from './components/Layout.tsx';
+import Dashboard from './pages/Dashboard.tsx';
+import Shipping from './pages/Shipping.tsx';
+import VinPicker from './pages/VinPicker.tsx';
+import Reports from './pages/Reports.tsx';
+import Sales from './pages/Sales.tsx';
+import Login from './pages/Login.tsx';
+import Register from './pages/Register.tsx';
+import Inventory from './pages/Inventory.tsx';
+import B2BManagement from './pages/B2BManagement.tsx';
+import Customers from './pages/Customers.tsx';
+import POS from './pages/POS.tsx';
+import Users from './pages/Users.tsx';
+import Invoices from './pages/Invoices.tsx';
+import Quotations from './pages/Quotations.tsx';
+import Settings from './pages/Settings.tsx';
+import Profile from './pages/Profile.tsx';
 import { LoaderCircle } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import { PERMISSIONS } from './config/permissions';
+import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import { PERMISSIONS } from './config/permissions.ts';
+import { UserRole } from '@masuma-ea/types';
+import B2BPortal from './pages/B2BPortal.tsx';
+import Branches from './pages/Branches.tsx';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -32,6 +35,21 @@ const AppContent: React.FC = () => {
         <LoaderCircle className="h-12 w-12 animate-spin text-orange-500" />
       </div>
     );
+  }
+
+  // B2B users get a different default route and layout
+  if (isAuthenticated && user?.role === UserRole.B2B_CLIENT) {
+    return (
+       <Routes>
+          <Route path="/" element={<Layout />}>
+              <Route index element={<Navigate to="/b2b-portal" replace />} />
+              <Route path="b2b-portal" element={<ProtectedRoute permission={PERMISSIONS.CREATE_STOCK_REQUEST}><B2BPortal /></ProtectedRoute>} />
+              <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.VIEW_INVENTORY}><Inventory /></ProtectedRoute>} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="*" element={<Navigate to="/b2b-portal" replace />} />
+          </Route>
+       </Routes>
+    )
   }
 
   return (
@@ -52,6 +70,7 @@ const AppContent: React.FC = () => {
           <Route path="reports" element={<ProtectedRoute permission={PERMISSIONS.VIEW_REPORTS}><Reports /></ProtectedRoute>} />
           <Route path="vin-picker" element={<ProtectedRoute permission={PERMISSIONS.USE_VIN_PICKER}><VinPicker /></ProtectedRoute>} />
           <Route path="settings" element={<ProtectedRoute permission={PERMISSIONS.EDIT_SETTINGS}><Settings /></ProtectedRoute>} />
+          <Route path="branches" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_BRANCHES}><Branches /></ProtectedRoute>} />
           <Route path="profile" element={<Profile />} />
         </Route>
       ) : (

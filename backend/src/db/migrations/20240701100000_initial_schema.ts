@@ -48,6 +48,7 @@ export async function up(knex: Knex): Promise<void> {
     table.string('password_hash').nullable(); // Nullable for Google Sign-In users
     table.string('role').notNullable();
     table.uuid('b2b_application_id').nullable().references('id').inTable('b2b_applications').onDelete('SET NULL');
+    table.integer('customer_id').unsigned().nullable().references('id').inTable('customers').onDelete('SET NULL');
     table.enum('status', ['Active', 'Inactive']).notNullable().defaultTo('Active');
     table.timestamps(true, true);
   });
@@ -149,11 +150,38 @@ export async function up(knex: Knex): Promise<void> {
     table.string('mpesa_receipt_number').nullable();
     table.timestamps(true, true);
   });
+
+  await knex.schema.createTable('stock_requests', (table) => {
+      table.increments('id').primary();
+      table.uuid('b2b_user_id').notNullable().references('id').inTable('users');
+      table.integer('branch_id').unsigned().notNullable().references('id').inTable('branches');
+      table.enum('status', ['Pending', 'Approved', 'Rejected', 'Shipped']).notNullable().defaultTo('Pending');
+      table.timestamps(true, true);
+  });
+
+  await knex.schema.createTable('stock_request_items', (table) => {
+      table.increments('id').primary();
+      table.integer('stock_request_id').unsigned().notNullable().references('id').inTable('stock_requests').onDelete('CASCADE');
+      table.uuid('product_id').notNullable().references('id').inTable('products');
+      table.integer('quantity').unsigned().notNullable();
+      table.decimal('wholesale_price_at_request', 10, 2).notNullable();
+  });
+
+  await knex.schema.createTable('audit_logs', (table) => {
+      table.increments('id').primary();
+      table.uuid('user_id').notNullable().references('id').inTable('users');
+      table.string('action').notNullable();
+      table.json('details').nullable();
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+  });
 }
 
 
 export async function down(knex: Knex): Promise<void> {
   // Drop in reverse order of creation due to foreign key constraints
+  await knex.schema.dropTableIfExists('audit_logs');
+  await knex.schema.dropTableIfExists('stock_request_items');
+  await knex.schema.dropTableIfExists('stock_requests');
   await knex.schema.dropTableIfExists('mpesa_transactions');
   await knex.schema.dropTableIfExists('app_settings');
   await knex.schema.dropTableIfExists('shipping_labels');

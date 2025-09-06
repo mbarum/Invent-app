@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
-import Pagination from '../components/ui/Pagination';
-import { PlusCircle, Printer, X, LoaderCircle, AlertTriangle } from 'lucide-react';
-import { ShippingLabel, ShippingStatus, Branch, Customer, Sale, Invoice } from '@masuma-ea/types';
-import ShippingLabelPrint from '../components/ShippingLabelPrint';
-import { getBranches, createShippingLabel, updateShippingLabelStatus, getInvoiceDetails } from '../services/api';
+import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card.tsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import Button from '../components/ui/Button.tsx';
+import Input from '../components/ui/Input.tsx';
+import Select from '../components/ui/Select.tsx';
+import Pagination from '../components/ui/Pagination.tsx';
+import { PlusCircle, Printer, X, LoaderCircle } from 'lucide-react';
+import { ShippingLabel, ShippingStatus, Branch, Customer } from '@masuma-ea/types';
+import ShippingLabelPrint from '../components/ShippingLabelPrint.tsx';
+import { getBranches, createShippingLabel, updateShippingLabelStatus, getInvoiceDetails } from '../services/api.ts';
 import toast from 'react-hot-toast';
-import { useAuth } from '../contexts/AuthContext';
-import { PERMISSIONS } from '../config/permissions';
-import { useDataStore } from '../store/dataStore';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { PERMISSIONS } from '../config/permissions.ts';
+import { useDataStore } from '../store/dataStore.ts';
 
 const getStatusBadge = (status: ShippingStatus) => {
   switch (status) {

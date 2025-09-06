@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ShippingLabel } from '@masuma-ea/types';
 
@@ -5,13 +6,6 @@ interface ShippingLabelPrintProps {
   label: ShippingLabel | null;
   format: 'thermal' | 'a5';
 }
-
-const MasumaLogoOrange = () => (
-    <svg width="150" height="50" viewBox="0 0 162 43" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-orange-500">
-        <path d="M29.5391 3.51367L19.4932 26.248L9.44727 3.51367H0.939453V42.5H8.32422V14.6309L16.2051 33.7285H22.7832L30.6641 14.6309V42.5H38.0488V3.51367H29.5391Z" fill="currentColor"/>
-        <path d="M64.7175 3.51367H48.4206V42.5H55.8054V25.2793H64.0906C71.321 25.2793 75.321 20.6533 75.321 14.3965C75.321 8.13965 71.321 3.51367 64.0906 3.51367H64.7175ZM64.0906 18.5723H55.8054V10.2207H64.0906C67.3181 10.2207 68.6413 11.959 68.6413 14.3965C68.6413 16.834 67.3181 18.5723 64.0906 18.5723Z" fill="currentColor"/>
-    </svg>
-);
 
 const QrCodePlaceholder = () => (
     <svg viewBox="0 0 100 100" className="w-24 h-24" xmlns="http://www.w3.org/2000/svg">
@@ -31,8 +25,8 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
         {/* Header */}
         <div className="flex justify-between items-center pb-2 border-b-2 border-black">
           <div>
-            <MasumaLogoOrange />
-            <p className="text-xs">Masuma Autoparts East Africa</p>
+            
+            <p className="text-xs font-semibold pt-4">Masuma Autoparts East Africa LTD</p>
           </div>
           <div className="text-right">
             <p className="font-bold text-sm">SHIPPING LABEL</p>
@@ -103,6 +97,9 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
             <p className="text-xs tracking-widest font-mono">{orderRef}</p>
           </div>
         </div>
+        <p className="text-center text-xs text-gray-800 mt-2 pt-2 border-t border-dashed border-gray-400">
+            Genuine Masuma Parts – Quality You Can Trust
+        </p>
       </div>
     </div>
   );

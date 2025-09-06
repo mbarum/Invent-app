@@ -17,6 +17,7 @@ interface SharedDataState {
   refetchProducts: () => Promise<void>;
   refetchCustomers: () => Promise<void>;
   refetchSales: () => Promise<void>;
+  refetchBranches: () => Promise<void>;
 }
 
 export const useDataStore = create<SharedDataState>((set, get) => ({
@@ -71,6 +72,15 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
     } catch (error) {
       console.error("Failed to refetch sales:", error);
     }
-  }
+  },
+
+  refetchBranches: async () => {
+    try {
+      const branches = await getBranches();
+      set({ branches });
+    } catch (error) {
+      console.error("Failed to refetch branches:", error);
+    }
+  },
 
 }));

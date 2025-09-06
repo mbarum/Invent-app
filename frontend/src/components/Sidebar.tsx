@@ -15,9 +15,12 @@ import {
   UserCircle,
   Briefcase,
   UserCog,
+  Building2,
+  PackagePlus,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { PERMISSIONS } from '../config/permissions';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { PERMISSIONS } from '../config/permissions.ts';
+import { UserRole } from '@masuma-ea/types';
 
 const MasumaLogo = () => (
     <div className="text-gray-200">
@@ -59,7 +62,7 @@ const MasumaLogo = () => (
 );
 
 
-const navItems = [
+const staffNavItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: PERMISSIONS.VIEW_DASHBOARD },
   { to: '/inventory', icon: Boxes, label: 'Inventory', permission: PERMISSIONS.VIEW_INVENTORY },
   { to: '/pos', icon: ShoppingCart, label: 'POS', permission: PERMISSIONS.CREATE_SALE },
@@ -74,7 +77,13 @@ const navItems = [
   { to: '/vin-picker', icon: Car, label: 'VIN Picker', permission: PERMISSIONS.USE_VIN_PICKER },
 ];
 
+const b2bNavItems = [
+    { to: '/b2b-portal', icon: PackagePlus, label: 'Stock Request', permission: PERMISSIONS.CREATE_STOCK_REQUEST },
+    { to: '/inventory', icon: Boxes, label: 'Wholesale Catalogue', permission: PERMISSIONS.VIEW_INVENTORY },
+];
+
 const bottomNavItems = [
+  { to: '/branches', icon: Building2, label: 'Branches', permission: PERMISSIONS.MANAGE_BRANCHES },
   { to: '/settings', icon: Settings, label: 'Settings', permission: PERMISSIONS.EDIT_SETTINGS },
   { to: '/profile', icon: UserCircle, label: 'Profile', permission: null }, // All users can see their profile
 ];
@@ -96,7 +105,10 @@ const NavItem: React.FC<{ to: string; icon: React.ElementType; label: string }> 
 );
 
 const Sidebar: React.FC = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
+
+  const isB2B = user?.role === UserRole.B2B_CLIENT;
+  const navItems = isB2B ? b2bNavItems : staffNavItems;
 
   const accessibleNavItems = navItems.filter(item => hasPermission(item.permission));
   const accessibleBottomNavItems = bottomNavItems.filter(item => item.permission === null || hasPermission(item.permission));

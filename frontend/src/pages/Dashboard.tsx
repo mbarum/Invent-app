@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle, Pencil, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getDashboardStats, updateSalesTarget, getSalesChartData } from '../services/api';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
+import { getDashboardStats, updateSalesTarget, getSalesChartData, getFastMovingProducts } from '../services/api.ts';
+import Button from '../components/ui/Button.tsx';
+import Input from '../components/ui/Input.tsx';
 import toast from 'react-hot-toast';
-import DateRangePicker from '../components/ui/DateRangePicker';
-import { DashboardStats, SalesChartDataPoint } from '@masuma-ea/types';
+import DateRangePicker from '../components/ui/DateRangePicker.tsx';
+import { DashboardStats, SalesChartDataPoint, Branch, FastMovingProduct } from '@masuma-ea/types';
 
 interface OutletContextType {
+  currentBranch: Branch;
   currentCurrency: string;
   exchangeRates: { [key: string]: number };
 }
@@ -30,9 +31,10 @@ const ProgressBar: React.FC<{ value: number, max: number }> = ({ value, max }) =
 const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
 const Dashboard: React.FC = () => {
-  const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
+  const { currentBranch, currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [salesChartData, setSalesChartData] = useState<SalesChartDataPoint[]>([]);
+  const [fastMovingProducts, setFastMovingProducts] = useState<FastMovingProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTargetModal, setShowTargetModal] = useState(false);
@@ -47,15 +49,19 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!currentBranch) return; // Don't fetch until branch is loaded
       try {
         setLoading(true);
         setError(null);
-        const [statsData, chartData] = await Promise.all([
-          getDashboardStats(dateRange),
-          getSalesChartData(dateRange),
+        const [statsData, chartData, fastMovingData] = await Promise.all([
+          getDashboardStats(dateRange, currentBranch.id),
+          getSalesChartData(dateRange, currentBranch.id),
+          getFastMovingProducts(dateRange, currentBranch.id),
         ]);
         setStats(statsData);
         setSalesChartData(chartData);
+        setFastMovingProducts(fastMovingData);
+
         if (stats === null) {
           setNewTarget(statsData.salesTarget.toString());
         }
@@ -67,7 +73,7 @@ const Dashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, [dateRange]);
+  }, [dateRange, currentBranch]);
 
   const formatCurrency = (amount: number) => {
     const rate = exchangeRates[currentCurrency] || 1;
@@ -151,7 +157,59 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Sales Target Card */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <Card className="xl:col-span-2">
+              <CardHeader>
+                <CardTitle>Sales Overview</CardTitle>
+                <CardDescription>A summary of sales and revenue for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={salesChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                      <XAxis dataKey="name" stroke="#888888" tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} />
+                      <YAxis stroke="#888888" tickFormatter={(value) => formatCurrency(value)} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: '1px solid #374151',
+                          color: '#f3f4f6',
+                        }}
+                        formatter={(value: number, name: string) => name === 'revenue' ? formatCurrency(value) : value}
+                      />
+                      <Legend />
+                      <Bar dataKey="sales" fill="#f97316" name="Sales" />
+                      <Bar dataKey="revenue" fill="#ea580c" name="Revenue" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Fast-Moving Products</CardTitle>
+                    <CardDescription>Top 10 sellers in this period.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ul className="space-y-3">
+                        {fastMovingProducts.map(p => (
+                            <li key={p.id} className="flex justify-between items-center text-sm">
+                                <div>
+                                    <p className="font-medium text-gray-200">{p.name}</p>
+                                    <p className="text-xs text-gray-400">{p.totalSold} units sold</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-semibold">{p.currentStock} in stock</p>
+                                    {p.currentStock < 10 && <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full">Low Stock</span>}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </CardContent>
+            </Card>
+        </div>
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -173,35 +231,6 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Sales Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Overview</CardTitle>
-            <CardDescription>A summary of sales and revenue for the selected period.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                  <XAxis dataKey="name" stroke="#888888" tickFormatter={(dateStr) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} />
-                  <YAxis stroke="#888888" tickFormatter={(value) => formatCurrency(value)} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      color: '#f3f4f6',
-                    }}
-                    formatter={(value: number, name: string) => name === 'revenue' ? formatCurrency(value) : value}
-                  />
-                  <Legend />
-                  <Bar dataKey="sales" fill="#f97316" name="Sales" />
-                  <Bar dataKey="revenue" fill="#ea580c" name="Revenue" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
       </>
     );
   }
@@ -213,7 +242,7 @@ const Dashboard: React.FC = () => {
         <h1 className="text-3xl font-bold">Dashboard</h1>
       </div>
 
-      <DateRangePicker onRangeChange={setDateRange} initialRange={dateRange} />
+      <DateRangePicker range={dateRange} onRangeChange={setDateRange} />
 
       {renderContent()}
 

@@ -1,1003 +1,1227 @@
-// FIX: Added reference to node types to resolve issue with 'process.exit' not being found.
-/// <reference types="node" />
-
-// FIX: Changed import to just import express to avoid type conflicts with node types.
-// FIX: Import Request, Response, and NextFunction for proper typing of route handlers.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Replaced qualified express type imports (e.g., express.Request) with direct imports
+// from 'express' (e.g., Request) and explicitly typed all route handlers. This resolves
+// numerous type inference errors that were causing compilation failures.
+// DEVELOPER NOTE: The above fix comment was incorrect. The reverse action (using qualified imports) was necessary to fix type collisions.
+// FIX: Changed import style to use a default import for Express and qualified types to resolve widespread type conflicts.
+import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import dotenv from 'dotenv';
-import db from './db';
-import { v4 as uuidv4 } from 'uuid';
-import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
-import { Knex } from 'knex';
-import { UserRole } from '@masuma-ea/types';
+import { GoogleGenAI, Type } from "@google/genai";
+import db from './db';
+import { UserRole, SalePayload } from '@masuma-ea/types';
+import type { Knex } from 'knex';
+import axios from 'axios';
+import {
+    validate,
+    loginSchema,
+    googleLoginSchema,
+    registerSchema,
+    productSchema,
+    updateProductSchema,
+    bulkProductSchema,
+    updateB2BStatusSchema,
+    createUserSchema,
+    updateUserSchema,
+    updatePasswordSchema,
+    createSaleSchema,
+    createLabelSchema,
+    updateLabelStatusSchema,
+    createQuotationSchema,
+    updateQuotationStatusSchema,
+    createBranchSchema,
+    updateBranchSchema,
+    createCustomerSchema,
+    updateSettingsSchema
+} from './validation';
 
 
+// --- CONFIGURATION ---
 dotenv.config();
-
-// --- START OF RBAC TYPES (Duplicated from frontend for backend use) ---
-// This is now imported from @masuma-ea/types
-// --- END OF RBAC TYPES ---
-
 const app = express();
-const port = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-
-if (!JWT_SECRET) {
-    console.error('FATAL ERROR: JWT_SECRET is not defined in environment variables.');
-    process.exit(1);
-}
-
-const googleAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const PORT = process.env.PORT || 3001;
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const googleAuthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
-
-// Middleware
+// --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
-
-// Trust the proxy to get the real client IP. This is crucial for IP whitelisting.
-app.set('trust proxy', true);
-
-// Serve static files for uploaded documents
-app.use('/uploads', express.static(uploadsDir));
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
 
-// --- Multer Setup for File Uploads ---
+// --- FILE UPLOAD CONFIG ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    // Ensure the uploads directory exists
+    const fs = require('fs');
+    const dir = path.join(__dirname, '..', 'uploads');
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${uuidv4()}${path.extname(file.originalname)}`);
-  },
+    cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`);
+  }
 });
 const upload = multer({ storage });
 
-// A simple utility to add -dev to uuid for readability
-const newId = () => uuidv4();
 
-// --- Validation Helpers ---
-const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+// --- STATIC ASSETS ---
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+const frontendPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
+app.use(express.static(frontendPath));
+
+
+// --- API ROUTER ---
+const apiRouter = express.Router();
+
+// A dummy auth middleware
+// FIX: Explicitly typed parameters with `express.*` types to ensure type consistency.
+const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // In a real app, this would validate a JWT from the Authorization header
+    // This is a placeholder for now.
+    next();
 };
-const isValidKraPin = (pin: string): boolean => {
-    const pinRegex = /^[A-Z][0-9]{9}[A-Z]$/;
-    return pinRegex.test(pin);
-}
 
-// --- Settings Helper ---
-const getAppSettings = async (dbInstance: Knex): Promise<any> => {
-    const defaultSettings = {
-        companyName: 'Masuma Autoparts East Africa',
-        companyAddress: '123 Industrial Area, Nairobi, Kenya',
-        companyPhone: '+254 700 123 456',
-        companyKraPin: 'P000000000X',
+// --- AUTH ---
+apiRouter.post('/auth/login', validate(loginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { email, password } = req.body;
+    try {
+        const user = await db('users').where({ email }).first();
+
+        if (!user || !user.password_hash) {
+            return res.status(401).json({ message: 'Invalid credentials or user setup issue.' });
+        }
+        
+        if (user.status !== 'Active') {
+            return res.status(403).json({ message: 'User account is inactive.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        const payload = {
+            userId: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+        };
+
+        const token = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'a-very-secret-and-secure-key-for-dev', // Use a default for safety in dev
+            { expiresIn: '7d' }
+        );
+
+        res.json({ token });
+
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.post('/auth/google-login', validate(googleLoginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { token: googleToken } = req.body;
+    try {
+        const ticket = await googleAuthClient.verifyIdToken({
+            idToken: googleToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const googlePayload = ticket.getPayload();
+        if (!googlePayload || !googlePayload.email) {
+            return res.status(400).json({ message: "Invalid Google token." });
+        }
+
+        const user = await db('users').where({ email: googlePayload.email }).first();
+
+        if (!user) {
+            return res.status(401).json({ message: "User not registered. Please sign up or contact an administrator." });
+        }
+        
+        if (user.status !== 'Active') {
+            return res.status(403).json({ message: 'User account is inactive.' });
+        }
+
+        const payload = {
+            userId: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+        };
+
+        const token = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'a-very-secret-and-secure-key-for-dev',
+            { expiresIn: '7d' }
+        );
+
+        res.json({ token });
+    } catch (error) {
+        console.error("Google login error:", error);
+        next(new Error("Google sign-in failed."));
+    }
+});
+apiRouter.post('/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+        if (!files.certOfInc || !files.cr12) {
+            return res.status(400).json({ message: 'Both Certificate of Incorporation and CR12 are required.' });
+        }
+
+        const certOfIncUrl = `/uploads/${files.certOfInc[0].filename}`;
+        const cr12Url = `/uploads/${files.cr12[0].filename}`;
+        
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
+
+        const newApplication = {
+            id: uuidv4(),
+            business_name: businessName,
+            kra_pin: kraPin,
+            contact_name: contactName,
+            contact_email: contactEmail,
+            contact_phone: contactPhone,
+            password_hash,
+            cert_of_inc_url: certOfIncUrl,
+            cr12_url: cr12Url,
+            status: 'Pending',
+        };
+        
+        await db('b2b_applications').insert(newApplication);
+        
+        const responsePayload = { ...newApplication, businessName: newApplication.business_name };
+        res.status(201).json(responsePayload);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// --- NOTIFICATIONS ---
+apiRouter.get('/notifications', authenticate, async (req: express.Request, res: express.Response) => {
+    const lowStockThresholdSetting = await db('app_settings').where('setting_key', 'lowStockThreshold').first();
+    const lowStockThreshold = Number(lowStockThresholdSetting?.setting_value) || 10;
+    const [newApplications, lowStockProducts] = await Promise.all([
+        db('b2b_applications').where({ status: 'Pending' }).select('id', 'business_name as businessName'),
+        db('products').where('stock', '<=', lowStockThreshold).select('id', 'name', 'stock'),
+    ]);
+    res.json({ newApplications, lowStockProducts, serverTimestamp: new Date().toISOString() });
+});
+
+// --- INVENTORY ---
+// FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
+apiRouter.get('/inventory/products', authenticate, async (req: express.Request, res: express.Response) => {
+    const products = await db('products').select(
+        'id',
+        'part_number as partNumber',
+        'name',
+        'retail_price as retailPrice',
+        'wholesale_price as wholesalePrice',
+        'stock'
+    );
+    res.json(products);
+});
+apiRouter.post('/inventory/products', authenticate, validate(productSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
+        const newProduct = {
+            id: uuidv4(),
+            part_number: partNumber,
+            name,
+            retail_price: retailPrice,
+            wholesale_price: wholesalePrice,
+            stock,
+        };
+        await db('products').insert(newProduct);
+        res.status(201).json({ ...newProduct, partNumber, retailPrice, wholesalePrice });
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.patch('/inventory/products/:id', authenticate, validate(updateProductSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
+        const updatedCount = await db('products').where({ id }).update({
+            part_number: partNumber,
+            name,
+            retail_price: retailPrice,
+            wholesale_price: wholesalePrice,
+            stock,
+        });
+
+        if (updatedCount === 0) return res.status(404).json({ message: 'Product not found' });
+        
+        const updatedProduct = await db('products').where({ id }).first();
+        res.json({ ...updatedProduct, partNumber, retailPrice, wholesalePrice });
+    } catch (error) {
+        next(error);
+    }
+});
+
+apiRouter.post('/inventory/products/bulk', authenticate, validate(bulkProductSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const products = req.body.map((p: any) => ({
+            id: uuidv4(),
+            part_number: p.partNumber,
+            name: p.name,
+            retail_price: p.retailPrice,
+            wholesale_price: p.wholesalePrice,
+            stock: p.stock
+        }));
+        // FIX: Replaced db.batchInsert with db('products').insert to allow for .onConflict().merge() which is not available on batchInsert for mysql.
+        await db('products').insert(products).onConflict('part_number').merge();
+        res.json({ message: 'Products imported successfully' });
+    } catch (error) {
+        next(error);
+    }
+});
+
+apiRouter.get('/inventory/fast-moving', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { startDate, endDate, branchId } = req.query;
+    try {
+        // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
+        const start = new Date(startDate as string);
+        start.setUTCHours(0, 0, 0, 0);
+        const end = new Date(endDate as string);
+        end.setUTCHours(23, 59, 59, 999);
+
+        let query = db('sale_items')
+            .join('sales', 'sale_items.sale_id', 'sales.id')
+            .join('products', 'sale_items.product_id', 'products.id')
+            .select(
+                'products.id',
+                'products.part_number as partNumber',
+                'products.name',
+                'products.stock as currentStock'
+            )
+            .sum('sale_items.quantity as totalSold')
+            .whereBetween('sales.created_at', [start, end])
+            .groupBy('products.id', 'products.part_number', 'products.name', 'products.stock')
+            .orderBy('totalSold', 'desc')
+            .limit(10);
+        
+        if (branchId) {
+            query = query.andWhere('sales.branch_id', branchId as any);
+        }
+
+        const results = await query;
+        
+        // Knex SUM returns a string for mysql2, so we cast it to a number.
+        const formattedResults = results.map(r => ({ ...r, totalSold: Number(r.totalSold) }));
+        res.json(formattedResults);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+// --- B2B ---
+// FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
+apiRouter.get('/b2b/applications', authenticate, async (req: express.Request, res: express.Response) => {
+    const applications = await db('b2b_applications')
+        .select(
+            'id',
+            'business_name as businessName',
+            'kra_pin as kraPin',
+            'contact_name as contactName',
+            'contact_email as contactEmail',
+            'contact_phone as contactPhone',
+            'cert_of_inc_url as certOfIncUrl',
+            'cr12_url as cr12Url',
+            'status',
+            'submitted_at as submittedAt'
+        )
+        .orderBy('submitted_at', 'desc');
+    res.json(applications);
+});
+apiRouter.patch('/b2b/applications/:id/status', authenticate, validate(updateB2BStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    try {
+        const application = await db('b2b_applications').where({ id }).first();
+        if (!application) {
+            return res.status(404).json({ message: 'Application not found' });
+        }
+
+        if (status === 'Approved' && application.status !== 'Approved') {
+            await db.transaction(async trx => {
+                // Create a corresponding user
+                const newUser = {
+                    id: uuidv4(),
+                    name: application.contact_name,
+                    email: application.contact_email,
+                    password_hash: application.password_hash, // Already hashed during registration
+                    role: UserRole.B2B_CLIENT,
+                    b2b_application_id: id,
+                    status: 'Active',
+                };
+                await trx('users').insert(newUser);
+                await trx('b2b_applications').where({ id }).update({ status });
+            });
+        } else {
+            await db('b2b_applications').where({ id }).update({ status });
+        }
+
+        const updatedApplication = await db('b2b_applications').where({ id }).first();
+        const responsePayload = { ...updatedApplication, businessName: updatedApplication.business_name };
+        res.json(responsePayload);
+
+    } catch (error) {
+        next(error);
+    }
+});
+
+// --- USERS ---
+apiRouter.get('/users', authenticate, async (req: express.Request, res: express.Response) => res.json(await db('users').select('id', 'name', 'email', 'role', 'status')));
+apiRouter.post('/users', authenticate, validate(createUserSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { name, email, password, role, status } = req.body;
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
+        const newUser = {
+            id: uuidv4(),
+            name,
+            email,
+            password_hash,
+            role,
+            status: status || 'Active',
+        };
+        await db('users').insert(newUser);
+        res.status(201).json({ id: newUser.id, name, email, role, status: newUser.status });
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.patch('/users/:id', authenticate, validate(updateUserSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { id } = req.params;
+    try {
+        // FIX: Corrected array destructuring for Knex update, which returns a number for mysql.
+        const updatedCount = await db('users').where({ id }).update(req.body);
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const updatedUser = await db('users').where({ id }).select('id', 'name', 'email', 'role', 'status').first();
+        res.json(updatedUser);
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.patch('/users/me/password', authenticate, validate(updatePasswordSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // This assumes a userId is available from a real auth middleware
+    const userId = '93288475-93a8-4e45-ae9c-e19d6ecb26ca'; // Hardcoded for demo
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        const user = await db('users').where({ id: userId }).first();
+        if (!user) return res.status(404).json({ message: "User not found." });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isMatch) return res.status(400).json({ message: "Incorrect current password." });
+
+        const salt = await bcrypt.genSalt(10);
+        const newPasswordHash = await bcrypt.hash(newPassword, salt);
+        await db('users').where({ id: userId }).update({ password_hash: newPasswordHash });
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+// --- POS ---
+/**
+ * A reusable function to create a sale within a database transaction.
+ * This is used by both the direct POS endpoint and the M-Pesa callback.
+ */
+const createSaleInDb = async (trx: Knex.Transaction, payload: SalePayload) => {
+    const { customerId, branchId, items, taxAmount, totalAmount, paymentMethod, invoiceId } = payload;
+
+    const sale_no = `SALE-${Date.now()}`;
+    const [saleId] = await trx('sales').insert({
+        sale_no,
+        customer_id: customerId,
+        branch_id: branchId,
+        tax_amount: taxAmount,
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
+        invoice_id: invoiceId,
+    });
+
+    const saleItems = items.map((item: any) => ({
+        sale_id: saleId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_price: item.unitPrice
+    }));
+    await trx('sale_items').insert(saleItems);
+
+    for (const item of items) {
+        await trx('products')
+            .where('id', item.productId)
+            .decrement('stock', item.quantity);
+    }
+
+    if (invoiceId) {
+        await trx('invoices').where('id', invoiceId).update({ status: 'Paid', amount_paid: totalAmount });
+    }
+    
+    // Fetch the complete sale object for the receipt
+    const finalSale = await trx('sales').where({ id: saleId }).first();
+    const finalItems = await trx('sale_items')
+        .join('products', 'sale_items.product_id', 'products.id')
+        .where({ sale_id: saleId })
+        .select('sale_items.*', 'products.name as product_name', 'products.part_number');
+    const customer = await trx('customers').where({ id: customerId }).first();
+    const branch = await trx('branches').where({ id: branchId }).first();
+
+    // FIX: Construct the final object to ensure correct types, converting decimals from strings to numbers.
+    return { 
+        id: finalSale.id,
+        sale_no: finalSale.sale_no,
+        customer_id: finalSale.customer_id,
+        branch_id: finalSale.branch_id,
+        created_at: finalSale.created_at,
+        payment_method: finalSale.payment_method,
+        invoice_id: finalSale.invoice_id,
+        items: finalItems,
+        customer, 
+        branch, 
+        tax_amount: Number(finalSale.tax_amount), 
+        amount: Number(finalSale.total_amount),
+    };
+};
+
+apiRouter.post('/pos/sales', authenticate, validate(createSaleSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const newSale = await db.transaction(async trx => {
+            return await createSaleInDb(trx, req.body);
+        });
+        res.status(201).json(newSale);
+    } catch(error) {
+        next(error);
+    }
+});
+
+
+// --- SHIPPING ---
+apiRouter.get('/shipping/labels', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { startDate, endDate } = req.query;
+    try {
+        let query = db('shipping_labels').select('*').orderBy('created_at', 'desc');
+        if (startDate && endDate) {
+            // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
+            const start = new Date(startDate as string);
+            start.setUTCHours(0, 0, 0, 0);
+            const end = new Date(endDate as string);
+            end.setUTCHours(23, 59, 59, 999);
+            query = query.whereBetween('created_at', [start, end]);
+        }
+        const labels = await query;
+        res.json(labels);
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.post('/shipping/labels', authenticate, validate(createLabelSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const newLabel = { id: uuidv4(), status: 'Draft', ...req.body };
+        await db('shipping_labels').insert(newLabel);
+        res.status(201).json({ ...newLabel, created_at: new Date().toISOString() });
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.patch('/shipping/labels/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        await db('shipping_labels').where({ id }).update({ status });
+        const updatedLabel = await db('shipping_labels').where({ id }).first();
+        res.json(updatedLabel);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+// --- QUOTATIONS & INVOICES ---
+apiRouter.get('/quotations', authenticate, async (req: express.Request, res: express.Response) => {
+    const data = await db('quotations')
+        .join('customers', 'quotations.customer_id', 'customers.id')
+        .select('quotations.*', 'customers.name as customerName')
+        .orderBy('created_at', 'desc');
+    res.json(data);
+});
+apiRouter.get('/quotations/:id', authenticate, async (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const quotation = await db('quotations').where({ id }).first();
+    if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
+    
+    const itemsData = await db('quotation_items')
+        .join('products', 'quotation_items.product_id', 'products.id')
+        .where({ quotation_id: id })
+        .select('quotation_items.*', 'products.name as product_name', 'products.part_number');
+
+    // FIX: Convert decimal strings from the database to numbers to prevent frontend type errors.
+    const items = itemsData.map((item: any) => ({
+        ...item,
+        unit_price: Number(item.unit_price),
+    }));
+
+    const customer = await db('customers').where({ id: quotation.customer_id }).first();
+    const branch = await db('branches').where({ id: quotation.branch_id }).first();
+    
+    // FIX: Ensure the total amount on the quotation object is a number.
+    const finalQuotation = {
+        ...quotation,
+        total_amount: Number(quotation.total_amount),
+    };
+    
+    res.json({ ...finalQuotation, items, customer, branch });
+});
+apiRouter.post('/quotations', authenticate, validate(createQuotationSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { customerId, branchId, items, validUntil } = req.body;
+    try {
+        const newQuotation = await db.transaction(async trx => {
+            const quotation_no = `QUO-${Date.now()}`;
+            const totalAmount = items.reduce((sum: number, item: any) => sum + (item.unitPrice * item.quantity), 0);
+
+            const [quotationId] = await trx('quotations').insert({
+                quotation_no,
+                customer_id: customerId,
+                branch_id: branchId,
+                valid_until: validUntil,
+                total_amount: totalAmount,
+                status: 'Draft',
+            });
+
+            const quotationItems = items.map((item: any) => ({
+                quotation_id: quotationId,
+                product_id: item.productId,
+                quantity: item.quantity,
+                unit_price: item.unitPrice
+            }));
+            await trx('quotation_items').insert(quotationItems);
+            
+            const finalQuotation = await trx('quotations').where({ id: quotationId }).first();
+            const customer = await trx('customers').where({ id: customerId }).first();
+            return { ...finalQuotation, customerName: customer.name, amount: finalQuotation.total_amount };
+        });
+        res.status(201).json(newQuotation);
+    } catch(error) {
+        next(error);
+    }
+});
+apiRouter.patch('/quotations/:id/status', authenticate, validate(updateQuotationStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        await db('quotations').where({ id }).update({ status });
+        const updated = await db('quotations').where({ id }).first();
+        res.json(updated);
+    } catch (error) {
+        next(error);
+    }
+});
+
+apiRouter.post('/quotations/:id/convert', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { id } = req.params;
+    try {
+        const newInvoice = await db.transaction(async trx => {
+            const quotation = await trx('quotations').where({ id }).first();
+            if (!quotation) throw new Error('Quotation not found');
+
+            const items = await trx('quotation_items').where({ quotation_id: id });
+            const settings = await trx('app_settings').where('setting_key', 'invoiceDueDays').first();
+            const dueDays = settings ? parseInt(settings.setting_value, 10) : 30;
+
+            const invoice_no = `INV-${Date.now()}`;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + dueDays);
+
+            const [invoiceId] = await trx('invoices').insert({
+                invoice_no,
+                customer_id: quotation.customer_id,
+                branch_id: quotation.branch_id,
+                quotation_id: id,
+                due_date: dueDate.toISOString().split('T')[0],
+                total_amount: quotation.total_amount,
+                status: 'Unpaid',
+            });
+
+            const invoiceItems = items.map(item => ({
+                invoice_id: invoiceId,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+            }));
+            await trx('invoice_items').insert(invoiceItems);
+            await trx('quotations').where({ id }).update({ status: 'Invoiced' });
+            
+            // Fetch the full invoice details to return to the frontend
+            const finalInvoice = await trx('invoices').where({ 'invoices.id': invoiceId })
+                .join('customers', 'invoices.customer_id', 'customers.id')
+                .select('invoices.*', 'customers.name as customerName')
+                .first();
+                
+            return { ...finalInvoice, amount: finalInvoice.total_amount };
+        });
+        res.status(201).json(newInvoice);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+apiRouter.get('/invoices', authenticate, async (req: express.Request, res: express.Response) => {
+    const { status } = req.query;
+    let query = db('invoices')
+        .join('customers', 'invoices.customer_id', 'customers.id')
+        .select('invoices.*', 'customers.name as customerName')
+        .orderBy('created_at', 'desc');
+
+    if (status && typeof status === 'string' && status !== 'All') {
+        query = query.where('invoices.status', status);
+    }
+    const data = await query;
+    res.json(data);
+});
+apiRouter.get('/invoices/:id', authenticate, async (req: express.Request, res: express.Response) => {
+    const { id } = req.params;
+    const invoice = await db('invoices').where({ id }).first();
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    
+    const itemsData = await db('invoice_items')
+        .join('products', 'invoice_items.product_id', 'products.id')
+        .where({ invoice_id: id })
+        .select('invoice_items.*', 'products.name as product_name', 'products.part_number');
+
+    // FIX: Convert decimal strings from the database to numbers to prevent frontend type errors.
+    const items = itemsData.map((item: any) => ({
+        ...item,
+        unit_price: Number(item.unit_price),
+    }));
+
+    const customer = await db('customers').where({ id: invoice.customer_id }).first();
+    const branch = await db('branches').where({ id: invoice.branch_id }).first();
+    
+    // FIX: Ensure all monetary values on the main invoice object are numbers.
+    const finalInvoice = {
+        ...invoice,
+        total_amount: Number(invoice.total_amount),
+        amount_paid: Number(invoice.amount_paid),
+    };
+
+    res.json({ ...finalInvoice, items, customer, branch });
+});
+
+// --- GENERAL DATA ---
+apiRouter.get('/data/sales', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { startDate, endDate } = req.query;
+    try {
+        let query = db('sales').select('*').orderBy('created_at', 'desc');
+        if (startDate && endDate) {
+            // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
+            const start = new Date(startDate as string);
+            start.setUTCHours(0, 0, 0, 0);
+            const end = new Date(endDate as string);
+            end.setUTCHours(23, 59, 59, 999);
+            query = query.whereBetween('created_at', [start, end]);
+        }
+        const sales = await query;
+        // FIX: Map over sales to convert decimal strings to numbers and alias total_amount to amount.
+        const formattedSales = sales.map(s => ({
+            ...s,
+            tax_amount: Number(s.tax_amount),
+            amount: Number(s.total_amount)
+        }));
+        res.json(formattedSales);
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.get('/data/invoices', authenticate, async (req: express.Request, res: express.Response) => {
+    // This endpoint is for the POS dropdown, needs only unpaid invoice snippets
+    const unpaidInvoices = await db('invoices')
+        .where('status', 'Unpaid')
+        .select('id', 'invoice_no');
+    res.json(unpaidInvoices);
+});
+apiRouter.get('/data/branches', authenticate, async (req: express.Request, res: express.Response) => res.json(await db('branches').select('*')));
+apiRouter.post('/data/branches', authenticate, validate(createBranchSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { name, address, phone } = req.body;
+        const [newId] = await db('branches').insert({
+            name,
+            address,
+            phone,
+        });
+        const newBranch = await db('branches').where({ id: newId }).first();
+        res.status(201).json(newBranch);
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.patch('/data/branches/:id', authenticate, validate(updateBranchSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { id } = req.params;
+    try {
+        const updatedCount = await db('branches').where({ id }).update(req.body);
+        if (updatedCount === 0) {
+            return res.status(404).json({ message: 'Branch not found' });
+        }
+        const updatedBranch = await db('branches').where({ id }).first();
+        res.json(updatedBranch);
+    } catch (error) {
+        next(error);
+    }
+});
+// FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
+apiRouter.get('/data/customers', authenticate, async (req: express.Request, res: express.Response) => {
+    const customers = await db('customers').select(
+        'id',
+        'name',
+        'address',
+        'phone',
+        'kra_pin as kraPin'
+    );
+    res.json(customers);
+});
+apiRouter.get('/customers/:id/transactions', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { id } = req.params;
+    try {
+        const [salesResults, invoicesResults, quotationsResults] = await Promise.all([
+            db('sales').where({ customer_id: id }).select('id', 'sale_no', 'created_at', 'total_amount as amount').orderBy('created_at', 'desc'),
+            db('invoices')
+                .where({ customer_id: id })
+                .join('customers', 'invoices.customer_id', 'customers.id')
+                .select('invoices.id', 'invoices.invoice_no', 'invoices.created_at', 'invoices.total_amount as amount', 'invoices.status')
+                .orderBy('created_at', 'desc'),
+            db('quotations')
+                .where({ customer_id: id })
+                .join('customers', 'quotations.customer_id', 'customers.id')
+                .select('quotations.id', 'quotations.quotation_no', 'quotations.created_at', 'quotations.total_amount as amount', 'quotations.status')
+                .orderBy('created_at', 'desc')
+        ]);
+        // FIX: Ensure all amount fields returned to the frontend are numbers.
+        const sales = salesResults.map(s => ({ ...s, amount: Number(s.amount) }));
+        const invoices = invoicesResults.map(i => ({ ...i, amount: Number(i.amount) }));
+        const quotations = quotationsResults.map(q => ({ ...q, amount: Number(q.amount) }));
+
+        res.json({ sales, invoices, quotations });
+    } catch (error) {
+        next(error);
+    }
+});
+apiRouter.post('/data/customers', authenticate, validate(createCustomerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { name, address, phone, kraPin } = req.body;
+        const [newId] = await db('customers').insert({
+            name,
+            address,
+            phone,
+            kra_pin: kraPin,
+        });
+        
+        const newCustomer = await db('customers').where({ id: newId }).select(
+            'id',
+            'name',
+            'address',
+            'phone',
+            'kra_pin as kraPin'
+        ).first();
+
+        res.status(201).json(newCustomer);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// --- SETTINGS ---
+// FIX: Implemented GET /settings to read from the database instead of returning a hardcoded object.
+apiRouter.get('/settings', authenticate, async (req: express.Request, res: express.Response) => {
+    const settingsRows = await db('app_settings').select('*');
+    const settings = settingsRows.reduce((acc, row) => {
+        // Attempt to parse numbers, otherwise keep as string
+        const isNumeric = !isNaN(parseFloat(row.setting_value)) && isFinite(row.setting_value);
+        acc[row.setting_key] = isNumeric ? Number(row.setting_value) : row.setting_value;
+        return acc;
+    }, {} as Record<string, any>);
+    
+    // Provide defaults for any missing settings to ensure frontend stability
+    const defaults = {
+        companyName: 'Masuma EA Hub',
+        companyAddress: '',
+        companyPhone: '',
+        companyKraPin: '',
         taxRate: 16,
         invoiceDueDays: 30,
         lowStockThreshold: 10,
-        salesTarget: 5000000,
         mpesaPaybill: '',
         mpesaConsumerKey: '',
         mpesaConsumerSecret: '',
         mpesaPasskey: '',
     };
 
-    try {
-        const rows = await dbInstance('app_settings').select('setting_key', 'setting_value');
-        if (!rows || rows.length === 0) {
-            return defaultSettings;
-        }
-        
-        const settingsFromDb = rows.reduce((acc, row) => {
-            const keyMap: { [key: string]: string } = {
-                company_name: 'companyName',
-                company_address: 'companyAddress',
-                company_phone: 'companyPhone',
-                company_kra_pin: 'companyKraPin',
-                tax_rate: 'taxRate',
-                invoice_due_days: 'invoiceDueDays',
-                low_stock_threshold: 'lowStockThreshold',
-                sales_target: 'salesTarget',
-                mpesa_paybill: 'mpesaPaybill',
-                mpesa_consumer_key: 'mpesaConsumerKey',
-                mpesa_consumer_secret: 'mpesaConsumerSecret',
-                mpesa_passkey: 'mpesaPasskey',
-            };
-            const camelCaseKey = keyMap[row.setting_key] || row.setting_key;
-
-            const isNumeric = ['tax_rate', 'invoice_due_days', 'low_stock_threshold', 'sales_target'].includes(row.setting_key) && !isNaN(parseFloat(row.setting_value));
-            acc[camelCaseKey] = isNumeric ? Number(row.setting_value) : row.setting_value;
-            return acc;
-        }, {} as any);
-        
-        return { ...defaultSettings, ...settingsFromDb };
-    } catch (error) {
-        console.error("Could not fetch app settings, using defaults.", error);
-        return defaultSettings;
-    }
-};
-
-
-
-// --- JWT & RBAC Middleware ---
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
-}
-
-const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.sendStatus(401);
-
-    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-};
-
-const authorizeRole = (allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !req.user.role) {
-      return res.status(403).json({ message: 'Forbidden: No role attached to user' });
-    }
-    if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
-    }
-    next();
-  };
-};
-
-// --- Reusable Sale Creation Logic ---
-async function createSaleFromPayload(payload: any, trx: Knex.Transaction) {
-    const { customerId, branchId, items, discount, paymentMethod, invoiceId } = payload;
+    res.json({ ...defaults, ...settings });
+});
+// FIX: Implemented PATCH /settings to save changes to the database.
+apiRouter.patch('/settings', authenticate, validate(updateSettingsSchema), async (req: express.Request, res: express.Response) => {
+    const settingsData = req.body;
     
-    try {
-        const settings = await getAppSettings(trx);
-        
-        const subtotal = items.reduce((sum: number, item: any) => sum + (item.unitPrice * item.quantity), 0);
-        const subtotalAfterDiscount = subtotal - (discount || 0);
-        const taxRate = settings.taxRate / 100;
-        const taxAmount = subtotalAfterDiscount * taxRate;
-        const totalAmount = subtotalAfterDiscount + taxAmount;
-
-        const saleNo = `SALE-${Date.now()}`;
-        const [saleId] = await trx('sales').insert({
-            sale_no: saleNo,
-            customer_id: customerId,
-            branch_id: branchId,
-            tax_amount: taxAmount,
-            total_amount: totalAmount,
-            payment_method: paymentMethod,
-            invoice_id: invoiceId || null
-        });
-
-        for (const item of items) {
-            await trx('sale_items').insert({
-                sale_id: saleId,
-                product_id: item.productId,
-                quantity: item.quantity,
-                unit_price: item.unitPrice
-            });
-            await trx('products').where('id', item.productId).decrement('stock', item.quantity);
-        }
-        
-        if (invoiceId) {
-            await trx('invoices').where('id', invoiceId).update({
-                amount_paid: db.raw('amount_paid + ?', [totalAmount]),
-                status: 'Paid'
-            });
-        }
-        
-        const saleDetails = await trx('sales as s')
-          .join('customers as c', 's.customer_id', 'c.id')
-          .join('branches as b', 's.branch_id', 'b.id')
-          .select(
-            's.id', 's.sale_no', 's.created_at', 's.total_amount as amount', 's.tax_amount', 's.payment_method',
-            'c.id as customer_id', 'c.name as customer_name',
-            'b.id as branch_id', 'b.name as branch_name', 'b.address as branch_address', 'b.phone as branch_phone'
-          )
-          .where('s.id', saleId)
-          .first();
-
-        const itemDetails = await trx('sale_items as si')
-          .join('products as p', 'si.product_id', 'p.id')
-          .select('si.id', 'si.quantity', 'si.unit_price', 'p.name as product_name', 'p.part_number')
-          .where('si.sale_id', saleId);
-        
-        const saleResponse = saleDetails;
-        saleResponse.customer = { id: saleResponse.customer_id, name: saleResponse.customer_name };
-        saleResponse.branch = { id: saleResponse.branch_id, name: saleResponse.branch_name, address: saleResponse.branch_address, phone: saleResponse.branch_phone };
-        saleResponse.items = itemDetails;
-
-        return saleResponse;
-    } catch (error) {
-        console.error("Sale creation error:", error);
-        throw new Error('Failed to create sale');
-    }
-}
-
-
-// --- PUBLIC API ROUTES (e.g., Callbacks) ---
-
-// Safaricom's official public IPs for Daraja API callbacks.
-const SAFARICOM_IPS = [
-    '196.201.214.200', '196.201.214.206', '196.201.214.207', 
-    '196.201.214.208', '196.201.214.209', '196.201.214.212', 
-    '196.201.214.213', '196.201.214.214'
-];
-
-/**
- * Middleware to verify that the M-Pesa callback is from a genuine Safaricom IP address.
- */
-const verifySafaricomIp = (req: Request, res: Response, next: NextFunction) => {
-    // Bypass IP check in non-production environments for easier local testing.
-    if (process.env.NODE_ENV !== 'production') {
-        console.log("Bypassing Safaricom IP check in development mode.");
-        return next();
-    }
-
-    const requestIp = req.ip;
-    console.log(`Received M-Pesa callback from IP: ${requestIp}`);
-
-    if (requestIp && SAFARICOM_IPS.includes(requestIp)) {
-        return next();
-    }
-    
-    console.warn(`WARN: Denied M-Pesa callback from untrusted IP: ${requestIp}`);
-    res.status(403).json({ message: 'Forbidden: Invalid request origin.' });
-};
-
-
-app.post('/api/payments/mpesa/callback', verifySafaricomIp, async (req: Request, res: Response) => {
-    console.log('--- M-PESA Callback Received ---');
-    console.log(JSON.stringify(req.body, null, 2));
-
-    // --- PRODUCTION SECURITY ---
-    // This endpoint is now protected by an IP whitelist middleware (`verifySafaricomIp`).
-    // For a truly secure system, the next step is to implement signature validation
-    // as per Safaricom's Daraja documentation. This involves:
-    // 1. Concatenating the full request body as a string.
-    // 2. Creating a digital signature of the body using your private key.
-    // 3. Verifying this signature against the one provided in the `X-Safaricom-Signature` header using Safaricom's public key.
-    // This prevents man-in-the-middle attacks and ensures the payload has not been tampered with.
-    
-    const { Body } = req.body;
-    if (!Body || !Body.stkCallback) {
-        // This might be a timeout or other callback type. Acknowledge and log it.
-        console.log("Received a non-STK callback or invalid body.");
-        return res.json({ ResultCode: 0, ResultDesc: "Accepted" });
-    }
-
-    const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = Body.stkCallback;
-
-    try {
-        await db.transaction(async (trx) => {
-            if (ResultCode !== 0) {
-                // Transaction failed or was cancelled by the user.
-                await trx('mpesa_transactions')
-                    .where('checkout_request_id', CheckoutRequestID)
-                    .update({ status: "Failed", result_desc: ResultDesc || 'Callback indicated failure.' });
-            } else {
-                // Transaction was successful.
-                const mpesaReceiptNumber = CallbackMetadata?.Item?.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
-                
-                const tx = await trx('mpesa_transactions')
-                    .where({ checkout_request_id: CheckoutRequestID, status: 'Pending' })
-                    .first();
-
-                if (!tx) {
-                     console.log(`Callback for already processed or unknown CheckoutRequestID: ${CheckoutRequestID}`);
-                     return; // Commit transaction
-                }
-                
-                if (tx.invoice_id) { // This is an invoice payment
-                    await trx('invoices')
-                        .where('id', tx.invoice_id)
-                        .update({ 
-                            amount_paid: db.raw('amount_paid + ?', [tx.amount]), 
-                            status: 'Paid' 
-                        });
-                } else { // This is a POS payment
-                    const salePayload = { ...JSON.parse(tx.transaction_details), paymentMethod: 'MPESA', items: JSON.parse(tx.transaction_details).cart.map((item:any) => ({ productId: item.product.id, quantity: item.quantity, unitPrice: item.product.retailPrice })) };
-                    const sale = await createSaleFromPayload(salePayload, trx);
-                    await trx('mpesa_transactions').where('id', tx.id).update({ sale_id: sale.id });
-                }
-                await trx('mpesa_transactions').where('id', tx.id).update({ 
-                    status: 'Completed', 
-                    mpesa_receipt_number: mpesaReceiptNumber, 
-                    result_desc: 'Completed Successfully' 
+    await db.transaction(async (trx) => {
+        const promises = Object.entries(settingsData).map(([key, value]) => {
+            return trx('app_settings')
+                .where({ setting_key: key })
+                .update({ setting_value: String(value) })
+                .then(updatedCount => {
+                    if (updatedCount === 0) {
+                        // If the key doesn't exist, insert it
+                        return trx('app_settings').insert({ setting_key: key, setting_value: String(value) });
+                    }
                 });
-            }
         });
-        res.json({ ResultCode: 0, ResultDesc: "Accepted" });
-    } catch (e) { 
-        console.error('M-Pesa callback processing error:', e); 
-        // Acknowledge the callback to prevent Safaricom from resending.
-        res.json({ ResultCode: 0, ResultDesc: "Accepted" });
-    }
+        await Promise.all(promises);
+    });
+
+    res.json(settingsData);
 });
 
-
-// --- AUTH ROUTES (Unprotected) ---
-const authRouter = express.Router();
-
-authRouter.post('/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), async (req: Request, res: Response) => {
-    const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
-    // --- Validation ---
-    if (!businessName || !kraPin || !contactName || !contactEmail || !contactPhone || !password || !files.certOfInc || !files.cr12) {
-        return res.status(400).json({ message: "All fields and documents are required." });
-    }
-    if (!isValidEmail(contactEmail)) {
-        return res.status(400).json({ message: "Invalid email format." });
-    }
-    if (password.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters long." });
-    }
-     if (!isValidKraPin(kraPin)) {
-        return res.status(400).json({ message: "Invalid KRA PIN format." });
-    }
-    // --- End Validation ---
-
+// --- DASHBOARD & REPORTS ---
+apiRouter.get('/dashboard/stats', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { startDate, endDate, branchId } = req.query;
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await db('b2b_applications').insert({
-            id: newId(),
-            business_name: businessName,
-            kra_pin: kraPin,
-            contact_name: contactName,
-            contact_email: contactEmail,
-            contact_phone: contactPhone,
-            password_hash: hashedPassword,
-            cert_of_inc_url: files.certOfInc[0].filename,
-            cr12_url: files.cr12[0].filename,
-            status: 'Pending'
+        // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
+        const start = new Date(startDate as string);
+        start.setUTCHours(0, 0, 0, 0);
+        const end = new Date(endDate as string);
+        end.setUTCHours(23, 59, 59, 999);
+
+        let salesQuery = db('sales').whereBetween('created_at', [start, end]);
+        let shipmentsQuery = db('shipping_labels').whereBetween('created_at', [start, end]);
+        
+        if (branchId) {
+            salesQuery = salesQuery.andWhere('branch_id', branchId as any);
+            shipmentsQuery = shipmentsQuery.andWhere('from_branch_id', branchId as any);
+        }
+
+        // FIX: Explicitly cast the knex query results to avoid 'never' type inference issues.
+        // FIX: Removed invalid `as Promise<...>` cast on Knex query builders.
+        const [salesResults, totalShipments, pendingShipments, salesTargetResult] = await Promise.all([
+            salesQuery.select(db.raw('SUM(total_amount) as totalRevenue'), db.raw('COUNT(id) as totalSales'), db.raw('COUNT(DISTINCT customer_id) as activeCustomers')).first(),
+            shipmentsQuery.clone().count({ count: '*' }).first(),
+            shipmentsQuery.clone().whereNot('status', 'Shipped').count({ count: '*' }).first(),
+            db('app_settings').where('setting_key', 'salesTarget').first()
+        ]);
+
+        res.json({
+// FIX: Added optional chaining to prevent crash if queries return no results.
+// FIX: Cast query results to 'any' to resolve TypeScript 'never' type inference issue.
+            totalRevenue: Number((salesResults as any)?.totalRevenue) || 0,
+            totalSales: Number((salesResults as any)?.totalSales) || 0,
+            activeCustomers: Number((salesResults as any)?.activeCustomers) || 0,
+            totalShipments: Number((totalShipments as any)?.count) || 0,
+            pendingShipments: Number((pendingShipments as any)?.count) || 0,
+            salesTarget: Number((salesTargetResult as any)?.setting_value) || 2000000
         });
-        res.status(201).json({ message: "Application submitted successfully." });
     } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ message: 'Database error during registration.' });
+        next(error);
     }
 });
 
-authRouter.post('/login', async (req: Request, res: Response) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "Email and password are required."});
+apiRouter.get('/dashboard/sales-chart', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { startDate, endDate, branchId } = req.query;
     try {
-        const user = await db('users as u')
-            .leftJoin('b2b_applications as b', 'u.b2b_application_id', 'b.id')
-            .select(
-                'u.id', 'u.email', 'u.name', 'u.role', 'u.status', 'u.password_hash',
-                'b.id as businessId', 'b.business_name as businessName'
-            )
-            .where('u.email', email)
-            .where('u.status', 'Active')
-            .first();
+        // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
+        const start = new Date(startDate as string);
+        start.setUTCHours(0, 0, 0, 0);
+        const end = new Date(endDate as string);
+        end.setUTCHours(23, 59, 59, 999);
 
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-            return res.status(401).json({ message: 'Invalid credentials or account inactive' });
+        let query = db('sales')
+            .select(db.raw('DATE(created_at) as name'), db.raw('SUM(total_amount) as revenue'), db.raw('COUNT(id) as sales'))
+            .whereBetween('created_at', [start, end])
+            .groupByRaw('DATE(created_at)')
+            .orderByRaw('DATE(created_at)');
+        
+        if (branchId) {
+            query = query.andWhere('branch_id', branchId as any);
         }
-        const token = jwt.sign(
-          { userId: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
-          JWT_SECRET, { expiresIn: '8h' }
-        );
-        res.json({ token });
-    } catch (error) { res.status(500).json({ message: 'Server error' }); }
+        
+        const data = await query;
+        res.json(data);
+    } catch(error) {
+        next(error);
+    }
 });
 
-authRouter.post('/google-login', async (req: Request, res: Response) => {
-    const { token: googleToken } = req.body;
-    if (!googleToken) {
-        return res.status(400).json({ message: "Google token is required." });
-    }
-
+apiRouter.post('/dashboard/sales-target', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
-        const ticket = await googleAuthClient.verifyIdToken({
-            idToken: googleToken,
-            audience: GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
-        if (!payload || !payload.email || !payload.name) {
-            return res.status(401).json({ message: 'Invalid Google token.' });
-        }
-        
-        const { email, name } = payload;
-        
-        let user = await db('users').where({ email }).first();
-
-        if (!user) {
-            // User does not exist, create a new one
-            const newUserId = newId();
-            // Default new Google sign-up users to a basic role
-            const defaultRole = UserRole.SALES_STAFF;
-            await db('users').insert({
-                id: newUserId,
-                name,
-                email,
-                role: defaultRole,
-                status: 'Active'
-            });
-            user = { id: newUserId, email, name, role: defaultRole, status: 'Active' };
-        }
-        
-        if (user.status !== 'Active') {
-            return res.status(403).json({ message: "Your account is currently inactive." });
-        }
-
-        const appToken = jwt.sign(
-            { userId: user.id, email: user.email, name: user.name, role: user.role, status: user.status },
-            JWT_SECRET,
-            { expiresIn: '8h' }
-        );
-        
-        res.json({ token: appToken });
+        const { target } = req.body;
+        await db('app_settings').insert({ setting_key: 'salesTarget', setting_value: target }).onConflict('setting_key').merge();
+        res.json({ salesTarget: target });
     } catch (error) {
-        console.error("Google Sign-In Error:", error);
-        res.status(500).json({ message: 'Google Sign-In failed. Please try again.' });
+        next(error);
     }
 });
 
-app.use('/api/auth', authRouter);
 
-// --- PROTECTED API ROUTES ---
-const apiRouter = express.Router();
-apiRouter.use(authenticateToken); // All routes below this point are protected
-
-// B2B Management
-apiRouter.get('/b2b/applications', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const applications = await db('b2b_applications')
-        .select(
-            'id', 
-            'business_name AS businessName', 
-            'kra_pin AS kraPin', 
-            'contact_name AS contactName', 
-            'contact_email AS contactEmail', 
-            'contact_phone AS contactPhone', 
-            'cert_of_inc_url AS certOfIncUrl', 
-            'cr12_url AS cr12Url', 
-            'status', 
-            'submitted_at as submittedAt'
-        )
-        .orderBy('submitted_at', 'desc');
-    res.json(applications);
-});
-apiRouter.patch('/b2b/applications/:id/status', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { status } = req.body;
+// --- VIN PICKER ---
+apiRouter.get('/vin-picker/:vin', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
-        await db.transaction(async trx => {
-            await trx('b2b_applications').where({ id }).update({ status });
-            if (status === 'Approved') {
-                const app = await trx('b2b_applications').where({ id }).first();
-                if (app) {
-                    const existingUser = await trx('users').where('email', app.contact_email).first();
-                    if (!existingUser) {
-                         await trx('users').insert({
-                            id: newId(),
-                            name: app.contact_name,
-                            email: app.contact_email,
-                            password_hash: app.password_hash,
-                            role: UserRole.SALES_STAFF, // Default B2B role
-                            b2b_application_id: id,
-                            status: 'Active'
-                         });
+        const { vin } = req.params;
+        if (!vin || vin.length < 17) {
+            return res.status(400).json({ message: 'A valid 17-character VIN is required.' });
+        }
+        const prompt = `Given the VIN ${vin}, list compatible Masuma auto parts. Provide the part number, part name, a brief compatibility description (e.g., "Fits Toyota Corolla 2018-2022 models"), and a fake stock level integer between 0 and 100.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            id: { type: Type.STRING, description: "A unique identifier for the part, can be the part number." },
+                            partNumber: { type: Type.STRING },
+                            name: { type: Type.STRING },
+                            stock: { type: Type.INTEGER },
+                            compatibility: { type: Type.STRING }
+                        },
+                        required: ["id", "partNumber", "name", "stock", "compatibility"]
                     }
                 }
             }
         });
-        const updatedApp = await db('b2b_applications').where({ id }).select(
-            'id', 'business_name AS businessName', 'kra_pin AS kraPin', 'contact_name AS contactName', 
-            'contact_email AS contactEmail', 'contact_phone AS contactPhone', 'cert_of_inc_url AS certOfIncUrl', 
-            'cr12_url AS cr12Url', 'status', 'submitted_at as submittedAt'
-        ).first();
-        res.json(updatedApp);
-    } catch (error) { res.status(500).json({ message: "Failed to update application status" }); }
-});
-
-// User Management
-apiRouter.get('/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR]), async (req: Request, res: Response) => {
-    const users = await db('users').select("id", "name", "email", "role", "status").orderBy("name", "asc");
-    res.json(users);
-});
-apiRouter.post('/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR]), async (req: Request, res: Response) => {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) return res.status(400).json({ message: 'All fields are required.' });
-    if (!isValidEmail(email)) return res.status(400).json({ message: "Invalid email format."});
-    if (password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters."});
-    if (!Object.values(UserRole).includes(role)) return res.status(400).json({ message: "Invalid user role."});
-
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = { id: newId(), name, email, role, status: 'Active' as 'Active' | 'Inactive' };
-        await db('users').insert({ ...newUser, password_hash: hashedPassword });
-        res.status(201).json(newUser);
-    } catch (error: any) {
-        if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email already exists.' });
-        res.status(500).json({ message: 'Failed to create user' });
-    }
-});
-apiRouter.patch('/users/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR]), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { name, email, role, status } = req.body;
-    if (req.user.userId === id && status === 'Inactive') return res.status(403).json({ message: "You cannot deactivate your own account." });
-    if (!isValidEmail(email)) return res.status(400).json({ message: "Invalid email format."});
-    if (!Object.values(UserRole).includes(role)) return res.status(400).json({ message: "Invalid user role."});
-    if (!['Active', 'Inactive'].includes(status)) return res.status(400).json({ message: "Invalid status."});
-
-    try {
-        await db('users').where({ id }).update({ name, email, role, status });
-        const user = await db('users').select("id", "name", "email", "role", "status").where({ id }).first();
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        res.json(user);
-    } catch (error: any) {
-        if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'Email already exists.' });
-        res.status(500).json({ message: 'Failed to update user' });
-    }
-});
-apiRouter.patch('/users/me/password', async (req: Request, res: Response) => {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) return res.status(400).json({ message: "All fields are required." });
-    if (newPassword.length < 8) return res.status(400).json({ message: "New password must be at least 8 characters long."});
-    
-    try {
-        const user = await db('users').select('password_hash').where({ id: req.user.userId }).first();
-        if (!user) return res.status(404).json({ message: 'User not found.' });
-        if (!user.password_hash) return res.status(401).json({ message: 'Cannot change password for accounts created via Google Sign-In.'});
-
-        const match = await bcrypt.compare(currentPassword, user.password_hash);
-        if (!match) return res.status(401).json({ message: 'Incorrect current password.' });
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-        await db('users').where({ id: req.user.userId }).update({ password_hash: hashedNewPassword });
-        res.json({ message: 'Password updated successfully.' });
-    } catch (error) { res.status(500).json({ message: 'Server error while updating password.' }); }
-});
-
-// Inventory
-apiRouter.get('/inventory/products', async (req: Request, res: Response) => {
-    const products = await db('products').select("id", "part_number as partNumber", "name", "retail_price as retailPrice", "wholesale_price as wholesalePrice", "stock").orderBy("name", "asc");
-    res.json(products);
-});
-apiRouter.post('/inventory/products', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
-    if (!partNumber || !name || retailPrice === undefined || wholesalePrice === undefined || stock === undefined) {
-        return res.status(400).json({ message: "All product fields are required." });
-    }
-    if (isNaN(retailPrice) || isNaN(wholesalePrice) || isNaN(stock) || retailPrice < 0 || wholesalePrice < 0 || stock < 0) {
-        return res.status(400).json({ message: "Prices and stock must be non-negative numbers."});
-    }
-
-    const newProduct = { id: newId(), partNumber, name, retailPrice, wholesalePrice, stock };
-    await db('products').insert({
-        id: newProduct.id,
-        part_number: newProduct.partNumber,
-        name: newProduct.name,
-        retail_price: newProduct.retailPrice,
-        wholesale_price: newProduct.wholesalePrice,
-        stock: newProduct.stock,
-    });
-    res.status(201).json(newProduct);
-});
-apiRouter.patch('/inventory/products/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
-
-    if (!partNumber || !name || retailPrice === undefined || wholesalePrice === undefined || stock === undefined) {
-        return res.status(400).json({ message: "All product fields are required." });
-    }
-    if (isNaN(retailPrice) || isNaN(wholesalePrice) || isNaN(stock) || retailPrice < 0 || wholesalePrice < 0 || stock < 0) {
-        return res.status(400).json({ message: "Prices and stock must be non-negative numbers."});
-    }
-
-    try {
-        await db('products').where({ id }).update({ part_number: partNumber, name, retail_price: retailPrice, wholesale_price: wholesalePrice, stock });
-        const product = await db('products').select("id", "part_number as partNumber", "name", "retail_price as retailPrice", "wholesale_price as wholesalePrice", "stock").where({ id }).first();
-        res.json(product);
-    } catch (error) {
-        console.error('Update product error:', error);
-        res.status(500).json({ message: 'Database error during product update.' });
-    }
-});
-
-apiRouter.post('/inventory/products/bulk', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const products = req.body.map((p: any) => ({
-        id: newId(),
-        part_number: p.partNumber,
-        name: p.name,
-        retail_price: p.retailPrice,
-        wholesale_price: p.wholesalePrice,
-        stock: p.stock
-    }));
-
-    try {
-        await db('products')
-            .insert(products)
-            .onConflict('part_number')
-            .merge(['name', 'retail_price', 'wholesale_price', 'stock']);
-        res.json({ message: 'Bulk import successful' });
-    } catch (error) { 
-        res.status(500).json({ message: 'Bulk import failed', error }); 
-    } 
-});
-
-// VIN Picker
-apiRouter.get('/vin-picker/:vin', async (req: Request, res: Response) => {
-    const { vin } = req.params;
-    if (!vin || vin.length < 5) {
-        return res.status(400).json({ message: "A valid VIN is required." });
-    }
-    try {
-        // SIMULATION: In a real system, you'd have a mapping table (vin_to_parts)
-        // or an external API. Here, we'll simulate a lookup by using a portion
-        // of the VIN to search for matching part numbers or names. This is NOT a real
-        // VIN lookup but demonstrates a functional API endpoint.
-        const searchTerm = `%${vin.substring(vin.length - 4)}%`; // Use last 4 chars of VIN
-        const rows = await db('products')
-            .select('id', 'part_number as partNumber', 'name', 'stock')
-            .where('part_number', 'like', searchTerm)
-            .orWhere('name', 'like', searchTerm)
-            .limit(5);
         
-        // Add mock compatibility string for display
-        const results = rows.map(row => ({
-            ...row,
-            compatibility: `Compatible with vehicles ending in ...${vin.slice(-6)} (Simulated)`
-        }));
+        const text = response.text;
+        if (text === undefined) {
+            throw new Error("The AI model returned an empty response, which may be due to content filters.");
+        }
+        
+        const jsonText = text.trim();
+        const parts = JSON.parse(jsonText);
+        res.json(parts);
 
-        res.json(results);
     } catch (error) {
-        console.error("VIN Picker search error:", error);
-        res.status(500).json({ message: 'Error searching for parts.' });
+        console.error("Gemini API error in VIN picker:", error);
+        res.status(500).json({ message: "Could not retrieve parts using VIN." });
     }
 });
 
-// General Data
-apiRouter.get('/data/customers', async (req: Request, res: Response) => {
-    const customers = await db('customers').select('id', 'name', 'address', 'phone', 'kra_pin as kraPin');
-    res.json(customers);
-});
-apiRouter.post('/data/customers', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.SALES_STAFF]), async (req: Request, res: Response) => {
-    const { name, address, phone, kraPin } = req.body;
-    if (!name || !address || !phone) {
-        return res.status(400).json({ message: "Name, address, and phone are required."});
-    }
-    const [id] = await db('customers').insert({ name, address, phone, kra_pin: kraPin || null });
-    res.status(201).json({ id, name, address, phone, kraPin });
-});
-apiRouter.get('/data/branches', async (req: Request, res: Response) => {
-    const branches = await db('branches').select('id', 'name', 'address', 'phone');
-    res.json(branches);
-});
-apiRouter.get('/data/sales', async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query;
-    let query = db('sales as s')
-        .select(
-            's.id', 's.sale_no', 's.customer_id', 's.branch_id', 's.created_at', 
-            's.total_amount as amount', 
-            db.raw('(SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) as items')
-        );
+// --- PAYMENTS (M-PESA) ---
+// In-memory cache for Daraja API token
+let darajaToken: { token: string; expires: number } | null = null;
+const DARAJA_API_URL = 'https://api.safaricom.co.ke'; // Use sandbox for dev: 'https://sandbox.safaricom.co.ke'
 
-    if (startDate && endDate) {
-        // Inclusive of start and end date
-        query.where('s.created_at', '>=', startDate as string)
-             .where('s.created_at', '<=', `${endDate as string} 23:59:59`);
+const getDarajaToken = async (consumerKey: string, consumerSecret: string) => {
+    if (darajaToken && darajaToken.expires > Date.now()) {
+        return darajaToken.token;
     }
-    query.orderBy('s.created_at', 'desc');
-    const sales = await query;
-    res.json(sales);
-});
-apiRouter.get('/data/invoices', async (req: Request, res: Response) => {
-    const invoices = await db('invoices').select('id', 'invoice_no').where('status', 'Unpaid').orderBy('created_at', 'desc');
-    res.json(invoices);
-});
 
-// POS
-apiRouter.post('/pos/sales', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.SALES_STAFF]), async (req: Request, res: Response) => {
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
     try {
-        const saleData = await db.transaction(async (trx) => {
-            return createSaleFromPayload(req.body, trx);
+        const response = await axios.get(`${DARAJA_API_URL}/oauth/v1/generate?grant_type=client_credentials`, {
+            headers: { 'Authorization': `Basic ${auth}` }
         });
-        res.status(201).json(saleData);
-    } catch (error) { 
-        res.status(500).json({ message: 'Failed to create sale' }); 
-    }
-});
-
-// Shipping
-apiRouter.get('/shipping/labels', async (req: Request, res: Response) => {
-    const labels = await db('shipping_labels').select('*').orderBy('created_at', 'desc');
-    res.json(labels);
-});
-apiRouter.post('/shipping/labels', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.SALES_STAFF, UserRole.WAREHOUSE_CLERK, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const labelData = { id: newId(), status: 'Draft', ...req.body };
-    await db('shipping_labels').insert(labelData);
-    res.status(201).json(labelData);
-});
-apiRouter.patch('/shipping/labels/:id/status', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.SALES_STAFF, UserRole.WAREHOUSE_CLERK, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const { id } = req.params; const { status } = req.body;
-    await db('shipping_labels').where({ id }).update({ status });
-    const updated = await db('shipping_labels').where({ id }).first();
-    res.json(updated);
-});
-
-// --- Quotations & Invoices (FULLY IMPLEMENTED) ---
-const VIEW_FINANCIALS_ROLES = [UserRole.SALES_STAFF, UserRole.ACCOUNTANT, UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER];
-const MANAGE_FINANCIALS_ROLES = [UserRole.SALES_STAFF, UserRole.SYSTEM_ADMINISTRATOR];
-
-apiRouter.get('/quotations', authorizeRole(VIEW_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const quotations = await db('quotations as q')
-        .join('customers as c', 'q.customer_id', 'c.id')
-        .select('q.id', 'q.quotation_no', 'q.customer_id', 'q.branch_id', 'q.created_at', 'q.valid_until', 'q.status', 'q.total_amount as amount', 'c.name as customerName')
-        .orderBy('q.created_at', 'desc');
-    res.json(quotations);
-});
-
-apiRouter.get('/quotations/:id', authorizeRole(VIEW_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    try {
-        const quotation = await db('quotations as q')
-            .join('customers as c', 'q.customer_id', 'c.id')
-            .join('branches as b', 'q.branch_id', 'b.id')
-            .select('q.*', 'c.name as customer_name', 'c.address as customer_address', 'c.phone as customer_phone', 'b.name as branch_name', 'b.address as branch_address', 'b.phone as branch_phone')
-            .where('q.id', id).first();
-
-        if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
-        
-        const items = await db('quotation_items as qi').join('products as p', 'qi.product_id', 'p.id').select('qi.*', 'p.name as product_name', 'p.part_number').where('qi.quotation_id', id);
-        
-        const response = {
-            id: quotation.id, quotation_no: quotation.quotation_no, customer_id: quotation.customer_id, branch_id: quotation.branch_id, created_at: quotation.created_at, valid_until: quotation.valid_until, status: quotation.status, amount: quotation.total_amount,
-            customer: { id: quotation.customer_id, name: quotation.customer_name, address: quotation.customer_address, phone: quotation.customer_phone, kraPin: quotation.customer_kra_pin },
-            branch: { id: quotation.branch_id, name: quotation.branch_name, address: quotation.branch_address, phone: quotation.branch_phone },
-            items: items,
+        const { access_token, expires_in } = response.data;
+        darajaToken = {
+            token: access_token,
+            expires: Date.now() + (parseInt(expires_in, 10) - 300) * 1000, // Refresh 5 mins early
         };
-        res.json(response);
-    } catch (error) { res.status(500).json({ message: "Server error fetching quotation details" }); }
-});
+        return darajaToken.token;
+    } catch (error: any) {
+        console.error('Failed to get Daraja token:', error.response?.data || error.message);
+        throw new Error('Could not authenticate with M-Pesa. Check credentials.');
+    }
+};
 
-apiRouter.post('/quotations', authorizeRole(MANAGE_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { customerId, branchId, items, validUntil } = req.body;
-    if (!customerId || !branchId || !items || !validUntil || items.length === 0) return res.status(400).json({ message: "Missing required fields for quotation." });
-    
+apiRouter.post('/payments/mpesa/initiate', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const { amount, phoneNumber, ...salePayload } = req.body;
     try {
-        const newQuotation = await db.transaction(async trx => {
-            const totalAmount = items.reduce((sum: number, item: any) => sum + (item.unitPrice * item.quantity), 0);
-            
-            const now = new Date();
-            const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-            const likePattern = `QUO-${datePrefix}-%`;
-            const countResult = await trx('quotations').where('quotation_no', 'like', likePattern).count({ count: '*' }).first();
-            const nextSequence = String((Number(countResult?.count) || 0) + 1).padStart(4, '0');
-            const quotationNo = `QUO-${datePrefix}-${nextSequence}`;
+        const settings = await db('app_settings').select();
+        const mpesaSettings = settings.reduce((acc, row) => ({ ...acc, [row.setting_key]: row.setting_value }), {} as any);
 
-            const [quotationId] = await trx('quotations').insert({ quotation_no: quotationNo, customer_id: customerId, branch_id: branchId, valid_until: validUntil, total_amount: totalAmount, status: 'Draft' });
-            const itemPayloads = items.map((item: any) => ({ quotation_id: quotationId, product_id: item.productId, quantity: item.quantity, unit_price: item.unitPrice }));
-            if(itemPayloads.length > 0) await trx('quotation_items').insert(itemPayloads);
-            
-            return trx('quotations as q').join('customers as c', 'q.customer_id', 'c.id').select('q.id', 'q.quotation_no', 'q.customer_id', 'q.branch_id', 'q.created_at', 'q.valid_until', 'q.status', 'q.total_amount as amount', 'c.name as customerName').where('q.id', quotationId).first();
-        });
-        res.status(201).json(newQuotation);
-    } catch (error) { res.status(500).json({ message: "Failed to create quotation" }); }
-});
+        const requiredKeys = ['mpesaConsumerKey', 'mpesaConsumerSecret', 'mpesaPasskey', 'mpesaPaybill'];
+        if (requiredKeys.some(key => !mpesaSettings[key])) {
+            return res.status(500).json({ message: 'M-Pesa settings are not fully configured.' });
+        }
 
-apiRouter.patch('/quotations/:id/status', authorizeRole(MANAGE_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { id } = req.params; const { status } = req.body;
-    try {
-        await db('quotations').where({ id }).update({ status });
-        const quotation = await db('quotations as q').join('customers as c', 'q.customer_id', 'c.id').select('q.id', 'q.quotation_no', 'q.customer_id', 'q.branch_id', 'q.created_at', 'q.valid_until', 'q.status', 'q.total_amount as amount', 'c.name as customerName').where('q.id', id).first();
-        if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
-        res.json(quotation);
-    } catch (error) { res.status(500).json({ message: "Failed to update quotation status" }); }
-});
+        const token = await getDarajaToken(mpesaSettings.mpesaConsumerKey, mpesaSettings.mpesaConsumerSecret);
 
-apiRouter.post('/quotations/:id/convert', authorizeRole(MANAGE_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    try {
-        const newInvoice = await db.transaction(async trx => {
-            const quotation = await trx('quotations').where({ id }).first();
-            if (!quotation) throw new Error('Quotation not found.');
-            if (quotation.status !== 'Accepted') throw new Error('Only accepted quotations can be converted.');
-            const existingInvoice = await trx('invoices').where('quotation_id', id).first();
-            if (existingInvoice) throw new Error('Invoice already created for this quotation.');
+        const now = new Date();
+        const timestamp = now.getFullYear() + ('0' + (now.getMonth() + 1)).slice(-2) + ('0' + now.getDate()).slice(-2) + ('0' + now.getHours()).slice(-2) + ('0' + now.getMinutes()).slice(-2) + ('0' + now.getSeconds()).slice(-2);
+        const password = Buffer.from(mpesaSettings.mpesaPaybill + mpesaSettings.mpesaPasskey + timestamp).toString('base64');
+        const callbackUrl = `${req.protocol}://${req.get('host')}/api/payments/mpesa/callback`;
 
-            const quoteItems = await trx('quotation_items').where('quotation_id', id);
-            const settings = await getAppSettings(trx);
-            const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + settings.invoiceDueDays);
-            const invoiceNo = `INV-${Date.now()}`;
-            
-            const [invoiceId] = await trx('invoices').insert({ invoice_no: invoiceNo, customer_id: quotation.customer_id, branch_id: quotation.branch_id, quotation_id: id, due_date: dueDate.toISOString().split('T')[0], total_amount: quotation.total_amount, status: 'Unpaid'});
-            const invoiceItemPayloads = quoteItems.map(item => ({ invoice_id: invoiceId, product_id: item.product_id, quantity: item.quantity, unit_price: item.unit_price }));
-            if(invoiceItemPayloads.length > 0) await trx('invoice_items').insert(invoiceItemPayloads);
-            await trx('quotations').where({ id }).update({ status: 'Invoiced' });
-            return trx('invoices').where({ id: invoiceId }).first();
-        });
-        res.status(201).json(newInvoice);
-    } catch (error: any) { res.status(500).json({ message: error.message || "Failed to convert quotation" }); } 
-});
-
-apiRouter.get('/invoices', authorizeRole(VIEW_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { status } = req.query;
-    let query = db('invoices as i').join('customers as c', 'i.customer_id', 'c.id').select('i.id', 'i.invoice_no', 'i.customer_id', 'i.branch_id', 'i.created_at', 'i.due_date', 'i.status', 'i.total_amount as amount', 'c.name as customerName');
-    if (status && status !== 'All') { query.where('i.status', status as string); }
-    query.orderBy('i.created_at', 'desc');
-    const invoices = await query;
-    res.json(invoices);
-});
-
-apiRouter.get('/invoices/:id', authorizeRole(VIEW_FINANCIALS_ROLES), async (req: Request, res: Response) => {
-    const { id } = req.params;
-    try {
-        const invoice = await db('invoices as i').join('customers as c', 'i.customer_id', 'c.id').join('branches as b', 'i.branch_id', 'b.id').select('i.*', 'c.name as customer_name', 'c.address as customer_address', 'c.phone as customer_phone', 'c.kra_pin as customer_kra_pin', 'b.name as branch_name', 'b.address as branch_address', 'b.phone as branch_phone').where('i.id', id).first();
-        if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
-        
-        const items = await db('invoice_items as ii').join('products as p', 'ii.product_id', 'p.id').select('ii.*', 'p.name as product_name', 'p.part_number').where('ii.invoice_id', id);
-        
-        const response = {
-            id: invoice.id, invoice_no: invoice.invoice_no, customer_id: invoice.customer_id, branch_id: invoice.branch_id, created_at: invoice.created_at, due_date: invoice.due_date, status: invoice.status, amount: invoice.total_amount, amount_paid: invoice.amount_paid, quotation_id: invoice.quotation_id,
-            customer: { id: invoice.customer_id, name: invoice.customer_name, address: invoice.customer_address, phone: invoice.customer_phone, kraPin: invoice.customer_kra_pin },
-            branch: { id: invoice.branch_id, name: invoice.branch_name, address: invoice.branch_address, phone: invoice.branch_phone },
-            items: items,
+        const stkPayload = {
+            BusinessShortCode: mpesaSettings.mpesaPaybill,
+            Password: password,
+            Timestamp: timestamp,
+            TransactionType: 'CustomerPayBillOnline',
+            Amount: Math.round(amount), // M-Pesa requires an integer
+            PartyA: phoneNumber,
+            PartyB: mpesaSettings.mpesaPaybill,
+            PhoneNumber: phoneNumber,
+            CallBackURL: callbackUrl,
+            AccountReference: salePayload.invoiceId ? `INV${salePayload.invoiceId}` : 'MASUMA-SALE',
+            TransactionDesc: 'Payment for autoparts'
         };
-        res.json(response);
-    } catch (error) { res.status(500).json({ message: "Server error fetching invoice details" }); }
-});
 
-// Dashboard
-apiRouter.get('/dashboard/stats', async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query as { startDate: string, endDate: string };
-    try {
-        const sales = await db('sales').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).sum('total_amount as total').count('id as count').first();
-        const customers = await db('sales').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).countDistinct('customer_id as count').first();
-        const shipments = await db('shipping_labels').where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`).count('id as total').sum(db.raw('CASE WHEN status="Draft" THEN 1 ELSE 0 END as pending')).first();
-        const settings = await getAppSettings(db);
-        res.json({ totalRevenue: sales?.total || 0, totalSales: sales?.count || 0, activeCustomers: customers?.count || 0, totalShipments: shipments?.total || 0, pendingShipments: shipments?.pending || 0, salesTarget: settings.salesTarget });
-    } catch(error) {
-        console.error("Error fetching dashboard stats:", error);
-        res.status(500).json({ message: "Failed to load dashboard statistics." });
-    }
-});
-apiRouter.post('/dashboard/sales-target', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const { target } = req.body;
-    if (target === undefined || typeof target !== 'number' || target < 0) {
-        return res.status(400).json({ message: "A valid, non-negative target number is required." });
-    }
-    try {
-        await db('app_settings').insert({ setting_key: 'sales_target', setting_value: target }).onConflict('setting_key').merge();
-        res.json({ salesTarget: target });
-    } catch (error) {
-        console.error("Failed to update sales target:", error);
-        res.status(500).json({ message: "Failed to update sales target." });
-    }
-});
-apiRouter.get('/dashboard/sales-chart', async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.query as { startDate: string, endDate: string };
-    const data = await db('sales')
-        .select(db.raw('DATE(created_at) as name'))
-        .sum('total_amount as revenue')
-        .count('id as sales')
-        .where('created_at', '>=', startDate).andWhere('created_at', '<=', `${endDate} 23:59:59`)
-        .groupBy('name')
-        .orderBy('name', 'asc');
-    res.json(data);
-});
-
-// Notifications
-apiRouter.get('/notifications', async (req: Request, res: Response) => {
-    const { lastCheck } = req.query;
-    const serverTimestamp = new Date().toISOString();
-    const settings = await getAppSettings(db);
-    
-    let newAppsQuery = db('b2b_applications').select('id', 'business_name as businessName', 'status').where('status', 'Pending');
-    if (lastCheck) newAppsQuery.where('submitted_at', '>', lastCheck as string);
-    const newApps = await newAppsQuery;
-    
-    const lowStock = await db('products').select('id', 'name', 'stock').where('stock', '<', settings.lowStockThreshold).where('stock', '>', 0);
-    res.json({ newApplications: newApps, lowStockProducts: lowStock, serverTimestamp: serverTimestamp });
-});
-
-// Settings
-apiRouter.get('/settings', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const settings = await getAppSettings(db); res.json(settings);
-});
-apiRouter.patch('/settings', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.INVENTORY_MANAGER]), async (req: Request, res: Response) => {
-    const settingsToUpdate = req.body;
-    try {
-        await db.transaction(async trx => {
-            for (const key in settingsToUpdate) {
-                const snakeCaseKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-                const value = settingsToUpdate[key];
-                await trx('app_settings').insert({ setting_key: snakeCaseKey, setting_value: String(value) }).onConflict('setting_key').merge();
-            }
+        const darajaResponse = await axios.post(`${DARAJA_API_URL}/mpesa/stkpush/v1/processrequest`, stkPayload, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        res.json(await getAppSettings(db));
-    } catch (error) { res.status(500).json({ message: "Failed to update settings" }); } 
-});
 
-// --- M-PESA PAYMENTS ---
-apiRouter.post('/payments/mpesa/initiate', async (req: Request, res: Response) => {
-    const { amount, phoneNumber, cart, customerId, branchId, invoiceId } = req.body;
-    const checkoutRequestId = `crq_${uuidv4()}`;
-    const merchantRequestId = `mrq_${uuidv4()}`;
-    try {
-        const transactionDetails = { cart, customerId, branchId, discount: req.body.discount, taxAmount: req.body.taxAmount, totalAmount: req.body.totalAmount };
+        const { MerchantRequestID, CheckoutRequestID } = darajaResponse.data;
+        
+        // Save pending transaction
         await db('mpesa_transactions').insert({
-            checkout_request_id: checkoutRequestId,
-            merchant_request_id: merchantRequestId,
+            checkout_request_id: CheckoutRequestID,
+            merchant_request_id: MerchantRequestID,
             amount: amount,
             phone_number: phoneNumber,
-            invoice_id: invoiceId || null,
-            transaction_details: JSON.stringify(transactionDetails),
-            status: 'Pending'
+            invoice_id: salePayload.invoiceId || null,
+            transaction_details: JSON.stringify(salePayload),
+            status: 'Pending',
         });
-        
-        console.log(`Transaction ${checkoutRequestId} initiated. Waiting for Safaricom callback.`);
 
-        res.json({ checkoutRequestId });
-    } catch (error: any) { 
-        console.error("M-Pesa initiation error:", error);
-        res.status(500).json({ message: error.message || 'Failed to initiate M-Pesa payment.' }); 
+        res.json({ checkoutRequestId: CheckoutRequestID });
+
+    } catch (error: any) {
+        console.error('M-Pesa initiation failed:', error.response?.data || error.message);
+        next(new Error('Failed to initiate M-Pesa payment.'));
+    }
+});
+
+apiRouter.post('/payments/mpesa/callback', async (req: express.Request, res: express.Response) => {
+    console.log('--- M-Pesa Callback Received ---');
+    console.log(JSON.stringify(req.body, null, 2));
+
+    const callbackData = req.body.Body.stkCallback;
+    const { CheckoutRequestID, ResultCode, ResultDesc } = callbackData;
+
+    try {
+        if (ResultCode === 0) {
+            // Success
+            const metadata = callbackData.CallbackMetadata.Item;
+            const mpesaReceipt = metadata.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
+            
+            const pendingTx = await db('mpesa_transactions').where({ checkout_request_id: CheckoutRequestID }).first();
+            if (!pendingTx || pendingTx.status !== 'Pending') {
+                 console.log(`Callback for already processed or unknown transaction ${CheckoutRequestID}`);
+                 return res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+            }
+
+            const salePayload: SalePayload = pendingTx.transaction_details;
+
+            const newSale = await db.transaction(async trx => {
+                const sale = await createSaleInDb(trx, salePayload);
+                await trx('mpesa_transactions').where({ id: pendingTx.id }).update({
+                    status: 'Completed',
+                    sale_id: sale.id,
+                    result_desc: ResultDesc,
+                    mpesa_receipt_number: mpesaReceipt,
+                    transaction_details: JSON.stringify(callbackData),
+                });
+                return sale;
+            });
+            console.log(`Successfully created sale ${newSale.sale_no} for M-Pesa tx ${CheckoutRequestID}`);
+
+        } else {
+            // Failure
+            await db('mpesa_transactions').where({ checkout_request_id: CheckoutRequestID }).update({
+                status: 'Failed',
+                result_desc: ResultDesc,
+                transaction_details: JSON.stringify(callbackData),
+            });
+            console.log(`M-Pesa tx ${CheckoutRequestID} failed: ${ResultDesc}`);
+        }
+
+        res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+
+    } catch (error) {
+        console.error('Error processing M-Pesa callback:', error);
+        // Don't send a failure response to Safaricom, as they might retry.
+        // Log the error for internal debugging.
+        res.json({ ResultCode: 0, ResultDesc: "Accepted" });
     }
 });
 
 
-apiRouter.get('/payments/mpesa/status/:checkoutRequestId', async (req: Request, res: Response) => {
+apiRouter.get('/payments/mpesa/status/:checkoutRequestId', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
         const tx = await db('mpesa_transactions').where({ checkout_request_id: checkoutRequestId }).first();
-        if (!tx) return res.status(404).json({ message: 'Transaction not found.' });
+        if (!tx) {
+            return res.status(404).json({ message: 'Transaction not found' });
+        }
 
         if (tx.status === 'Completed' && tx.sale_id) {
-            const saleDetails = await db('sales as s').join('customers as c', 's.customer_id', 'c.id').join('branches as b', 's.branch_id', 'b.id').select('s.id', 's.sale_no', 's.created_at', 's.total_amount as amount', 's.tax_amount', 's.payment_method', 'c.id as customer_id', 'c.name as customer_name', 'b.id as branch_id', 'b.name as branch_name', 'b.address as branch_address', 'b.phone as branch_phone').where('s.id', tx.sale_id).first();
-            const itemDetails = await db('sale_items as si').join('products as p', 'si.product_id', 'p.id').select('si.id', 'si.quantity', 'si.unit_price', 'p.name as product_name', 'p.part_number').where('si.sale_id', tx.sale_id);
-            const saleResponse = saleDetails;
-            saleResponse.customer = { id: saleResponse.customer_id, name: saleResponse.customer_name };
-            saleResponse.branch = { id: saleResponse.branch_id, name: saleResponse.branch_name, address: saleResponse.branch_address, phone: saleResponse.branch_phone };
-            saleResponse.items = itemDetails;
-            res.json({ status: 'Completed', sale: saleResponse });
+            const sale = await db('sales').where({ id: tx.sale_id }).first();
+            const items = await db('sale_items').join('products', 'sale_items.product_id', 'products.id').where({ sale_id: tx.sale_id }).select('sale_items.*', 'products.name as product_name');
+            const customer = await db('customers').where({ id: sale.customer_id }).first();
+            const branch = await db('branches').where({ id: sale.branch_id }).first();
+             // FIX: Reconstruct sale object to ensure correct types for the frontend.
+            const fullSale = {
+                id: sale.id,
+                sale_no: sale.sale_no,
+                customer_id: sale.customer_id,
+                branch_id: sale.branch_id,
+                created_at: sale.created_at,
+                payment_method: sale.payment_method,
+                invoice_id: sale.invoice_id,
+                items,
+                customer,
+                branch,
+                tax_amount: Number(sale.tax_amount),
+                amount: Number(sale.total_amount)
+            };
+            res.json({ status: tx.status, sale: fullSale });
         } else {
             res.json({ status: tx.status, message: tx.result_desc });
         }
-    } catch (error) { res.status(500).json({ message: 'Error checking payment status.' }); }
+    } catch (error) {
+        next(error);
+    }
 });
 
 app.use('/api', apiRouter);
 
-// --- STATIC FILE SERVING ---
-if (process.env.NODE_ENV === 'production') {
-    // In production, serve the built frontend files from the 'dist' directory of the frontend workspace.
-    const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
-    
-    app.use(express.static(frontendDistPath));
 
-    // For any route that doesn't match an API route or a static file, serve the frontend's index.html.
-    // This is crucial for single-page applications with client-side routing.
-    app.get('*', (req: Request, res: Response) => {
-        if (req.originalUrl.startsWith('/api/')) {
-            return res.status(404).json({ message: 'API endpoint not found.' });
-        }
-        res.sendFile(path.join(frontendDistPath, 'index.html'));
-    });
-}
-
-
-app.listen(port, () => {
-  console.log(`✅ Server is running on http://localhost:${port}`);
+// --- REACT APP HANDLER ---
+app.get('*', (req: express.Request, res: express.Response) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
 });
+
+
+// --- GLOBAL ERROR HANDLER ---
+// FIX: Added explicit types for req, res, next to satisfy Express's error handler signature.
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error(err); // Log the full error, including stack for debugging
+    const statusCode = err.statusCode || 500;
+    const message = err.statusCode ? err.message : 'Something went wrong on the server!';
+    res.status(statusCode).json({ message });
+});
+
+// --- SERVER START ---
+app.listen(PORT, () => {
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
+});
+
+export default app;

@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import Input from '../components/ui/Input';
-import Pagination from '../components/ui/Pagination';
-import { LoaderCircle, AlertTriangle } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import Input from '../components/ui/Input.tsx';
+import Pagination from '../components/ui/Pagination.tsx';
+import { LoaderCircle, AlertTriangle, Download } from 'lucide-react';
 import { Sale, Customer, Branch } from '@masuma-ea/types';
-import { getSales, getCustomers } from '../services/api';
-import DateRangePicker from '../components/ui/DateRangePicker';
+import { getSales, getCustomers } from '../services/api.ts';
+import DateRangePicker from '../components/ui/DateRangePicker.tsx';
+import Button from '../components/ui/Button.tsx';
+import { useDataStore } from '../store/dataStore.ts';
+import Select from '../components/ui/Select.tsx';
 
 interface OutletContextType {
   currentBranch: Branch;
@@ -17,10 +20,37 @@ interface OutletContextType {
 
 const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
+const exportToCsv = (filename: string, headers: string[], data: any[], keys: string[]) => {
+    const csvContent = [
+        headers.join(','),
+        ...data.map(row => 
+            keys.map(key => {
+                let value = key.split('.').reduce((o, i) => o ? o[i] : '', row);
+                if (typeof value === 'string') {
+                    value = `"${value.replace(/"/g, '""')}"`;
+                }
+                return value;
+            }).join(',')
+        )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+
 const Sales: React.FC = () => {
-  const { currentBranch, currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
+  const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
   const [sales, setSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const { branches } = useDataStore(); // Get branches from the global store
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +62,7 @@ const Sales: React.FC = () => {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
@@ -62,6 +93,13 @@ const Sales: React.FC = () => {
       }, {} as Record<number, string>);
   }, [customers]);
 
+  const branchMap = useMemo(() => {
+      return branches.reduce((acc, branch) => {
+          acc[branch.id] = branch.name;
+          return acc;
+      }, {} as Record<number, string>);
+  }, [branches]);
+
   const formatCurrency = (amount: number) => {
     const rate = exchangeRates[currentCurrency] || 1;
     const convertedAmount = amount * rate;
@@ -72,20 +110,35 @@ const Sales: React.FC = () => {
   };
 
   const filteredSales = useMemo(() => {
-      let branchSales = sales.filter(sale => sale.branch_id === currentBranch.id);
+      let allSales = [...sales];
+      
+      if (selectedCustomerId !== 'All') {
+          allSales = allSales.filter(sale => sale.customer_id === parseInt(selectedCustomerId, 10));
+      }
+
       if (searchTerm) {
           const lowercasedTerm = searchTerm.toLowerCase();
-          branchSales = branchSales.filter(sale => 
+          allSales = allSales.filter(sale => 
               sale.sale_no.toLowerCase().includes(lowercasedTerm) ||
-              (customerMap[sale.customer_id] || '').toLowerCase().includes(lowercasedTerm)
+              (customerMap[sale.customer_id] || '').toLowerCase().includes(lowercasedTerm) ||
+              (branchMap[sale.branch_id] || '').toLowerCase().includes(lowercasedTerm)
           );
       }
-      return branchSales;
-  }, [sales, searchTerm, currentBranch, customerMap]);
+      return allSales;
+  }, [sales, searchTerm, customerMap, branchMap, selectedCustomerId]);
   
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchTerm, dateRange]);
+  }, [searchTerm, dateRange, selectedCustomerId]);
+
+  const handleExport = () => {
+    const data = filteredSales.map(s => ({
+        ...s,
+        customerName: customerMap[s.customer_id] || 'N/A',
+        branchName: branchMap[s.branch_id] || 'N/A'
+    }));
+    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['sale_no', 'customerName', 'branchName', 'created_at', 'amount', 'payment_method']);
+  };
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const paginatedSales = filteredSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -102,6 +155,7 @@ const Sales: React.FC = () => {
             <TableRow>
               <TableHead>Sale No.</TableHead>
               <TableHead>Customer</TableHead>
+              <TableHead>Branch</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-center">Items</TableHead>
               <TableHead className="text-right">Amount ({currentCurrency})</TableHead>
@@ -112,6 +166,7 @@ const Sales: React.FC = () => {
               <TableRow key={sale.id}>
                 <TableCell className="font-mono">{sale.sale_no}</TableCell>
                 <TableCell>{customerMap[sale.customer_id] || 'Unknown'}</TableCell>
+                <TableCell>{branchMap[sale.branch_id] || 'Unknown'}</TableCell>
                 <TableCell>{new Date(sale.created_at).toLocaleString()}</TableCell>
                 <TableCell className="text-center">{typeof sale.items === 'number' ? sale.items : (Array.isArray(sale.items) ? sale.items.length : 0)}</TableCell>
                 <TableCell className="font-semibold text-right">{formatCurrency(sale.amount || 0)}</TableCell>
@@ -126,11 +181,14 @@ const Sales: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <h1 className="text-3xl font-bold">Sales History</h1>
-        <p className="text-gray-400 mt-2 md:mt-0">Branch: <span className="font-semibold text-orange-500">{currentBranch.name}</span></p>
+        <div>
+          <h1 className="text-3xl font-bold">Sales History</h1>
+          <p className="text-gray-400 mt-1">A log of all sales transactions across all branches.</p>
+        </div>
+        <Button onClick={handleExport} variant="secondary"><Download className="h-4 w-4 mr-2" /> Export CSV</Button>
       </div>
       
-      <DateRangePicker onRangeChange={setDateRange} initialRange={dateRange} />
+      <DateRangePicker range={dateRange} onRangeChange={setDateRange} />
       
       <Card>
           <CardHeader>
@@ -138,12 +196,26 @@ const Sales: React.FC = () => {
             <CardDescription>A complete log of all sales transactions for the selected period.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <Input 
-                    placeholder="Search by Sale No. or Customer Name..."
+                    placeholder="Search by Sale No, Customer or Branch Name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-grow"
                 />
+                 <Select
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full sm:w-64"
+                    aria-label="Filter by customer"
+                >
+                    <option value="All">All Customers</option>
+                    {customers.map(customer => (
+                        <option key={customer.id} value={customer.id}>
+                            {customer.name}
+                        </option>
+                    ))}
+                </Select>
               </div>
               {renderContent()}
               <div className="p-4 border-t border-gray-700">

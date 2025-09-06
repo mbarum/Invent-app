@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import Header from './Header';
+import Sidebar from './Sidebar.tsx';
+import Header from './Header.tsx';
 import { Branch, NotificationPayload } from '@masuma-ea/types';
 import toast from 'react-hot-toast';
-import { getNotifications } from '../services/api';
-import Button from './ui/Button';
-import { useAuth } from '../contexts/AuthContext';
+import { getNotifications } from '../services/api.ts';
+import Button from './ui/Button.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import { LoaderCircle } from 'lucide-react';
-import { useDataStore } from '../store/dataStore';
+import { useDataStore } from '../store/dataStore.ts';
 
 // Base currency is KES
 const exchangeRates = {

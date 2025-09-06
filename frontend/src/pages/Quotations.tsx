@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
-import Button from '../components/ui/Button';
-import Pagination from '../components/ui/Pagination';
-import Modal from '../components/ui/Modal';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card.tsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import Button from '../components/ui/Button.tsx';
+import Pagination from '../components/ui/Pagination.tsx';
+import Modal from '../components/ui/Modal.tsx';
 import { PlusCircle, LoaderCircle, AlertTriangle, X, Minus, Plus, RefreshCw, Check, Send, Eye, Printer, Download } from 'lucide-react';
 import { Quotation, QuotationStatus, Branch, Customer, Product, QuotationPayload } from '@masuma-ea/types';
-import { getQuotations, createQuotation, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api';
+import { getQuotations, createQuotation, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api.ts';
 import toast from 'react-hot-toast';
-import Input from '../components/ui/Input';
-import QuotationPrint from '../components/QuotationPrint';
+import Input from '../components/ui/Input.tsx';
+import QuotationPrint from '../components/QuotationPrint.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useDataStore } from '../store/dataStore';
+import { useDataStore } from '../store/dataStore.ts';
 
 interface OutletContextType {
   currentBranch: Branch;
@@ -42,6 +42,7 @@ const getStatusBadge = (status: QuotationStatus) => {
 
 const Quotations: React.FC = () => {
     const { currentBranch, currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
+    const navigate = useNavigate();
     const { customers: allCustomers, products: allProducts } = useDataStore();
     
     // Data state
@@ -122,9 +123,10 @@ const Quotations: React.FC = () => {
 
     const handleConvertToInvoice = async (id: number) => {
         try {
-            await convertQuotationToInvoice(id);
-            toast.success("Invoice created successfully! View it on the Invoices page.");
+            const newInvoice = await convertQuotationToInvoice(id);
+            toast.success(`Invoice ${newInvoice.invoice_no} created successfully!`);
             fetchQuotations(); // Refresh list
+            navigate('/invoices');
         } catch (err: any) {
             toast.error(`Failed to create invoice: ${err.message}`);
         }
@@ -137,7 +139,7 @@ const Quotations: React.FC = () => {
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
         
         try {
-            const canvas = await html2canvas(element, { scale: 2 });
+            const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();

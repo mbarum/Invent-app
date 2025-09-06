@@ -19,9 +19,10 @@
     "html2canvas": "^1.4.1",
     "google-one-tap": "^1.0.6",
     "zustand": "^4.5.2",
-    "@masuma-ea/types": "workspace:*"
+    "@masuma-ea/types": "1.0.0"
   },
   "devDependencies": {
+    "@types/node": "^20.12.12",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
