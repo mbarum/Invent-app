@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@masuma-ea/types': path.resolve(__dirname, '../../packages/types/src/index.ts'),
+      '@masuma-ea/types': path.resolve(__dirname, '../packages/types/src/index.ts'),
     },
   },
   server: {
