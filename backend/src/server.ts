@@ -1,13 +1,10 @@
 
 
 
-// FIX: Replaced qualified express type imports (e.g., express.Request) with direct imports
-// from 'express' (e.g., Request) and explicitly typed all route handlers. This resolves
-// numerous type inference errors that were causing compilation failures.
-// DEVELOPER NOTE: The above fix comment was incorrect. The reverse action (using qualified imports) was necessary to fix type collisions.
-// FIX: Changed import style to use a default import for Express and qualified types to resolve widespread type conflicts.
-// FIX: Changed express import to use a namespace `Express` for types (e.g., `Express.Request`). This resolves widespread type conflicts with global types.
-import express, * as Express from 'express';
+
+
+// FIX: Changed express import to a default import and used qualified types (e.g., `express.Request`). This resolves widespread type conflicts with global types.
+import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
@@ -98,14 +95,14 @@ const apiRouter = express.Router();
 
 // A dummy auth middleware
 // FIX: Explicitly typed parameters with `express.*` types to ensure type consistency.
-const authenticate = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     // In a real app, this would validate a JWT from the Authorization header
     // This is a placeholder for now.
     next();
 };
 
 // --- AUTH ---
-apiRouter.post('/auth/login', validate(loginSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/auth/login', validate(loginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -142,7 +139,7 @@ apiRouter.post('/auth/login', validate(loginSchema), async (req: Express.Request
         next(error);
     }
 });
-apiRouter.post('/auth/google-login', validate(googleLoginSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/auth/google-login', validate(googleLoginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { token: googleToken } = req.body;
     try {
         const ticket = await googleAuthClient.verifyIdToken({
@@ -183,7 +180,7 @@ apiRouter.post('/auth/google-login', validate(googleLoginSchema), async (req: Ex
         next(new Error("Google sign-in failed."));
     }
 });
-apiRouter.post('/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -221,7 +218,7 @@ apiRouter.post('/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1
 });
 
 // --- NOTIFICATIONS ---
-apiRouter.get('/notifications', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/notifications', authenticate, async (req: express.Request, res: express.Response) => {
     const lowStockThresholdSetting = await db('app_settings').where('setting_key', 'lowStockThreshold').first();
     const lowStockThreshold = Number(lowStockThresholdSetting?.setting_value) || 10;
     const [newApplications, lowStockProducts] = await Promise.all([
@@ -233,7 +230,7 @@ apiRouter.get('/notifications', authenticate, async (req: Express.Request, res: 
 
 // --- INVENTORY ---
 // FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
-apiRouter.get('/inventory/products', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/inventory/products', authenticate, async (req: express.Request, res: express.Response) => {
     const products = await db('products').select(
         'id',
         'part_number as partNumber',
@@ -244,7 +241,7 @@ apiRouter.get('/inventory/products', authenticate, async (req: Express.Request, 
     );
     res.json(products);
 });
-apiRouter.post('/inventory/products', authenticate, validate(productSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/inventory/products', authenticate, validate(productSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
         const newProduct = {
@@ -261,7 +258,7 @@ apiRouter.post('/inventory/products', authenticate, validate(productSchema), asy
         next(error);
     }
 });
-apiRouter.patch('/inventory/products/:id', authenticate, validate(updateProductSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/inventory/products/:id', authenticate, validate(updateProductSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const { partNumber, name, retailPrice, wholesalePrice, stock } = req.body;
@@ -282,7 +279,7 @@ apiRouter.patch('/inventory/products/:id', authenticate, validate(updateProductS
     }
 });
 
-apiRouter.post('/inventory/products/bulk', authenticate, validate(bulkProductSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/inventory/products/bulk', authenticate, validate(bulkProductSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const products = req.body.map((p: any) => ({
             id: uuidv4(),
@@ -300,7 +297,7 @@ apiRouter.post('/inventory/products/bulk', authenticate, validate(bulkProductSch
     }
 });
 
-apiRouter.get('/inventory/fast-moving', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/inventory/fast-moving', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { startDate, endDate, branchId } = req.query;
     try {
         // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
@@ -341,7 +338,7 @@ apiRouter.get('/inventory/fast-moving', authenticate, async (req: Express.Reques
 
 // --- B2B ---
 // FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
-apiRouter.get('/b2b/applications', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/b2b/applications', authenticate, async (req: express.Request, res: express.Response) => {
     const applications = await db('b2b_applications')
         .select(
             'id',
@@ -358,7 +355,7 @@ apiRouter.get('/b2b/applications', authenticate, async (req: Express.Request, re
         .orderBy('submitted_at', 'desc');
     res.json(applications);
 });
-apiRouter.patch('/b2b/applications/:id/status', authenticate, validate(updateB2BStatusSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/b2b/applications/:id/status', authenticate, validate(updateB2BStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
 
@@ -397,8 +394,8 @@ apiRouter.patch('/b2b/applications/:id/status', authenticate, validate(updateB2B
 });
 
 // --- USERS ---
-apiRouter.get('/users', authenticate, async (req: Express.Request, res: Express.Response) => res.json(await db('users').select('id', 'name', 'email', 'role', 'status')));
-apiRouter.post('/users', authenticate, validate(createUserSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/users', authenticate, async (req: express.Request, res: express.Response) => res.json(await db('users').select('id', 'name', 'email', 'role', 'status')));
+apiRouter.post('/users', authenticate, validate(createUserSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { name, email, password, role, status } = req.body;
     try {
         const salt = await bcrypt.genSalt(10);
@@ -417,7 +414,7 @@ apiRouter.post('/users', authenticate, validate(createUserSchema), async (req: E
         next(error);
     }
 });
-apiRouter.patch('/users/:id', authenticate, validate(updateUserSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/users/:id', authenticate, validate(updateUserSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     try {
         // FIX: Corrected array destructuring for Knex update, which returns a number for mysql.
@@ -431,7 +428,7 @@ apiRouter.patch('/users/:id', authenticate, validate(updateUserSchema), async (r
         next(error);
     }
 });
-apiRouter.patch('/users/me/password', authenticate, validate(updatePasswordSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/users/me/password', authenticate, validate(updatePasswordSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     // This assumes a userId is available from a real auth middleware
     const userId = '93288475-93a8-4e45-ae9c-e19d6ecb26ca'; // Hardcoded for demo
     const { currentPassword, newPassword } = req.body;
@@ -517,7 +514,7 @@ const createSaleInDb = async (trx: Knex.Transaction, payload: SalePayload) => {
     };
 };
 
-apiRouter.post('/pos/sales', authenticate, validate(createSaleSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/pos/sales', authenticate, validate(createSaleSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const newSale = await db.transaction(async trx => {
             return await createSaleInDb(trx, req.body);
@@ -530,7 +527,7 @@ apiRouter.post('/pos/sales', authenticate, validate(createSaleSchema), async (re
 
 
 // --- SHIPPING ---
-apiRouter.get('/shipping/labels', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/shipping/labels', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { startDate, endDate } = req.query;
     try {
         let query = db('shipping_labels').select('*').orderBy('created_at', 'desc');
@@ -548,7 +545,7 @@ apiRouter.get('/shipping/labels', authenticate, async (req: Express.Request, res
         next(error);
     }
 });
-apiRouter.post('/shipping/labels', authenticate, validate(createLabelSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/shipping/labels', authenticate, validate(createLabelSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const newLabel = { id: uuidv4(), status: 'Draft', ...req.body };
         await db('shipping_labels').insert(newLabel);
@@ -557,7 +554,7 @@ apiRouter.post('/shipping/labels', authenticate, validate(createLabelSchema), as
         next(error);
     }
 });
-apiRouter.patch('/shipping/labels/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/shipping/labels/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -571,14 +568,14 @@ apiRouter.patch('/shipping/labels/:id/status', authenticate, validate(updateLabe
 
 
 // --- QUOTATIONS & INVOICES ---
-apiRouter.get('/quotations', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/quotations', authenticate, async (req: express.Request, res: express.Response) => {
     const data = await db('quotations')
         .join('customers', 'quotations.customer_id', 'customers.id')
         .select('quotations.*', 'customers.name as customerName')
         .orderBy('created_at', 'desc');
     res.json(data);
 });
-apiRouter.get('/quotations/:id', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/quotations/:id', authenticate, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const quotation = await db('quotations').where({ id }).first();
     if (!quotation) return res.status(404).json({ message: 'Quotation not found' });
@@ -605,7 +602,7 @@ apiRouter.get('/quotations/:id', authenticate, async (req: Express.Request, res:
     
     res.json({ ...finalQuotation, items, customer, branch });
 });
-apiRouter.post('/quotations', authenticate, validate(createQuotationSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/quotations', authenticate, validate(createQuotationSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { customerId, branchId, items, validUntil } = req.body;
     try {
         const newQuotation = await db.transaction(async trx => {
@@ -638,7 +635,7 @@ apiRouter.post('/quotations', authenticate, validate(createQuotationSchema), asy
         next(error);
     }
 });
-apiRouter.patch('/quotations/:id/status', authenticate, validate(updateQuotationStatusSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/quotations/:id/status', authenticate, validate(updateQuotationStatusSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -650,7 +647,7 @@ apiRouter.patch('/quotations/:id/status', authenticate, validate(updateQuotation
     }
 });
 
-apiRouter.post('/quotations/:id/convert', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/quotations/:id/convert', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     try {
         const newInvoice = await db.transaction(async trx => {
@@ -699,7 +696,7 @@ apiRouter.post('/quotations/:id/convert', authenticate, async (req: Express.Requ
 });
 
 
-apiRouter.get('/invoices', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/invoices', authenticate, async (req: express.Request, res: express.Response) => {
     const { status } = req.query;
     let query = db('invoices')
         .join('customers', 'invoices.customer_id', 'customers.id')
@@ -712,7 +709,7 @@ apiRouter.get('/invoices', authenticate, async (req: Express.Request, res: Expre
     const data = await query;
     res.json(data);
 });
-apiRouter.get('/invoices/:id', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/invoices/:id', authenticate, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const invoice = await db('invoices').where({ id }).first();
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
@@ -742,7 +739,7 @@ apiRouter.get('/invoices/:id', authenticate, async (req: Express.Request, res: E
 });
 
 // --- GENERAL DATA ---
-apiRouter.get('/data/sales', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/data/sales', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { startDate, endDate } = req.query;
     try {
         let query = db('sales').select('*').orderBy('created_at', 'desc');
@@ -766,15 +763,15 @@ apiRouter.get('/data/sales', authenticate, async (req: Express.Request, res: Exp
         next(error);
     }
 });
-apiRouter.get('/data/invoices', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/data/invoices', authenticate, async (req: express.Request, res: express.Response) => {
     // This endpoint is for the POS dropdown, needs only unpaid invoice snippets
     const unpaidInvoices = await db('invoices')
         .where('status', 'Unpaid')
         .select('id', 'invoice_no');
     res.json(unpaidInvoices);
 });
-apiRouter.get('/data/branches', authenticate, async (req: Express.Request, res: Express.Response) => res.json(await db('branches').select('*')));
-apiRouter.post('/data/branches', authenticate, validate(createBranchSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/data/branches', authenticate, async (req: express.Request, res: express.Response) => res.json(await db('branches').select('*')));
+apiRouter.post('/data/branches', authenticate, validate(createBranchSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { name, address, phone } = req.body;
         const [newId] = await db('branches').insert({
@@ -788,7 +785,7 @@ apiRouter.post('/data/branches', authenticate, validate(createBranchSchema), asy
         next(error);
     }
 });
-apiRouter.patch('/data/branches/:id', authenticate, validate(updateBranchSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.patch('/data/branches/:id', authenticate, validate(updateBranchSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     try {
         const updatedCount = await db('branches').where({ id }).update(req.body);
@@ -802,7 +799,7 @@ apiRouter.patch('/data/branches/:id', authenticate, validate(updateBranchSchema)
     }
 });
 // FIX: Aliased snake_case columns to camelCase to match frontend type definitions.
-apiRouter.get('/data/customers', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/data/customers', authenticate, async (req: express.Request, res: express.Response) => {
     const customers = await db('customers').select(
         'id',
         'name',
@@ -812,7 +809,7 @@ apiRouter.get('/data/customers', authenticate, async (req: Express.Request, res:
     );
     res.json(customers);
 });
-apiRouter.get('/customers/:id/transactions', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/customers/:id/transactions', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     try {
         const [salesResults, invoicesResults, quotationsResults] = await Promise.all([
@@ -838,7 +835,7 @@ apiRouter.get('/customers/:id/transactions', authenticate, async (req: Express.R
         next(error);
     }
 });
-apiRouter.post('/data/customers', authenticate, validate(createCustomerSchema), async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/data/customers', authenticate, validate(createCustomerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { name, address, phone, kraPin } = req.body;
         const [newId] = await db('customers').insert({
@@ -864,7 +861,7 @@ apiRouter.post('/data/customers', authenticate, validate(createCustomerSchema), 
 
 // --- SETTINGS ---
 // FIX: Implemented GET /settings to read from the database instead of returning a hardcoded object.
-apiRouter.get('/settings', authenticate, async (req: Express.Request, res: Express.Response) => {
+apiRouter.get('/settings', authenticate, async (req: express.Request, res: express.Response) => {
     const settingsRows = await db('app_settings').select('*');
     const settings = settingsRows.reduce((acc, row) => {
         // Attempt to parse numbers, otherwise keep as string
@@ -891,7 +888,7 @@ apiRouter.get('/settings', authenticate, async (req: Express.Request, res: Expre
     res.json({ ...defaults, ...settings });
 });
 // FIX: Implemented PATCH /settings to save changes to the database.
-apiRouter.patch('/settings', authenticate, validate(updateSettingsSchema), async (req: Express.Request, res: Express.Response) => {
+apiRouter.patch('/settings', authenticate, validate(updateSettingsSchema), async (req: express.Request, res: express.Response) => {
     const settingsData = req.body;
     
     await db.transaction(async (trx) => {
@@ -913,7 +910,7 @@ apiRouter.patch('/settings', authenticate, validate(updateSettingsSchema), async
 });
 
 // --- DASHBOARD & REPORTS ---
-apiRouter.get('/dashboard/stats', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/dashboard/stats', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { startDate, endDate, branchId } = req.query;
     try {
         // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
@@ -954,7 +951,7 @@ apiRouter.get('/dashboard/stats', authenticate, async (req: Express.Request, res
     }
 });
 
-apiRouter.get('/dashboard/sales-chart', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/dashboard/sales-chart', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { startDate, endDate, branchId } = req.query;
     try {
         // FIX: Replaced string-based date manipulation with Date objects for robust, timezone-proof queries.
@@ -980,7 +977,7 @@ apiRouter.get('/dashboard/sales-chart', authenticate, async (req: Express.Reques
     }
 });
 
-apiRouter.post('/dashboard/sales-target', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/dashboard/sales-target', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { target } = req.body;
         await db('app_settings').insert({ setting_key: 'salesTarget', setting_value: target }).onConflict('setting_key').merge();
@@ -992,7 +989,7 @@ apiRouter.post('/dashboard/sales-target', authenticate, async (req: Express.Requ
 
 
 // --- VIN PICKER ---
-apiRouter.get('/vin-picker/:vin', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/vin-picker/:vin', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { vin } = req.params;
         if (!vin || vin.length < 17) {
@@ -1064,7 +1061,7 @@ const getDarajaToken = async (consumerKey: string, consumerSecret: string) => {
     }
 };
 
-apiRouter.post('/payments/mpesa/initiate', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.post('/payments/mpesa/initiate', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { amount, phoneNumber, ...salePayload } = req.body;
     try {
         const settings = await db('app_settings').select();
@@ -1121,7 +1118,7 @@ apiRouter.post('/payments/mpesa/initiate', authenticate, async (req: Express.Req
     }
 });
 
-apiRouter.post('/payments/mpesa/callback', async (req: Express.Request, res: Express.Response) => {
+apiRouter.post('/payments/mpesa/callback', async (req: express.Request, res: express.Response) => {
     console.log('--- M-Pesa Callback Received ---');
     console.log(JSON.stringify(req.body, null, 2));
 
@@ -1176,7 +1173,7 @@ apiRouter.post('/payments/mpesa/callback', async (req: Express.Request, res: Exp
 });
 
 
-apiRouter.get('/payments/mpesa/status/:checkoutRequestId', authenticate, async (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+apiRouter.get('/payments/mpesa/status/:checkoutRequestId', authenticate, async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
         const tx = await db('mpesa_transactions').where({ checkout_request_id: checkoutRequestId }).first();
@@ -1221,14 +1218,14 @@ app.use('/api', apiRouter);
 // It serves the main 'index.html' file of the React app for any request that doesn't match an API endpoint
 // or a static asset (like a JS or CSS file). This allows React Router to take over and handle client-side routing.
 // For example, a request to 'https://erp.masuma.africa/dashboard' will be handled here.
-app.get('*', (req: Express.Request, res: Express.Response) => {
+app.get('*', (req: express.Request, res: express.Response) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 
 // --- GLOBAL ERROR HANDLER ---
 // FIX: Added explicit types for req, res, next to satisfy Express's error handler signature.
-app.use((err: any, req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error(err); // Log the full error, including stack for debugging
     const statusCode = err.statusCode || 500;
     const message = err.statusCode ? err.message : 'Something went wrong on the server!';

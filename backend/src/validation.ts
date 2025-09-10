@@ -1,8 +1,6 @@
 import Joi from 'joi';
-// FIX: Unify express import style with server.ts to fix type conflicts and resolve type inference errors.
-// FIX: Changed import style to use a default import for Express and qualified types to resolve widespread type conflicts.
-// FIX: Changed express import to use a namespace `Express` for types (e.g., `Express.Request`). This resolves widespread type conflicts with global types.
-import express, * as Express from 'express';
+// FIX: Changed express import to a default import and used qualified types (e.g., `express.Request`). This resolves widespread type conflicts with global types.
+import express from 'express';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole } from '@masuma-ea/types';
 
 /**
@@ -11,7 +9,7 @@ import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, User
  * @returns An Express middleware function.
  */
 // FIX: Added an explicit express.RequestHandler return type and typed inner function arguments to ensure correct type inference from Express.
-export const validate = (schema: Joi.Schema): Express.RequestHandler => (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+export const validate = (schema: Joi.Schema): express.RequestHandler => (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {
         // Create a custom error object for the global error handler
