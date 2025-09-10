@@ -1,3 +1,4 @@
+
 // FIX: Replaced qualified express type imports (e.g., express.Request) with direct imports
 // from 'express' (e.g., Request) and explicitly typed all route handlers. This resolves
 // numerous type inference errors that were causing compilation failures.
@@ -76,12 +77,20 @@ const upload = multer({ storage });
 
 
 // --- STATIC ASSETS ---
+// Serve uploaded documents (e.g., B2B registration files) from the /uploads route.
+// This makes files accessible via URLs like 'https://erp.masuma.africa/uploads/filename.pdf'
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// --- PRODUCTION FRONTEND SERVING ---
+// For the single-subdomain deployment on 'erp.masuma.africa', this Express server
+// is responsible for serving the compiled frontend application. The following
+// middleware points to the 'dist' directory created by the frontend's build process.
 const frontendPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
 app.use(express.static(frontendPath));
 
 
 // --- API ROUTER ---
+// All API endpoints are prefixed with /api to distinguish them from frontend routes.
 const apiRouter = express.Router();
 
 // A dummy auth middleware
@@ -1204,7 +1213,11 @@ apiRouter.get('/payments/mpesa/status/:checkoutRequestId', authenticate, async (
 app.use('/api', apiRouter);
 
 
-// --- REACT APP HANDLER ---
+// --- REACT APP HANDLER (SPA Fallback) ---
+// This is a catch-all route that must be placed AFTER all other API routes and static file handlers.
+// It serves the main 'index.html' file of the React app for any request that doesn't match an API endpoint
+// or a static asset (like a JS or CSS file). This allows React Router to take over and handle client-side routing.
+// For example, a request to 'https://erp.masuma.africa/dashboard' will be handled here.
 app.get('*', (req: express.Request, res: express.Response) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });

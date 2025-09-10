@@ -3,63 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuma EA Hub - Project Setup</title>
+    <title>Masuma EA Hub - Project Root</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #111827; color: #f3f4f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 1rem; }
-        .container { text-align: center; max-width: 600px; padding: 2rem; border: 1px solid #374151; border-radius: 0.5rem; background-color: #1f2937; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
-        h1 { color: #f97316; font-size: 1.875rem; font-weight: bold; }
-        p { margin: 1rem 0; line-height: 1.6; color: #d1d5db; }
-        code { font-family: 'Courier New', Courier, monospace; background-color: #374151; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 1.1rem; color: #fb923c; }
-        a { color: #fb923c; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .info { font-size: 0.875rem; color: #6b7280; margin-top: 2rem; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            background-color: #111827; /* gray-900 */
+            color: #f3f4f6; /* gray-100 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 650px;
+            padding: 2.5rem;
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 0.75rem;
+            background-color: #1f2937; /* gray-800 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            color: #f97316; /* orange-500 */
+            font-size: 2.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            margin: 1.25rem 0;
+            line-height: 1.7;
+            color: #d1d5db; /* gray-300 */
+        }
+        .info-box {
+            background-color: #374151; /* gray-700 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            margin-top: 1.5rem;
+        }
+        code {
+            font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+            background-color: #4b5563; /* gray-600 */
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            color: #fb923c; /* orange-300 */
+            font-size: 0.9em;
+        }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react": "https://aistudiocdn.com/react@^19.1.1",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.8.2",
-    "react-hot-toast": "https://aistudiocdn.com/react-hot-toast@^2.6.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.542.0",
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
-    "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
-    "google-one-tap": "https://aistudiocdn.com/google-one-tap@^1.0.6",
-    "mysql2/": "https://aistudiocdn.com/mysql2@^3.14.4/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.19.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.0",
+    "axios": "https://aistudiocdn.com/axios@^1.11.0",
+    "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
+    "vite": "https://aistudiocdn.com/vite@^7.1.5",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.8.2",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.2",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
     "dotenv": "https://aistudiocdn.com/dotenv@^17.2.2",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.543.0",
+    "react-hot-toast": "https://aistudiocdn.com/react-hot-toast@^2.6.0",
     "express": "https://aistudiocdn.com/express@^5.1.0",
-    "cors": "https://aistudiocdn.com/cors@^2.8.5",
-    "mysql2": "https://aistudiocdn.com/mysql2@^3.14.4",
-    "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
-    "multer": "https://aistudiocdn.com/multer@^2.0.2",
-    "path": "https://aistudiocdn.com/path@^0.12.7",
-    "fs": "https://aistudiocdn.com/fs@^0.0.1-security",
-    "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0",
     "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2",
     "google-auth-library": "https://aistudiocdn.com/google-auth-library@^10.3.0",
-    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.2",
-    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
-    "vite": "https://aistudiocdn.com/vite@^7.1.4",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "multer": "https://aistudiocdn.com/multer@^2.0.2",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
     "knex": "https://aistudiocdn.com/knex@^3.1.0",
-    "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
-    "express-rate-limit": "https://aistudiocdn.com/express-rate-limit@^8.1.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "cors": "https://aistudiocdn.com/cors@^2.8.5",
     "joi": "https://aistudiocdn.com/joi@^18.0.1",
     "morgan": "https://aistudiocdn.com/morgan@^1.10.1",
-    "axios": "https://aistudiocdn.com/axios@^1.11.0"
+    "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0"
   }
 }
 </script>
 </head>
 <body>
     <div class="container">
-        <h1>Project Restructured Successfully</h1>
-        <p>This application now uses a modern development server (Vite) for a better and faster local development experience.</p>
-        <p>To view and work on the app, please run the following command in your terminal:</p>
-        <code>npm run dev</code>
-        <p>Then, open your browser and go to <a href="http://localhost:5173">http://localhost:5173</a>.</p>
-        <p class="info">This <code>index.html</code> file is a placeholder. The actual development entry point is now <code>/frontend/index.html</code>, served by Vite.</p>
+        <h1>Masuma EA Hub</h1>
+        <p>This is the root of the Masuma EA Hub application monorepo. The project contains separate frontend and backend services designed to work together as a single-page application (SPA).</p>
+        
+        <div class="info-box">
+            <p><strong>For Local Development:</strong><br>
+            Run <code>npm run dev</code> from this root directory. This command starts both the frontend and backend servers concurrently. Access the application at the local address provided by Vite (usually <code>http://localhost:5173</code>).</p>
+        </div>
+
+        <div class="info-box">
+            <p><strong>For Production Deployment (e.g., on CloudPanel):</strong><br>
+            1. Build the entire application using <code>npm run build</code>.<br>
+            2. Configure your server to run the Node.js application from its entry point: <code>backend/dist/server.js</code>.<br>
+            3. The backend server is configured to serve the static frontend files. No separate web server for the frontend is needed.</p>
+        </div>
     </div>
 </body>
 </html>
