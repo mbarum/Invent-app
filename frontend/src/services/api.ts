@@ -1,434 +1,296 @@
+
+
+
+import axios from 'axios';
 import { 
-    ApplicationStatus, 
-    BusinessApplication, 
-    RegistrationData,
-    Product, 
-    Branch, 
-    Customer, 
-    Sale, 
-    Invoice,
-    InvoiceStatus,
-    Quotation,
-    ShippingLabel, 
-    ShippingStatus,
-    NotificationPayload,
-    User,
-    AppSettings,
-    DashboardStats,
-    SalesChartDataPoint,
-    VinSearchResult,
-    SalePayload,
-    QuotationPayload,
-    MpesaPayload,
-    FastMovingProduct,
+    User, Product, Sale, Customer, Invoice, Quotation, ShippingLabel, Branch, 
+    BusinessApplication, AppSettings, DashboardStats, SalesChartDataPoint, 
+    FastMovingProduct, VinSearchResult, CustomerTransactions, QuotationPayload,
+    ApplicationStatus, ShippingStatus, QuotationStatus, StockRequest, 
+    CreateStockRequestPayload, StockRequestStatus, NotificationPayload, AuditLog,
+    // FIX: Add missing InvoiceStatus import.
+    InvoiceStatus
 } from '@masuma-ea/types';
 
-// This setup is for a single-server deployment model where the backend
-// serves both the API and the frontend static files.
-export const API_BASE_URL = '/api';
-export const DOCS_BASE_URL = ''; // Docs are served from the same origin.
+const api = axios.create({
+  baseURL: '/api',
+});
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
-// Custom type for the new transaction history endpoint
-export interface CustomerTransactions {
-    sales: Sale[];
-    invoices: Invoice[];
-    quotations: Quotation[];
-}
-
-/**
- * A helper function to handle API responses.
- * It checks for errors and parses the JSON body.
- */
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'An unknown API error occurred' }));
-    throw new Error(errorData.message || 'Failed to fetch data');
-  }
-  return response.json() as Promise<T>;
-};
-
-/**
- * Creates the authorization headers if a token exists.
- */
-const getAuthHeaders = (): HeadersInit => {
+// Add a request interceptor to include the auth token
+api.interceptors.request.use(
+  (config) => {
     const token = sessionStorage.getItem('authToken');
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return headers;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || error.message;
+    return Promise.reject(new Error(message));
+  }
+);
+
+
+// --- Auth ---
+export const loginUser = async (email: string, password: string): Promise<{ token: string }> => {
+    const { data } = await api.post('/auth/login', { email, password });
+    return data;
 };
 
-const buildUrlWithDateRange = (baseUrl: string, dateRange: DateRange): string => {
-    const url = new URL(baseUrl, window.location.origin);
-    url.searchParams.append('startDate', dateRange.start);
-    url.searchParams.append('endDate', dateRange.end);
-    return `${url.pathname}${url.search}`;
+export const loginWithGoogle = async (token: string): Promise<{ token: string }> => {
+    const { data } = await api.post('/auth/google', { token });
+    return data;
 };
 
-// --- AUTH ---
-export const loginUser = async (email: string, pass: string): Promise<{ token: string }> => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass }),
-    });
-    return handleResponse<{ token: string }>(response);
-}
-
-export const loginWithGoogle = async (googleToken: string): Promise<{ token: string }> => {
-    const response = await fetch(`${API_BASE_URL}/auth/google-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: googleToken }),
-    });
-    return handleResponse<{ token: string }>(response);
-};
-
-export const checkAuth = (): Promise<boolean> => {
-    const token = sessionStorage.getItem('authToken');
-    // In a real app, you might want to verify the token with the backend here.
-    // For now, we'll just check for its existence.
-    return Promise.resolve(!!token);
-}
-
-export const registerUser = async (data: RegistrationData): Promise<BusinessApplication> => {
+export const registerUser = async (payload: {
+    businessName: string; kraPin: string; contactName: string; contactEmail: string; contactPhone: string; password: string; certOfInc: File; cr12: File;
+}) => {
     const formData = new FormData();
-    formData.append('businessName', data.businessName);
-    formData.append('kraPin', data.kraPin);
-    formData.append('contactName', data.contactName);
-    formData.append('contactEmail', data.contactEmail);
-    formData.append('contactPhone', data.contactPhone);
-    formData.append('password', data.password || '');
-    formData.append('certOfInc', data.certOfInc);
-    formData.append('cr12', data.cr12);
-
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        body: formData, // No Content-Type header needed, browser sets it for FormData
+    Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value);
     });
-
-    return handleResponse<BusinessApplication>(response);
-}
-
-// --- NOTIFICATIONS ---
-export const getNotifications = async (lastCheck?: string): Promise<NotificationPayload> => {
-    const url = new URL(`${API_BASE_URL}/notifications`, window.location.origin);
-    if (lastCheck) {
-        url.searchParams.append('lastCheck', lastCheck);
-    }
-    const response = await fetch(url.toString(), { headers: getAuthHeaders() });
-    return handleResponse<NotificationPayload>(response);
-};
-
-// --- INVENTORY ---
-export const getProducts = async (): Promise<Product[]> => {
-    const response = await fetch(`${API_BASE_URL}/inventory/products`, { headers: getAuthHeaders() });
-    return handleResponse<Product[]>(response);
-};
-
-export const createProduct = async (data: Omit<Product, 'id'>): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/inventory/products`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+    const { data } = await api.post('/auth/register', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return handleResponse<Product>(response);
+    return data;
 };
 
-export const updateProduct = async (id: string, data: Partial<Product>): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/inventory/products/${id}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<Product>(response);
+// --- Dashboard ---
+export const getDashboardStats = async (range: {start: string, end: string}, branchId: number): Promise<DashboardStats> => {
+    const { data } = await api.get('/dashboard/stats', { params: { ...range, branchId } });
+    return data;
 };
 
-export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<{ message: string }> => {
-    const response = await fetch(`${API_BASE_URL}/inventory/products/bulk`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(products),
-    });
-    return handleResponse<{ message: string }>(response);
+export const getSalesChartData = async (range: {start: string, end: string}, branchId: number): Promise<SalesChartDataPoint[]> => {
+    const { data } = await api.get('/dashboard/sales-chart', { params: { ...range, branchId } });
+    return data;
 };
 
-export const getFastMovingProducts = async (dateRange: DateRange, branchId?: number): Promise<FastMovingProduct[]> => {
-    let url = buildUrlWithDateRange(`${API_BASE_URL}/inventory/fast-moving`, dateRange);
-    if (branchId) {
-        url += `&branchId=${branchId}`;
-    }
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<FastMovingProduct[]>(response);
-};
-
-// --- B2B MANAGEMENT ---
-export const getB2BApplications = async (): Promise<BusinessApplication[]> => {
-    const response = await fetch(`${API_BASE_URL}/b2b/applications`, { headers: getAuthHeaders() });
-    return handleResponse<BusinessApplication[]>(response);
-};
-
-export const updateB2BApplicationStatus = async (id: string, status: ApplicationStatus): Promise<BusinessApplication> => {
-    const response = await fetch(`${API_BASE_URL}/b2b/applications/${id}/status`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
-    });
-    return handleResponse<BusinessApplication>(response);
-}
-
-// --- USER MANAGEMENT ---
-export const getUsers = async (): Promise<User[]> => {
-    const response = await fetch(`${API_BASE_URL}/users`, { headers: getAuthHeaders() });
-    return handleResponse<User[]>(response);
-};
-
-export const createUser = async (data: Partial<User>): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<User>(response);
-};
-
-export const updateUser = async (id: string, data: Partial<User>): Promise<User> => {
-    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<User>(response);
-};
-
-export const updateCurrentUserPassword = async (data: { currentPassword?: string; newPassword?: string; }): Promise<{ message: string; }> => {
-    const response = await fetch(`${API_BASE_URL}/users/me/password`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<{ message: string }>(response);
-};
-
-
-// --- POS ---
-export const createSale = async (payload: SalePayload): Promise<Sale> => {
-    const response = await fetch(`${API_BASE_URL}/pos/sales`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-    });
-    return handleResponse<Sale>(response);
-};
-
-
-// --- SHIPPING ---
-export const getShippingLabels = async (dateRange?: DateRange): Promise<ShippingLabel[]> => {
-    let url = `${API_BASE_URL}/shipping/labels`;
-    if (dateRange) {
-        url = buildUrlWithDateRange(url, dateRange);
-    }
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<ShippingLabel[]>(response);
-};
-
-export const createShippingLabel = async (data: Partial<ShippingLabel>): Promise<ShippingLabel> => {
-    const response = await fetch(`${API_BASE_URL}/shipping/labels`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<ShippingLabel>(response);
-}
-
-export const updateShippingLabelStatus = async (id: string, status: ShippingStatus): Promise<ShippingLabel> => {
-    const response = await fetch(`${API_BASE_URL}/shipping/labels/${id}/status`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
-    });
-    return handleResponse<ShippingLabel>(response);
-}
-
-// --- QUOTATIONS & INVOICES ---
-export const getQuotations = async (): Promise<Quotation[]> => {
-    const response = await fetch(`${API_BASE_URL}/quotations`, { headers: getAuthHeaders() });
-    return handleResponse<Quotation[]>(response);
-};
-
-export const getQuotationDetails = async (id: number): Promise<Quotation> => {
-    const response = await fetch(`${API_BASE_URL}/quotations/${id}`, { headers: getAuthHeaders() });
-    return handleResponse<Quotation>(response);
-};
-
-export const createQuotation = async (payload: QuotationPayload): Promise<Quotation> => {
-    const response = await fetch(`${API_BASE_URL}/quotations`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload)
-    });
-    return handleResponse<Quotation>(response);
-};
-
-export const updateQuotationStatus = async (id: number, status: string): Promise<Quotation> => {
-     const response = await fetch(`${API_BASE_URL}/quotations/${id}/status`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
-    });
-    return handleResponse<Quotation>(response);
-};
-
-export const convertQuotationToInvoice = async (id: number): Promise<Invoice> => {
-    const response = await fetch(`${API_BASE_URL}/quotations/${id}/convert`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-    });
-    return handleResponse<Invoice>(response);
-};
-
-export const getInvoices = async (status?: InvoiceStatus): Promise<Invoice[]> => {
-    const url = new URL(`${API_BASE_URL}/invoices`, window.location.origin);
-    if (status && status !== 'All' as any) {
-        url.searchParams.append('status', status);
-    }
-    const response = await fetch(url.toString(), { headers: getAuthHeaders() });
-    return handleResponse<Invoice[]>(response);
-};
-
-export const getInvoiceDetails = async (id: number): Promise<Invoice> => {
-    const response = await fetch(`${API_BASE_URL}/invoices/${id}`, { headers: getAuthHeaders() });
-    return handleResponse<Invoice>(response);
-};
-
-
-// --- GENERAL DATA ---
-export const getSales = async (dateRange?: DateRange): Promise<Sale[]> => {
-    let url = `${API_BASE_URL}/data/sales`;
-    if (dateRange) {
-        url = buildUrlWithDateRange(url, dateRange);
-    }
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<Sale[]>(response);
-};
-
-// Returns a list of unpaid invoices with minimal data for dropdowns.
-export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id'| 'invoice_no'>[]> => {
-    const response = await fetch(`${API_BASE_URL}/data/invoices`, { headers: getAuthHeaders() });
-    return handleResponse<Pick<Invoice, 'id'| 'invoice_no'>[]>(response);
-};
-
-export const getBranches = async (): Promise<Branch[]> => {
-    const response = await fetch(`${API_BASE_URL}/data/branches`, { headers: getAuthHeaders() });
-    return handleResponse<Branch[]>(response);
-};
-
-export const createBranch = async (data: Omit<Branch, 'id'>): Promise<Branch> => {
-    const response = await fetch(`${API_BASE_URL}/data/branches`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<Branch>(response);
-};
-
-export const updateBranch = async (id: number, data: Partial<Omit<Branch, 'id'>>): Promise<Branch> => {
-    const response = await fetch(`${API_BASE_URL}/data/branches/${id}`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<Branch>(response);
-};
-
-export const getCustomers = async (): Promise<Customer[]> => {
-    const response = await fetch(`${API_BASE_URL}/data/customers`, { headers: getAuthHeaders() });
-    return handleResponse<Customer[]>(response);
-};
-
-export const getCustomerTransactions = async (id: number): Promise<CustomerTransactions> => {
-    const response = await fetch(`${API_BASE_URL}/customers/${id}/transactions`, { headers: getAuthHeaders() });
-    return handleResponse<CustomerTransactions>(response);
-};
-
-export const createCustomer = async (data: Omit<Customer, 'id'>): Promise<Customer> => {
-    const response = await fetch(`${API_BASE_URL}/data/customers`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<Customer>(response);
-};
-
-export const getShipments = getShippingLabels;
-
-// --- SETTINGS ---
-export const getSettings = async (): Promise<AppSettings> => {
-    const response = await fetch(`${API_BASE_URL}/settings`, { headers: getAuthHeaders() });
-    return handleResponse<AppSettings>(response);
-};
-
-export const updateSettings = async (data: AppSettings): Promise<AppSettings> => {
-    const response = await fetch(`${API_BASE_URL}/settings`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<AppSettings>(response);
-};
-
-
-// --- DASHBOARD & REPORTS ---
-export const getDashboardStats = async (dateRange: DateRange, branchId?: number): Promise<DashboardStats> => {
-    let url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/stats`, dateRange);
-    if(branchId) {
-        url += `&branchId=${branchId}`;
-    }
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<DashboardStats>(response);
-};
-
-export const getSalesChartData = async (dateRange: DateRange, branchId?: number): Promise<SalesChartDataPoint[]> => {
-    let url = buildUrlWithDateRange(`${API_BASE_URL}/dashboard/sales-chart`, dateRange);
-    if(branchId) {
-        url += `&branchId=${branchId}`;
-    }
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    return handleResponse<SalesChartDataPoint[]>(response);
+export const getFastMovingProducts = async (range: {start: string, end: string}, branchId: number): Promise<FastMovingProduct[]> => {
+    const { data } = await api.get('/dashboard/fast-moving', { params: { ...range, branchId } });
+    return data;
 };
 
 export const updateSalesTarget = async (target: number): Promise<{ salesTarget: number }> => {
-    const response = await fetch(`${API_BASE_URL}/dashboard/sales-target`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ target }),
-    });
-    return handleResponse<{ salesTarget: number }>(response);
+    const { data } = await api.put('/dashboard/sales-target', { target });
+    return data;
 };
 
-// --- VIN PICKER ---
+// --- Products ---
+export const getProducts = async (): Promise<Product[]> => {
+    const { data } = await api.get('/products');
+    return data;
+};
+
+export const createProduct = async (productData: Omit<Product, 'id'>): Promise<Product> => {
+    const { data } = await api.post('/products', productData);
+    return data;
+};
+
+export const updateProduct = async (id: string, productData: Partial<Product>): Promise<Product> => {
+    const { data } = await api.put(`/products/${id}`, productData);
+    return data;
+};
+
+export const deleteProduct = async (id: string): Promise<void> => {
+    await api.delete(`/products/${id}`);
+};
+
+export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<{ count: number }> => {
+    const { data } = await api.post('/products/import', { products });
+    return data;
+};
+
+// --- VIN Picker ---
 export const getPartsByVin = async (vin: string): Promise<VinSearchResult[]> => {
-    const response = await fetch(`${API_BASE_URL}/vin-picker/${vin}`, { headers: getAuthHeaders() });
-    return handleResponse<VinSearchResult[]>(response);
+    const { data } = await api.get(`/vin/${vin}`);
+    return data;
+}
+
+// --- Customers ---
+export const getCustomers = async (): Promise<Customer[]> => {
+    const { data } = await api.get('/customers');
+    return data;
 };
 
-// --- M-PESA PAYMENTS ---
-export const initiateMpesaPayment = async (payload: MpesaPayload): Promise<{ checkoutRequestId: string }> => {
-    const response = await fetch(`${API_BASE_URL}/payments/mpesa/initiate`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(payload),
-    });
-    return handleResponse<{ checkoutRequestId: string }>(response);
+export const createCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer> => {
+    const { data } = await api.post('/customers', customerData);
+    return data;
 };
 
+export const getCustomerTransactions = async (id: number): Promise<CustomerTransactions> => {
+    const { data } = await api.get(`/customers/${id}/transactions`);
+    return data;
+};
+
+// --- Sales ---
+export const getSales = async (range?: {start: string, end: string}): Promise<Sale[]> => {
+    const { data } = await api.get('/sales', { params: range });
+    return data;
+};
+
+export const createSale = async (saleData: any): Promise<Sale> => {
+    const { data } = await api.post('/sales', saleData);
+    return data;
+};
+
+// --- Invoices ---
+export const getInvoices = async (status?: InvoiceStatus): Promise<Invoice[]> => {
+    const { data } = await api.get('/invoices', { params: { status } });
+    return data;
+};
+export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id' | 'invoice_no'>[]> => {
+    const { data } = await api.get('/invoices/snippets/unpaid');
+    return data;
+}
+export const getInvoiceDetails = async (id: number): Promise<Invoice> => {
+    const { data } = await api.get(`/invoices/${id}`);
+    return data;
+};
+
+// --- Quotations ---
+export const getQuotations = async (): Promise<Quotation[]> => {
+    const { data } = await api.get('/quotations');
+    return data;
+};
+export const getQuotationDetails = async (id: number): Promise<Quotation> => {
+    const { data } = await api.get(`/quotations/${id}`);
+    return data;
+};
+export const createQuotation = async (payload: QuotationPayload): Promise<Quotation> => {
+    const { data } = await api.post('/quotations', payload);
+    return data;
+};
+export const updateQuotationStatus = async (id: number, status: QuotationStatus): Promise<Quotation> => {
+    const { data } = await api.patch(`/quotations/${id}/status`, { status });
+    return data;
+};
+export const convertQuotationToInvoice = async (id: number): Promise<Invoice> => {
+    const { data } = await api.post(`/quotations/${id}/convert-to-invoice`);
+    return data;
+};
+
+// --- Shipping ---
+export const getShippingLabels = async (): Promise<ShippingLabel[]> => {
+    const { data } = await api.get('/shipping');
+    return data;
+};
+export const createShippingLabel = async (labelData: Partial<ShippingLabel>): Promise<ShippingLabel> => {
+    const { data } = await api.post('/shipping', labelData);
+    return data;
+};
+export const updateShippingLabelStatus = async (id: string, status: ShippingStatus): Promise<ShippingLabel> => {
+    const { data } = await api.patch(`/shipping/${id}/status`, { status });
+    return data;
+};
+export const getShipments = async (range: {start: string, end: string}): Promise<ShippingLabel[]> => {
+    const { data } = await api.get('/reports/shipments', { params: range });
+    return data;
+};
+
+// --- B2B ---
+export const getB2BApplications = async (): Promise<BusinessApplication[]> => {
+    const { data } = await api.get('/b2b/applications');
+    return data;
+};
+export const updateB2BApplicationStatus = async (id: string, status: ApplicationStatus): Promise<BusinessApplication> => {
+    const { data } = await api.patch(`/b2b/applications/${id}`, { status });
+    return data;
+};
+
+// --- Stock Requests (B2B Portal) ---
+export const createStockRequest = async (payload: CreateStockRequestPayload): Promise<StockRequest> => {
+    const { data } = await api.post('/stock-requests', payload);
+    return data;
+};
+export const getMyStockRequests = async (): Promise<StockRequest[]> => {
+    const { data } = await api.get('/stock-requests/my-requests');
+    return data;
+};
+export const getAllStockRequests = async (): Promise<StockRequest[]> => {
+    const { data } = await api.get('/stock-requests');
+    return data;
+};
+export const getStockRequestDetails = async (id: number): Promise<StockRequest> => {
+    const { data } = await api.get(`/stock-requests/${id}`);
+    return data;
+};
+export const updateStockRequestStatus = async (id: number, status: StockRequestStatus): Promise<StockRequest> => {
+    const { data } = await api.patch(`/stock-requests/${id}/status`, { status });
+    return data;
+};
+
+// --- Users ---
+export const getUsers = async (): Promise<User[]> => {
+    const { data } = await api.get('/users');
+    return data;
+};
+export const createUser = async (userData: Partial<User>): Promise<User> => {
+    const { data } = await api.post('/users', userData);
+    return data;
+};
+export const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
+    const { data } = await api.put(`/users/${id}`, userData);
+    return data;
+};
+export const updateCurrentUserPassword = async (payload: {currentPassword: string, newPassword: string}):Promise<void> => {
+    await api.patch('/users/me/password', payload);
+};
+
+// --- Branches ---
+export const getBranches = async (): Promise<Branch[]> => {
+    const { data } = await api.get('/branches');
+    return data;
+};
+export const createBranch = async (branchData: Omit<Branch, 'id'>): Promise<Branch> => {
+    const { data } = await api.post('/branches', branchData);
+    return data;
+};
+export const updateBranch = async (id: number, branchData: Partial<Branch>): Promise<Branch> => {
+    const { data } = await api.put(`/branches/${id}`, branchData);
+    return data;
+};
+
+
+// --- Settings ---
+export const getSettings = async (): Promise<AppSettings> => {
+    const { data } = await api.get('/settings');
+    return data;
+};
+export const updateSettings = async (settings: AppSettings): Promise<AppSettings> => {
+    const { data } = await api.put('/settings', settings);
+    return data;
+};
+
+// --- M-Pesa ---
+export const initiateMpesaPayment = async (payload: any): Promise<{ checkoutRequestId: string }> => {
+    const { data } = await api.post('/mpesa/stk-push', payload);
+    return data;
+};
 export const getMpesaPaymentStatus = async (checkoutRequestId: string): Promise<{ status: string, sale?: Sale, message?: string }> => {
-    const response = await fetch(`${API_BASE_URL}/payments/mpesa/status/${checkoutRequestId}`, { headers: getAuthHeaders() });
-    return handleResponse<{ status: string, sale?: Sale, message?: string }>(response);
+    const { data } = await api.get(`/mpesa/status/${checkoutRequestId}`);
+    return data;
+};
+
+// --- Notifications ---
+export const getNotifications = async (): Promise<NotificationPayload> => {
+    const { data } = await api.get('/notifications');
+    return data;
+};
+
+export const markNotificationsRead = async (ids: number[]): Promise<void> => {
+    await api.post('/notifications/mark-read', { ids });
+};
+
+// --- Audit Logs ---
+export const getAuditLogs = async (page: number, limit: number): Promise<{logs: AuditLog[], total: number}> => {
+    const { data } = await api.get('/audit-logs', { params: { page, limit } });
+    return data;
 };

@@ -2,6 +2,12 @@
 import type { Knex } from 'knex';
 import dotenv from 'dotenv';
 import path from 'path';
+// FIX: Added imports to derive __dirname in an ES module context.
+import { fileURLToPath } from 'url';
+
+// FIX: __dirname is not available in ES modules by default. This correctly derives it.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Ensure the .env file from the backend root is loaded
 dotenv.config({ path: path.resolve(__dirname, './.env') });

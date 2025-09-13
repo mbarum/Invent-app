@@ -22,11 +22,11 @@ const db = knex({
   pool: { min: 2, max: 10 }
 });
 
-console.log('Attempting to connect to MySQL database via Knex...');
+console.log(`Attempting to connect to MySQL database '${process.env.DB_NAME}' via Knex...`);
 
 // FIX: Added a .catch() block to handle potential connection errors gracefully.
 db.raw('SELECT 1+1 AS result').then(() => {
-    console.log('✅ Database connected successfully via Knex!');
+    console.log(`✅ Database connected successfully to '${process.env.DB_NAME}' via Knex!`);
 }).catch(err => {
     console.error('❌ Knex database connection failed:', err.message);
 });

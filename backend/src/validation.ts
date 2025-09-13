@@ -1,15 +1,15 @@
 import Joi from 'joi';
-// FIX: Changed express import to a default import and used qualified types (e.g., `express.Request`). This resolves widespread type conflicts with global types.
-import express from 'express';
-import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole } from '@masuma-ea/types';
+// FIX: Import express namespace and RequestHandler type to avoid global type conflicts.
+import express, { RequestHandler } from 'express';
+import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
 
 /**
  * A generic middleware to validate the request body against a Joi schema.
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Added an explicit express.RequestHandler return type and typed inner function arguments to ensure correct type inference from Express.
-export const validate = (schema: Joi.Schema): express.RequestHandler => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Use RequestHandler to ensure correct type inference and avoid global type conflicts.
+export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {
         // Create a custom error object for the global error handler
@@ -49,18 +49,22 @@ export const registerSchema = Joi.object({
 // --- Product ---
 export const productSchema = Joi.object({
     partNumber: Joi.string().required(),
+    oemNumbers: Joi.array().items(Joi.string().allow('')).optional(),
     name: Joi.string().required(),
     retailPrice: Joi.number().precision(2).positive().required(),
     wholesalePrice: Joi.number().precision(2).positive().required(),
     stock: Joi.number().integer().min(0).required(),
+    notes: Joi.string().allow('').optional(),
 });
 
 export const updateProductSchema = Joi.object({
     partNumber: Joi.string(),
+    oemNumbers: Joi.array().items(Joi.string().allow('')).optional(),
     name: Joi.string(),
     retailPrice: Joi.number().precision(2).positive(),
     wholesalePrice: Joi.number().precision(2).positive(),
     stock: Joi.number().integer().min(0),
+    notes: Joi.string().allow('').optional(),
 }).min(1);
 
 export const bulkProductSchema = Joi.array().items(productSchema);
@@ -69,6 +73,22 @@ export const bulkProductSchema = Joi.array().items(productSchema);
 export const updateB2BStatusSchema = Joi.object({
     status: Joi.string().valid(...Object.values(ApplicationStatus)).required(),
 });
+
+// --- Stock Requests ---
+export const stockRequestItemSchema = Joi.object({
+    productId: uuid.required(),
+    quantity: Joi.number().integer().positive().required(),
+});
+
+export const createStockRequestSchema = Joi.object({
+    branchId: id.required(),
+    items: Joi.array().items(stockRequestItemSchema).min(1).required(),
+});
+
+export const updateStockRequestStatusSchema = Joi.object({
+    status: Joi.string().valid(...Object.values(StockRequestStatus)).required(),
+});
+
 
 // --- User ---
 export const createUserSchema = Joi.object({
@@ -102,7 +122,7 @@ export const createSaleSchema = Joi.object({
     customerId: id.required(),
     branchId: id.required(),
     items: Joi.array().items(saleItemSchema).min(1).required(),
-    discount: Joi.number().min(0).required(),
+    discountAmount: Joi.number().min(0).required(),
     taxAmount: Joi.number().min(0).required(),
     totalAmount: Joi.number().positive().required(),
     paymentMethod: Joi.string().required(),
@@ -181,4 +201,6 @@ export const updateSettingsSchema = Joi.object({
     mpesaConsumerKey: Joi.string().allow(''),
     mpesaConsumerSecret: Joi.string().allow(''),
     mpesaPasskey: Joi.string().allow(''),
+    paymentDetails: Joi.string().allow(''),
+    paymentTerms: Joi.string().allow(''),
 });

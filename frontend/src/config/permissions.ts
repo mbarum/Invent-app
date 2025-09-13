@@ -1,84 +1,103 @@
+
 import { UserRole } from '@masuma-ea/types';
 
-// This holds public configuration variables for the frontend.
-// In a production build process, these values would typically be
-// injected via environment variables at build time.
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+// IMPORTANT: Replace with your actual Google Client ID from Google Cloud Console
+export const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+
+// Base URL for accessing uploaded documents from the backend
+export const DOCS_BASE_URL = '/';
 
 export const PERMISSIONS = {
-  // High-level permissions
+  // Dashboard
   VIEW_DASHBOARD: 'view:dashboard',
+
+  // POS
+  USE_POS: 'use:pos',
+
+  // Inventory
   VIEW_INVENTORY: 'view:inventory',
-  MANAGE_INVENTORY: 'manage:inventory', // Add, import, export
-  CREATE_SALE: 'create:sale', // Access POS
-  VIEW_REPORTS: 'view:reports',
+  MANAGE_INVENTORY: 'manage:inventory', // Create, update, delete products
+
+  // Sales
+  VIEW_SALES: 'view:sales',
+
+  // Customers
   VIEW_CUSTOMERS: 'view:customers',
-  MANAGE_USERS: 'manage:users',
-  MANAGE_B2B: 'manage:b2b',
-  MANAGE_SHIPPING: 'manage:shipping',
+  MANAGE_CUSTOMERS: 'manage:customers', // Create, update
+
+  // Quotations
+  MANAGE_QUOTATIONS: 'manage:quotations',
+
+  // Invoices
+  MANAGE_INVOICES: 'manage:invoices',
+
+  // Shipping
+  VIEW_SHIPPING: 'view:shipping',
+  MANAGE_SHIPPING: 'manage:shipping', // Create labels, update status
+
+  // VIN Picker
   USE_VIN_PICKER: 'use:vin_picker',
-  EDIT_SETTINGS: 'edit:settings',
-  
-  // B2B specific
-  CREATE_STOCK_REQUEST: 'create:stock_request',
-  VIEW_OWN_STOCK_REQUESTS: 'view:own_stock_requests',
-  MANAGE_ALL_STOCK_REQUESTS: 'manage:all_stock_requests',
-  
-  // New Admin Permissions
+
+  // Reports
+  VIEW_REPORTS: 'view:reports',
+
+  // B2B
+  MANAGE_B2B_APPLICATIONS: 'manage:b2b_applications', // Approve/reject
+  USE_B2B_PORTAL: 'use:b2b_portal', // For B2B clients to make requests
+
+  // Admin
+  MANAGE_USERS: 'manage:users',
   MANAGE_BRANCHES: 'manage:branches',
+  MANAGE_SETTINGS: 'manage:settings',
+  VIEW_AUDIT_LOGS: 'view:audit_logs',
 };
 
+
 export const ROLES: Record<UserRole, string[]> = {
-  [UserRole.SYSTEM_ADMINISTRATOR]: [
+  [UserRole.SYSTEM_ADMINISTRATOR]: Object.values(PERMISSIONS), // Has all permissions
+
+  [UserRole.BRANCH_MANAGER]: [
     PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.USE_POS,
     PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.MANAGE_INVENTORY,
-    PERMISSIONS.CREATE_SALE,
-    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.VIEW_SALES,
     PERMISSIONS.VIEW_CUSTOMERS,
-    PERMISSIONS.MANAGE_USERS,
-    PERMISSIONS.MANAGE_B2B,
+    PERMISSIONS.MANAGE_CUSTOMERS,
+    PERMISSIONS.MANAGE_QUOTATIONS,
+    PERMISSIONS.MANAGE_INVOICES,
+    PERMISSIONS.VIEW_SHIPPING,
     PERMISSIONS.MANAGE_SHIPPING,
     PERMISSIONS.USE_VIN_PICKER,
-    PERMISSIONS.EDIT_SETTINGS,
-    PERMISSIONS.MANAGE_ALL_STOCK_REQUESTS,
-    PERMISSIONS.MANAGE_BRANCHES,
-  ],
-  [UserRole.INVENTORY_MANAGER]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_INVENTORY,
-    PERMISSIONS.MANAGE_INVENTORY,
     PERMISSIONS.VIEW_REPORTS,
-    PERMISSIONS.MANAGE_SHIPPING,
-    PERMISSIONS.MANAGE_ALL_STOCK_REQUESTS,
+    PERMISSIONS.MANAGE_B2B_APPLICATIONS,
+    PERMISSIONS.MANAGE_USERS, // Can manage users within their branch
   ],
-  [UserRole.PROCUREMENT_OFFICER]: [
-    PERMISSIONS.VIEW_INVENTORY,
-  ],
+
   [UserRole.SALES_STAFF]: [
+    PERMISSIONS.VIEW_DASHBOARD,
+    PERMISSIONS.USE_POS,
     PERMISSIONS.VIEW_INVENTORY,
-    PERMISSIONS.CREATE_SALE,
+    PERMISSIONS.VIEW_SALES,
     PERMISSIONS.VIEW_CUSTOMERS,
+    PERMISSIONS.MANAGE_CUSTOMERS,
+    PERMISSIONS.MANAGE_QUOTATIONS,
+    PERMISSIONS.MANAGE_INVOICES,
+    PERMISSIONS.VIEW_SHIPPING,
+    PERMISSIONS.USE_VIN_PICKER,
+  ],
+
+  [UserRole.INVENTORY_MANAGER]: [
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.MANAGE_INVENTORY,
+    PERMISSIONS.VIEW_SHIPPING,
     PERMISSIONS.MANAGE_SHIPPING,
     PERMISSIONS.USE_VIN_PICKER,
   ],
-  [UserRole.WAREHOUSE_CLERK]: [
-    PERMISSIONS.VIEW_INVENTORY,
-    PERMISSIONS.MANAGE_SHIPPING,
-  ],
-  [UserRole.ACCOUNTANT]: [
-    PERMISSIONS.VIEW_DASHBOARD,
-    PERMISSIONS.VIEW_REPORTS,
-    PERMISSIONS.VIEW_CUSTOMERS,
-  ],
-  [UserRole.AUDITOR]: [
-    PERMISSIONS.VIEW_REPORTS,
-    PERMISSIONS.VIEW_INVENTORY,
-    PERMISSIONS.VIEW_CUSTOMERS,
-  ],
+
   [UserRole.B2B_CLIENT]: [
-    PERMISSIONS.VIEW_INVENTORY, // Will be filtered to show only wholesale prices
-    PERMISSIONS.CREATE_STOCK_REQUEST,
-    PERMISSIONS.VIEW_OWN_STOCK_REQUESTS,
+      PERMISSIONS.VIEW_INVENTORY, // View only, no prices
+      PERMISSIONS.USE_VIN_PICKER,
+      PERMISSIONS.USE_B2B_PORTAL,
   ],
 };

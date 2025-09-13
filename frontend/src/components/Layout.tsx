@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar.tsx';
 import Header from './Header.tsx';
-import { Branch, NotificationPayload } from '@masuma-ea/types';
-import toast from 'react-hot-toast';
-import { getNotifications } from '../services/api.ts';
-import Button from './ui/Button.tsx';
+import { Branch } from '@masuma-ea/types';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { LoaderCircle } from 'lucide-react';
 import { useDataStore } from '../store/dataStore.ts';
@@ -19,17 +19,13 @@ const exchangeRates = {
 
 const Layout: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   
   // Get shared data and initializer from Zustand store
-  const { branches, isInitialDataLoaded, fetchInitialData } = useDataStore();
+  const { branches, isInitialDataLoaded, fetchInitialData, startNotificationPolling, stopNotificationPolling } = useDataStore();
   
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [currentCurrency, setCurrentCurrency] = useState<string>('KES');
-  
-  // Notification state
-  const lastCheckTimestamp = useRef<string | null>(null);
-  const notifiedLowStock = useRef(new Set<string>());
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   
   // Fetch all shared data once on layout mount
   useEffect(() => {
@@ -43,64 +39,15 @@ const Layout: React.FC = () => {
     }
   }, [branches, currentBranch]);
 
+  // Start/stop notification polling based on user session
   useEffect(() => {
-    const fetchNotifications = async () => {
-        try {
-            const data: NotificationPayload = await getNotifications(lastCheckTimestamp.current || undefined);
-            lastCheckTimestamp.current = data.serverTimestamp;
-
-            data.newApplications.forEach(app => {
-                toast(
-                    (t) => (
-                        <div className="flex items-center justify-between w-full">
-                            <span className="text-sm mr-4">
-                                New B2B App: <b>{app.businessName}</b>
-                            </span>
-                            <Button size="sm" variant="ghost" onClick={() => {
-                                navigate('/b2b-management');
-                                toast.dismiss(t.id);
-                            }}>
-                                View
-                            </Button>
-                        </div>
-                    ),
-                    { duration: 10000, icon: '🏢' }
-                );
-            });
-
-            data.lowStockProducts.forEach(product => {
-                if (!notifiedLowStock.current.has(product.id)) {
-                    notifiedLowStock.current.add(product.id);
-                    toast.error(
-                        (t) => (
-                            <div className="flex items-center justify-between w-full">
-                                <span className="text-sm mr-4">
-                                    Low Stock: <b>{product.name}</b> ({product.stock} left)
-                                </span>
-                                <Button size="sm" variant="ghost" onClick={() => {
-                                    navigate('/inventory');
-                                    toast.dismiss(t.id);
-                                }}>
-                                    View
-                                </Button>
-                            </div>
-                        ),
-                        { duration: 10000, icon: '⚠️' }
-                    );
-                }
-            });
-
-        } catch (error) {
-            console.error("Failed to fetch notifications:", error);
-        }
-    };
-    
     if (user) {
-        fetchNotifications();
-        const intervalId = setInterval(fetchNotifications, 20000);
-        return () => clearInterval(intervalId);
+        startNotificationPolling();
     }
-  }, [navigate, user]);
+    return () => {
+        stopNotificationPolling();
+    };
+  }, [user, startNotificationPolling, stopNotificationPolling]);
 
   if (!isInitialDataLoaded || !currentBranch) {
     return (
@@ -113,9 +60,10 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
-      <Sidebar />
-      <div className="flex flex-col flex-1">
+      <Sidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <div className="flex flex-col flex-1 md:pl-64">
         <Header 
+          onMenuClick={() => setSidebarOpen(true)}
           branches={branches}
           currentBranch={currentBranch}
           onBranchChange={setCurrentBranch}
@@ -123,7 +71,13 @@ const Layout: React.FC = () => {
           currentCurrency={currentCurrency}
           onCurrencyChange={setCurrentCurrency}
         />
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+           {isSidebarOpen && (
+            <div
+              className="fixed inset-0 z-20 bg-black/50 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            ></div>
+          )}
           <Outlet context={{ currentBranch, currentCurrency, exchangeRates }} />
         </main>
       </div>

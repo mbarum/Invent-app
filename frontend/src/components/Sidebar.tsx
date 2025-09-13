@@ -1,138 +1,98 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Boxes,
-  ShoppingCart,
-  Receipt,
-  Users,
-  FileText,
-  FileQuestion,
-  Truck,
-  BarChart2,
-  Car,
-  Settings,
-  UserCircle,
-  Briefcase,
-  UserCog,
-  Building2,
-  PackagePlus,
-} from 'lucide-react';
+import { Home, ShoppingCart, Users, Truck, FileText, Wrench, BarChart2, Settings, UserCircle, LogOut, Building, Briefcase, FileClock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { PERMISSIONS } from '../config/permissions.ts';
-import { UserRole } from '@masuma-ea/types';
 
-const MasumaLogo = () => (
-    <div className="text-gray-200">
-        <svg width="160" height="44" viewBox="0 0 160 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Masuma EA Hub Logo">
-            <text
-                x="0"
-                y="28"
-                fontFamily="Impact, Charcoal, 'Arial Narrow Bold', sans-serif"
-                fontWeight="900"
-                fontSize="32"
-                fill="#F97316"
-                letterSpacing="0.5"
-            >
-                MASUMA
-            </text>
-            <text
-                x="142"
-                y="18"
-                fontFamily="Arial, sans-serif"
-                fontWeight="normal"
-                fontSize="8"
-                fill="#F97316"
-            >
-                ®
-            </text>
-            <text
-                x="0"
-                y="40"
-                fontFamily="Arial, sans-serif"
-                fontWeight="bold"
-                fontSize="9"
-                fill="currentColor"
-                letterSpacing="0.2"
-            >
-                AUTOPARTS EAST AFRICA
-            </text>
-        </svg>
-    </div>
-);
+interface SidebarProps {
+  isSidebarOpen: boolean;
+  setSidebarOpen: (isOpen: boolean) => void;
+}
 
+const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setSidebarOpen }) => {
+  const { user, logout, hasPermission } = useAuth();
 
-const staffNavItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: PERMISSIONS.VIEW_DASHBOARD },
-  { to: '/inventory', icon: Boxes, label: 'Inventory', permission: PERMISSIONS.VIEW_INVENTORY },
-  { to: '/pos', icon: ShoppingCart, label: 'POS', permission: PERMISSIONS.CREATE_SALE },
-  { to: '/sales', icon: Receipt, label: 'Sales', permission: PERMISSIONS.VIEW_REPORTS },
-  { to: '/customers', icon: Users, label: 'Customers', permission: PERMISSIONS.VIEW_CUSTOMERS },
-  { to: '/b2b-management', icon: Briefcase, label: 'B2B Accounts', permission: PERMISSIONS.MANAGE_B2B },
-  { to: '/users', icon: UserCog, label: 'Users', permission: PERMISSIONS.MANAGE_USERS },
-  { to: '/invoices', icon: FileText, label: 'Invoices', permission: PERMISSIONS.VIEW_REPORTS },
-  { to: '/quotations', icon: FileQuestion, label: 'Quotations', permission: PERMISSIONS.CREATE_SALE },
-  { to: '/shipping', icon: Truck, label: 'Shipping', permission: PERMISSIONS.MANAGE_SHIPPING },
-  { to: '/reports', icon: BarChart2, label: 'Reports', permission: PERMISSIONS.VIEW_REPORTS },
-  { to: '/vin-picker', icon: Car, label: 'VIN Picker', permission: PERMISSIONS.USE_VIN_PICKER },
-];
+  const navLinkClasses = "flex items-center px-4 py-2.5 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200";
+  const activeNavLinkClasses = "bg-orange-600 text-white";
 
-const b2bNavItems = [
-    { to: '/b2b-portal', icon: PackagePlus, label: 'Stock Request', permission: PERMISSIONS.CREATE_STOCK_REQUEST },
-    { to: '/inventory', icon: Boxes, label: 'Wholesale Catalogue', permission: PERMISSIONS.VIEW_INVENTORY },
-];
+  const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 
+    isActive ? `${navLinkClasses} ${activeNavLinkClasses}` : navLinkClasses;
+  
+  const navLinks = [
+    { to: "/dashboard", icon: <Home className="w-5 h-5 mr-3" />, label: "Dashboard", permission: PERMISSIONS.VIEW_DASHBOARD },
+    { to: "/pos", icon: <ShoppingCart className="w-5 h-5 mr-3" />, label: "Point of Sale", permission: PERMISSIONS.USE_POS },
+    { to: "/inventory", icon: <Wrench className="w-5 h-5 mr-3" />, label: "Inventory", permission: PERMISSIONS.VIEW_INVENTORY },
+    { to: "/sales", icon: <BarChart2 className="w-5 h-5 mr-3" />, label: "Sales History", permission: PERMISSIONS.VIEW_SALES },
+    { to: "/customers", icon: <Users className="w-5 h-5 mr-3" />, label: "Customers", permission: PERMISSIONS.VIEW_CUSTOMERS },
+    { to: "/quotations", icon: <FileText className="w-5 h-5 mr-3" />, label: "Quotations", permission: PERMISSIONS.MANAGE_QUOTATIONS },
+    { to: "/invoices", icon: <FileClock className="w-5 h-5 mr-3" />, label: "Invoices", permission: PERMISSIONS.MANAGE_INVOICES },
+    { to: "/shipping", icon: <Truck className="w-5 h-5 mr-3" />, label: "Shipping", permission: PERMISSIONS.VIEW_SHIPPING },
+    { to: "/vin-picker", icon: <Wrench className="w-5 h-5 mr-3" />, label: "VIN Picker", permission: PERMISSIONS.USE_VIN_PICKER },
+    { to: "/reports", icon: <BarChart2 className="w-5 h-5 mr-3" />, label: "Reports", permission: PERMISSIONS.VIEW_REPORTS },
+  ];
 
-const bottomNavItems = [
-  { to: '/branches', icon: Building2, label: 'Branches', permission: PERMISSIONS.MANAGE_BRANCHES },
-  { to: '/settings', icon: Settings, label: 'Settings', permission: PERMISSIONS.EDIT_SETTINGS },
-  { to: '/profile', icon: UserCircle, label: 'Profile', permission: null }, // All users can see their profile
-];
-
-const NavItem: React.FC<{ to: string; icon: React.ElementType; label: string }> = ({ to, icon: Icon, label }) => (
-  <li>
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center p-3 rounded-lg transition-colors text-gray-300 hover:bg-gray-700 hover:text-white ${
-          isActive ? 'bg-gray-700 text-white' : ''
-        }`
-      }
-    >
-      <Icon className="w-5 h-5 mr-3" />
-      <span className="font-medium">{label}</span>
-    </NavLink>
-  </li>
-);
-
-const Sidebar: React.FC = () => {
-  const { user, hasPermission } = useAuth();
-
-  const isB2B = user?.role === UserRole.B2B_CLIENT;
-  const navItems = isB2B ? b2bNavItems : staffNavItems;
-
-  const accessibleNavItems = navItems.filter(item => hasPermission(item.permission));
-  const accessibleBottomNavItems = bottomNavItems.filter(item => item.permission === null || hasPermission(item.permission));
+  const b2bLinks = [
+    { to: "/b2b-portal", icon: <Briefcase className="w-5 h-5 mr-3" />, label: "B2B Portal", permission: PERMISSIONS.USE_B2B_PORTAL },
+  ];
+  
+  const adminLinks = [
+    { to: "/b2b-management", icon: <Briefcase className="w-5 h-5 mr-3" />, label: "B2B Management", permission: PERMISSIONS.MANAGE_B2B_APPLICATIONS },
+    { to: "/users", icon: <UserCircle className="w-5 h-5 mr-3" />, label: "Users", permission: PERMISSIONS.MANAGE_USERS },
+    { to: "/branches", icon: <Building className="w-5 h-5 mr-3" />, label: "Branches", permission: PERMISSIONS.MANAGE_BRANCHES },
+    { to: "/audit-logs", icon: <FileClock className="w-5 h-5 mr-3" />, label: "Audit Logs", permission: PERMISSIONS.VIEW_AUDIT_LOGS },
+    { to: "/settings", icon: <Settings className="w-5 h-5 mr-3" />, label: "Settings", permission: PERMISSIONS.MANAGE_SETTINGS },
+  ];
 
   return (
-    <aside className="no-print w-64 bg-gray-800 flex flex-col p-4 border-r border-gray-700">
-      <div className="px-3 py-4 mb-4">
-        <MasumaLogo />
-      </div>
-      <nav className="flex-1">
-        <ul className="space-y-2">
-          {accessibleNavItems.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
-        </ul>
-      </nav>
-      <nav>
-        <ul className="space-y-2 pt-4 border-t border-gray-700">
-          {accessibleBottomNavItems.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
-        </ul>
-      </nav>
-    </aside>
+    <>
+      <aside className={`no-print fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 border-r border-gray-700 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0`}>
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-center h-20 border-b border-gray-700">
+             <h1 className="text-2xl font-bold text-white">
+                <span className="text-orange-500">Masuma</span> EA
+            </h1>
+          </div>
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            
+            {navLinks.filter(link => hasPermission(link.permission)).map(link => (
+              <NavLink key={link.to} to={link.to} className={getNavLinkClass} onClick={() => setSidebarOpen(false)}>
+                {link.icon}
+                {link.label}
+              </NavLink>
+            ))}
+
+            {b2bLinks.some(link => hasPermission(link.permission)) && <hr className="border-gray-600 my-4" />}
+            {b2bLinks.filter(link => hasPermission(link.permission)).map(link => (
+              <NavLink key={link.to} to={link.to} className={getNavLinkClass} onClick={() => setSidebarOpen(false)}>
+                {link.icon}
+                {link.label}
+              </NavLink>
+            ))}
+
+            {adminLinks.some(link => hasPermission(link.permission)) && <hr className="border-gray-600 my-4" />}
+            {adminLinks.filter(link => hasPermission(link.permission)).map(link => (
+              <NavLink key={link.to} to={link.to} className={getNavLinkClass} onClick={() => setSidebarOpen(false)}>
+                {link.icon}
+                {link.label}
+              </NavLink>
+            ))}
+
+          </nav>
+
+           <div className="p-4 border-t border-gray-700">
+              <NavLink to="/profile" className={getNavLinkClass}>
+                <UserCircle className="w-5 h-5 mr-3" />
+                Profile
+              </NavLink>
+              <button onClick={logout} className={`${navLinkClasses} w-full`}>
+                <LogOut className="w-5 h-5 mr-3" />
+                Logout
+              </button>
+            </div>
+        </div>
+      </aside>
+    </>
   );
 };
 

@@ -1,13 +1,14 @@
 
 import React from 'react';
-import { Invoice } from '@masuma-ea/types';
+import { Invoice, AppSettings } from '@masuma-ea/types';
 
 interface InvoicePrintProps {
   invoice: Invoice | null;
+  appSettings: Partial<AppSettings>;
   isPreview?: boolean;
 }
 
-const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false }) => {
+const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPreview = false }) => {
     if (!invoice) return null;
     
     const subtotal = (invoice.items || []).reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
@@ -23,9 +24,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
                 <div className="flex justify-between items-start pb-4 border-b-2 border-black">
                     <div>
                         
-                        <p className="text-sm font-bold mt-2">Masuma Autoparts East Africa LTD</p>
-                        <p className="text-xs">{invoice.branch?.address}</p>
-                        <p className="text-xs">{invoice.branch?.phone}</p>
+                        <p className="text-sm font-bold mt-2">{appSettings.companyName || 'Masuma Autoparts East Africa LTD'}</p>
+                        <p className="text-xs">{appSettings.companyAddress || invoice.branch?.address}</p>
+                        <p className="text-xs">{appSettings.companyPhone || invoice.branch?.phone}</p>
                     </div>
                     <div className="text-right">
                         <h1 className="text-4xl font-bold uppercase">Invoice</h1>
@@ -67,8 +68,22 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
                     </tbody>
                 </table>
                 
-                {/* Totals */}
-                <div className="flex justify-end mt-4">
+                {/* Totals & Payment Info */}
+                <div className="flex justify-between items-start mt-4">
+                    <div className="w-2/3 text-xs">
+                        {appSettings.paymentDetails && (
+                            <div className="mb-4">
+                                <h4 className="font-bold uppercase border-b border-black mb-1">Payment Details</h4>
+                                <pre className="font-sans whitespace-pre-wrap">{appSettings.paymentDetails}</pre>
+                            </div>
+                        )}
+                        {appSettings.paymentTerms && (
+                             <div>
+                                <h4 className="font-bold uppercase border-b border-black mb-1">Terms & Conditions</h4>
+                                <p>{appSettings.paymentTerms}</p>
+                            </div>
+                        )}
+                    </div>
                     <div className="w-1/3 space-y-2">
                         <div className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></div>
                         <div className="flex justify-between"><span>VAT (16%):</span> <span>{taxAmount > 0 ? taxAmount.toFixed(2) : '0.00'}</span></div>
@@ -78,7 +93,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, isPreview = false 
 
                 {/* Footer */}
                 <div className="text-center text-xs text-gray-600 mt-12 pt-4 border-t border-gray-300">
-                    <p>Please make all cheques payable to Masuma Autoparts East Africa LTD.</p>
+                    <p>If you have any questions about this invoice, please contact us.</p>
                     <p className="font-semibold mt-1">Genuine Masuma Parts – Quality You Can Trust</p>
                 </div>
 

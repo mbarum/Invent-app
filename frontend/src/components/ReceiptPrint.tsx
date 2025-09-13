@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Sale } from '@masuma-ea/types';
 
@@ -41,8 +40,11 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ sale }) => {
         </table>
         <hr className="my-2 border-black border-dashed"/>
         <p className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></p>
+        {(sale.discount_amount || 0) > 0 && (
+            <p className="flex justify-between"><span>Discount:</span> <span>-{(sale.discount_amount || 0).toFixed(2)}</span></p>
+        )}
         <p className="flex justify-between"><span>VAT (16%):</span> <span>{(sale.tax_amount || 0).toFixed(2)}</span></p>
-        <p className="flex justify-between font-bold"><span>TOTAL:</span> <span>{(sale.amount || 0).toFixed(2)}</span></p>
+        <p className="flex justify-between font-bold"><span>TOTAL:</span> <span>{sale.totalAmount.toFixed(2)}</span></p>
         <hr className="my-2 border-black border-dashed"/>
         <p>Paid via: {sale.payment_method}</p>
         <p className="text-center mt-4 font-semibold">Thank you for choosing Masuma Autospares</p>

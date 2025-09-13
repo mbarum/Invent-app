@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import InvoicePrint from '../components/InvoicePrint.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useDataStore } from '../store/dataStore.ts';
 
 interface OutletContextType {
   currentBranch: Branch;
@@ -42,6 +43,7 @@ const getStatusBadge = (status: InvoiceStatus) => {
 
 const Invoices: React.FC = () => {
     const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
+    const { appSettings } = useDataStore();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -212,13 +214,13 @@ const Invoices: React.FC = () => {
                     </div>
                     <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
                         <div id="invoice-preview-content">
-                            <InvoicePrint invoice={viewingInvoice} isPreview={true} />
+                            <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} isPreview={true} />
                         </div>
                     </div>
                 </Modal>
             )}
 
-            {isPrintView && <InvoicePrint invoice={viewingInvoice} />}
+            {isPrintView && <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} />}
         </>
     );
 };

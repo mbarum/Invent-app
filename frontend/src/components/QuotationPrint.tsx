@@ -1,13 +1,14 @@
 
 import React from 'react';
-import { Quotation } from '@masuma-ea/types';
+import { Quotation, AppSettings } from '@masuma-ea/types';
 
 interface QuotationPrintProps {
   quotation: Quotation | null;
+  appSettings: Partial<AppSettings>;
   isPreview?: boolean;
 }
 
-const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, isPreview = false }) => {
+const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings, isPreview = false }) => {
     if (!quotation) return null;
 
     const containerClasses = isPreview ? "bg-white text-black p-8 font-sans w-full" : "print-area a4-page";
@@ -19,9 +20,9 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, isPreview = 
                 <div className="flex justify-between items-start pb-4 border-b-2 border-black">
                     <div>
                         
-                        <p className="text-sm font-bold mt-2">Masuma Autoparts East Africa LTD</p>
-                        <p className="text-xs">{quotation.branch?.address}</p>
-                        <p className="text-xs">{quotation.branch?.phone}</p>
+                        <p className="text-sm font-bold mt-2">{appSettings.companyName || 'Masuma Autoparts East Africa LTD'}</p>
+                        <p className="text-xs">{appSettings.companyAddress || quotation.branch?.address}</p>
+                        <p className="text-xs">{appSettings.companyPhone || quotation.branch?.phone}</p>
                     </div>
                     <div className="text-right">
                         <h1 className="text-4xl font-bold uppercase">Quotation</h1>
@@ -55,12 +56,31 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, isPreview = 
                     </tbody>
                 </table>
                 
-                {/* Totals */}
-                <div className="flex justify-end mt-4">
+                 {/* Totals & Payment Info */}
+                <div className="flex justify-between items-start mt-4">
+                    <div className="w-2/3 text-xs">
+                        {appSettings.paymentDetails && (
+                            <div className="mb-4">
+                                <h4 className="font-bold uppercase border-b border-black mb-1">Payment Details</h4>
+                                <pre className="font-sans whitespace-pre-wrap">{appSettings.paymentDetails}</pre>
+                            </div>
+                        )}
+                         {appSettings.paymentTerms && (
+                             <div>
+                                <h4 className="font-bold uppercase border-b border-black mb-1">Terms & Conditions</h4>
+                                <p>{appSettings.paymentTerms}</p>
+                            </div>
+                        )}
+                    </div>
                     <div className="w-1/3 space-y-2">
-                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2"><span>Total (KES):</span> <span>{(quotation.amount || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-end">
+                            <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2 w-full">
+                                <span>Total (KES):</span> <span>{(quotation.amount || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
 
                 {/* Footer */}
                 <div className="text-center text-xs text-gray-600 mt-12 pt-4 border-t border-gray-300">

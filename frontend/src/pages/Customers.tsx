@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
@@ -14,23 +8,19 @@ import Pagination from '../components/ui/Pagination.tsx';
 import Button from '../components/ui/Button.tsx';
 import Modal from '../components/ui/Modal.tsx';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download } from 'lucide-react';
-import { Customer, Sale } from '@masuma-ea/types';
-import { getCustomers, getSales, createCustomer, getCustomerTransactions, CustomerTransactions } from '../services/api.ts';
+// FIX: Import CustomerTransactions from the types package instead of the api service.
+import { Customer, Sale, CustomerTransactions } from '@masuma-ea/types';
+import { getCustomers, getSales, createCustomer, getCustomerTransactions } from '../services/api.ts';
 import toast from 'react-hot-toast';
 import { useDataStore } from '../store/dataStore.ts';
 
-// Enriched customer data type
-// FIX: Redefined interface to be self-contained to avoid potential type extension issues.
-interface CustomerSegmentData {
-    id: number;
-    name: string;
-    address: string;
-    phone: string;
-    kraPin?: string;
+// Enriched customer data type that extends the base type for component-specific stats
+// FIX: Changed from interface extension to type intersection to resolve type inference issues.
+type CustomerSegmentData = Customer & {
     totalSpending: number;
     totalOrders: number;
     lastPurchaseDate: Date | null;
-}
+};
 
 type NewCustomerData = Omit<Customer, 'id'>;
 type SortKey = 'name' | 'totalOrders' | 'totalSpending' | 'lastPurchaseDate';
@@ -113,7 +103,7 @@ const Customers: React.FC = () => {
 
                 const enrichedCustomers = customersData.map((customer): CustomerSegmentData => {
                     const customerSales = salesByCustomerId[customer.id] || [];
-                    const totalSpending = customerSales.reduce((sum, s) => sum + (s.amount || 0), 0);
+                    const totalSpending = customerSales.reduce((sum, s) => sum + s.totalAmount, 0);
                     const totalOrders = customerSales.length;
                     const lastPurchaseDate = customerSales.length > 0
                         ? new Date(Math.max(...customerSales.map(s => new Date(s.created_at).getTime())))
@@ -214,7 +204,7 @@ const Customers: React.FC = () => {
             ...historyData.quotations.map(q => ({ type: 'Quotation', ...q, date: q.created_at, ref: q.quotation_no }))
         ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
-        exportToCsv(`${historyCustomer.name}_history`, ['Type', 'Ref No.', 'Date', 'Amount', 'Status'], allData, ['type', 'ref', 'date', 'amount', 'status']);
+        exportToCsv(`${historyCustomer.name}_history`, ['Type', 'Ref No.', 'Date', 'Amount', 'Status'], allData, ['type', 'ref', 'date', 'totalAmount', 'status']);
     };
 
     const totalPages = Math.ceil(filteredAndSortedCustomers.length / itemsPerPage);
@@ -263,11 +253,18 @@ const Customers: React.FC = () => {
     return (
         <>
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <h1 className="text-3xl font-bold">Customer Management</h1>
-                    <div className="flex space-x-2">
-                        <Button variant="secondary" onClick={handleExportCustomers}><Download className="mr-2 h-4 w-4"/> Export CSV</Button>
-                        <Button onClick={() => setAddModalOpen(true)}><PlusCircle className="mr-2 h-5 w-5" /> Add Customer</Button>
+                    <div className="flex space-x-2 flex-shrink-0">
+                        <Button variant="secondary" onClick={handleExportCustomers}>
+                            <Download className="mr-2 h-4 w-4"/> 
+                            <span className="hidden sm:inline">Export CSV</span>
+                        </Button>
+                        <Button onClick={() => setAddModalOpen(true)}>
+                            <PlusCircle className="mr-2 h-5 w-5" />
+                            <span className="hidden sm:inline">Add Customer</span>
+                            <span className="sm:hidden">Add</span>
+                        </Button>
                     </div>
                 </div>
                 <Card><CardHeader><CardTitle>Customer Segmentation</CardTitle><CardDescription>Filter and sort customers based on their activity.</CardDescription></CardHeader><CardContent>
@@ -294,9 +291,9 @@ const Customers: React.FC = () => {
                 <Button onClick={handleExportHistory} disabled={!historyData || historyLoading}><Download className="mr-2 h-4 w-4"/> Export History</Button>
                 <div className="mt-4 max-h-[60vh] overflow-y-auto">
                     {historyLoading ? <div className="flex justify-center p-8"><LoaderCircle className="w-8 h-8 animate-spin"/></div> : <>
-                        <HistorySection title="Sales" data={historyData?.sales} columns={['sale_no', 'created_at', 'amount']} formatCurrency={formatCurrency}/>
-                        <HistorySection title="Invoices" data={historyData?.invoices} columns={['invoice_no', 'created_at', 'amount', 'status']} formatCurrency={formatCurrency}/>
-                        <HistorySection title="Quotations" data={historyData?.quotations} columns={['quotation_no', 'created_at', 'amount', 'status']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Sales" data={historyData?.sales} columns={['sale_no', 'created_at', 'totalAmount']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Invoices" data={historyData?.invoices} columns={['invoice_no', 'created_at', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Quotations" data={historyData?.quotations} columns={['quotation_no', 'created_at', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
                     </>}
                 </div>
             </Modal>
@@ -306,9 +303,9 @@ const Customers: React.FC = () => {
 
 const HistorySection: React.FC<{title: string, data: any[] | undefined, columns: string[], formatCurrency: (v: number) => string}> = ({ title, data, columns, formatCurrency }) => {
     if (!data || data.length === 0) return null;
-    return <div className="mb-6"><h3 className="text-xl font-semibold mb-2">{title}</h3><Table><TableHeader><TableRow>{columns.map(c => <TableHead key={c}>{c.replace('_', ' ').toUpperCase()}</TableHead>)}</TableRow></TableHeader><TableBody>
+    return <div className="mb-6"><h3 className="text-xl font-semibold mb-2">{title}</h3><Table><TableHeader><TableRow>{columns.map(c => <TableHead key={c}>{c.replace(/_/g, ' ').replace('totalAmount', 'Amount').toUpperCase()}</TableHead>)}</TableRow></TableHeader><TableBody>
         {data.map(item => <TableRow key={item.id}>{columns.map(col => <TableCell key={col}>
-            {col.includes('amount') ? formatCurrency(item[col] || 0) : col.includes('at') ? new Date(item[col]).toLocaleDateString() : item[col]}
+            {col.includes('Amount') ? formatCurrency(item[col] || 0) : col.includes('at') ? new Date(item[col]).toLocaleDateString() : item[col]}
         </TableCell>)}</TableRow>)}
     </TableBody></Table></div>
 };

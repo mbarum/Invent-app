@@ -43,7 +43,7 @@ const getStatusBadge = (status: QuotationStatus) => {
 const Quotations: React.FC = () => {
     const { currentBranch, currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
     const navigate = useNavigate();
-    const { customers: allCustomers, products: allProducts } = useDataStore();
+    const { customers: allCustomers, products: allProducts, appSettings } = useDataStore();
     
     // Data state
     const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -325,13 +325,13 @@ const Quotations: React.FC = () => {
                     </div>
                     <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
                         <div id="quotation-preview-content">
-                            <QuotationPrint quotation={viewingQuotation} isPreview={true} />
+                            <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} isPreview={true} />
                         </div>
                     </div>
                  </Modal>
             )}
 
-            {isPrintView && <QuotationPrint quotation={viewingQuotation} />}
+            {isPrintView && <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} />}
 
         </>
     );

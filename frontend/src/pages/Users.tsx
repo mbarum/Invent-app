@@ -18,7 +18,9 @@ const getStatusBadge = (status: 'Active' | 'Inactive') => {
   return <span className={`${baseClasses} bg-red-400/10 text-red-400 ring-red-400/30`}>Inactive</span>;
 };
 
-const staffRoles = Object.values(UserRole).filter(role => role !== UserRole.B2B_CLIENT);
+// FIX: Added explicit 'string[]' type annotation to fix type inference issue.
+// FIX: Cast Object.values result to string[] to resolve incorrect 'unknown[]' type inference.
+const staffRoles: string[] = (Object.values(UserRole) as string[]).filter(role => role !== UserRole.B2B_CLIENT);
 
 const Users: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -145,7 +147,7 @@ const Users: React.FC = () => {
                     <Input label="Email Address" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} required />
                     {/* FIX: Explicitly cast formData.role to string to resolve type inference issue with enums. */}
                     {/* FIX: Wrapped formData.role in String() to robustly convert the value and satisfy the component's prop type. */}
-                    <Select label="Role" name="role" value={formData.role || ''} onChange={handleInputChange} required disabled={formData.role === UserRole.B2B_CLIENT}>
+                    <Select label="Role" name="role" value={String(formData.role || '')} onChange={handleInputChange} required disabled={formData.role === UserRole.B2B_CLIENT}>
                         {staffRoles.map(role => <option key={role} value={role}>{role}</option>)}
                     </Select>
                     <Select label="Status" name="status" value={formData.status || ''} onChange={handleInputChange} required>

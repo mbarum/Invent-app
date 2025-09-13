@@ -238,11 +238,10 @@ const Dashboard: React.FC = () => {
   return (
     <>
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
+        <DateRangePicker range={dateRange} onRangeChange={setDateRange} />
       </div>
-
-      <DateRangePicker range={dateRange} onRangeChange={setDateRange} />
 
       {renderContent()}
 

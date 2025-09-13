@@ -22,7 +22,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ range, onRangeChange 
     };
 
     return (
-        <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-800 border border-gray-700 rounded-lg sm:w-auto">
             <Input
                 label="Start Date"
                 type="date"
