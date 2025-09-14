@@ -204,6 +204,7 @@ export interface AppSettings {
   mpesaPasskey?: string;
   paymentDetails?: string;
   paymentTerms?: string;
+  mpesaEnvironment?: 'sandbox' | 'live';
 }
 
 export interface StockRequestItem {

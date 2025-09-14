@@ -1,6 +1,5 @@
 import Joi from 'joi';
-// FIX: Import express namespace and RequestHandler type to avoid global type conflicts.
-import express, { RequestHandler } from 'express';
+import express from 'express';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
 
 /**
@@ -8,16 +7,14 @@ import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, User
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Use RequestHandler to ensure correct type inference and avoid global type conflicts.
-export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
+export const validate = (schema: Joi.Schema): express.RequestHandler => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {
-        // Create a custom error object for the global error handler
         const validationError: any = new Error(error.details.map(d => d.message).join(', '));
         validationError.statusCode = 400; // Bad Request
         return next(validationError);
     }
-    req.body = value; // Assign the validated (and possibly sanitized) value back to req.body
+    req.body = value;
     next();
 };
 
@@ -201,6 +198,7 @@ export const updateSettingsSchema = Joi.object({
     mpesaConsumerKey: Joi.string().allow(''),
     mpesaConsumerSecret: Joi.string().allow(''),
     mpesaPasskey: Joi.string().allow(''),
+    mpesaEnvironment: Joi.string().valid('sandbox', 'live').allow(''),
     paymentDetails: Joi.string().allow(''),
     paymentTerms: Joi.string().allow(''),
 });

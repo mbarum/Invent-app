@@ -515,7 +515,7 @@ const POS: React.FC = () => {
                             <Button onClick={handlePrintReceipt} variant="secondary" className="w-full"><Printer className="mr-2 h-4 w-4" /> Print Receipt</Button>
                             <Button onClick={handleDownloadPdf} className="w-full"><Download className="mr-2 h-4 w-4" /> Download PDF</Button>
                         </div>
-                         <div className="border border-gray-700 rounded-md p-2 h-80 overflow-y-auto bg-gray-900">
+                         <div id="receipt-to-print" className="border border-gray-700 rounded-md p-2 h-80 overflow-y-auto bg-gray-900">
                              <ReceiptPrint sale={completedSale} />
                         </div>
                         <Button size="lg" className="w-full mt-4" onClick={resetSale}>Start New Sale</Button>

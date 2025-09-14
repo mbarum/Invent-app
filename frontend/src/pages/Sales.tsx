@@ -137,7 +137,7 @@ const Sales: React.FC = () => {
         customerName: customerMap[s.customer_id] || 'N/A',
         branchName: branchMap[s.branch_id] || 'N/A'
     }));
-    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['sale_no', 'customerName', 'branchName', 'created_at', 'amount', 'payment_method']);
+    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['sale_no', 'customerName', 'branchName', 'created_at', 'totalAmount', 'payment_method']);
   };
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
@@ -169,7 +169,7 @@ const Sales: React.FC = () => {
                 <TableCell>{branchMap[sale.branch_id] || 'Unknown'}</TableCell>
                 <TableCell>{new Date(sale.created_at).toLocaleString()}</TableCell>
                 <TableCell className="text-center">{typeof sale.items === 'number' ? sale.items : (Array.isArray(sale.items) ? sale.items.length : 0)}</TableCell>
-                <TableCell className="font-semibold text-right">{formatCurrency(sale.amount || 0)}</TableCell>
+                <TableCell className="font-semibold text-right">{formatCurrency(sale.totalAmount || 0)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -2,6 +2,7 @@
 
 
 
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Branch, Sale, Customer, ShippingLabel, ShippingStatus } from '@masuma-ea/types';
@@ -117,14 +118,14 @@ const Reports: React.FC = () => {
   };
 
   const stats = useMemo(() => {
-      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
+      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
       const activeCustomers = new Set(sales.map(s => s.customer_id)).size;
       return { totalRevenue, totalSales: sales.length, activeCustomers, totalShipments: shipments.length };
   }, [sales, shipments]);
 
   const handleExportSales = () => {
     const data = sales.map(s => ({ ...s, customerName: customerMap[s.customer_id] || 'N/A' }));
-    exportToCsv(`sales_report_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Date', 'Amount (KES)'], data, ['sale_no', 'customerName', 'created_at', 'amount']);
+    exportToCsv(`sales_report_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Date', 'Amount (KES)'], data, ['sale_no', 'customerName', 'created_at', 'totalAmount']);
   };
   
   const handleExportShipments = () => {
@@ -201,7 +202,7 @@ const Reports: React.FC = () => {
                               <TableRow key={sale.id}>
                                   <TableCell className="font-mono">{sale.sale_no}</TableCell>
                                   <TableCell>{customerMap[sale.customer_id] || 'N/A'}</TableCell>
-                                  <TableCell className="text-right font-semibold">{formatCurrency(sale.amount || 0)}</TableCell>
+                                  <TableCell className="text-right font-semibold">{formatCurrency(sale.totalAmount || 0)}</TableCell>
                               </TableRow>
                           ))}
                       </TableBody>

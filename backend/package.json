@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only --ignore-watch uploads src/server.ts",
     "build:types": "npm run build --prefix ../packages/types",
     "db:migrate": "npm run build:types && knex migrate:latest",
     "db:seed": "npm run build:types && knex seed:run"

@@ -75,7 +75,7 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                     <div className="w-1/3 space-y-2">
                         <div className="flex justify-end">
                             <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2 w-full">
-                                <span>Total (KES):</span> <span>{(quotation.amount || 0).toFixed(2)}</span>
+                                <span>Total (KES):</span> <span>{(quotation.totalAmount || 0).toFixed(2)}</span>
                             </div>
                         </div>
                     </div>

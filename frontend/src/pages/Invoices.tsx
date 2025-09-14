@@ -155,7 +155,7 @@ const Invoices: React.FC = () => {
                                 <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
                                 <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                                 <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                                <TableCell className="text-right font-semibold">{formatCurrency(invoice.amount || 0)}</TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(invoice.totalAmount || 0)}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(invoice.id)}>
                                         <Eye className="h-4 w-4 mr-1" /> View

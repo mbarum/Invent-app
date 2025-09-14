@@ -8,6 +8,7 @@ import { AppSettings } from '@masuma-ea/types';
 import toast from 'react-hot-toast';
 import { LoaderCircle, Save } from 'lucide-react';
 import { useDataStore } from '../store/dataStore.ts';
+import Select from '../components/ui/Select.tsx';
 
 const Settings: React.FC = () => {
     const { appSettings, refetchSettings, isInitialDataLoaded } = useDataStore();
@@ -25,7 +26,7 @@ const Settings: React.FC = () => {
         }
     }, [appSettings, isInitialDataLoaded]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (Object.keys(credentials).includes(name)) {
             setCredentials(prev => ({ ...prev, [name]: value }));
@@ -142,6 +143,10 @@ const Settings: React.FC = () => {
                         <Input label="Lipa Na M-Pesa Passkey" name="mpesaPasskey" type="password" value={credentials.mpesaPasskey} onChange={handleInputChange} placeholder={settings.mpesaPasskey ? 'Value is set. Enter a new one to change.' : ''} />
                         <Input label="Consumer Key" name="mpesaConsumerKey" type="password" value={credentials.mpesaConsumerKey} onChange={handleInputChange} placeholder={settings.mpesaConsumerKey ? 'Value is set. Enter a new one to change.' : ''} />
                         <Input label="Consumer Secret" name="mpesaConsumerSecret" type="password" value={credentials.mpesaConsumerSecret} onChange={handleInputChange} placeholder={settings.mpesaConsumerSecret ? 'Value is set. Enter a new one to change.' : ''} />
+                        <Select label="M-Pesa Environment" name="mpesaEnvironment" value={settings.mpesaEnvironment || 'sandbox'} onChange={handleInputChange} className="md:col-span-2">
+                            <option value="sandbox">Sandbox (Testing)</option>
+                            <option value="live">Live (Production)</option>
+                        </Select>
                     </CardContent>
                 </Card>
             </div>

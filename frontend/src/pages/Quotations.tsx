@@ -228,7 +228,7 @@ const Quotations: React.FC = () => {
                                 <TableCell>{new Date(q.created_at).toLocaleDateString()}</TableCell>
                                 <TableCell>{new Date(q.valid_until).toLocaleDateString()}</TableCell>
                                 <TableCell>{getStatusBadge(q.status)}</TableCell>
-                                <TableCell className="text-right font-semibold">{formatCurrency(q.amount || 0)}</TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(q.totalAmount || 0)}</TableCell>
                                 <TableCell className="space-x-1">
                                     <Button variant="ghost" size="sm" onClick={() => handleViewQuotation(q.id)} title="View Details"><Eye className="h-4 w-4"/></Button>
                                     {q.status === QuotationStatus.DRAFT && <Button variant="ghost" size="sm" onClick={() => handleStatusChange(q.id, QuotationStatus.SENT)} title="Mark as Sent"><Send className="h-4 w-4"/></Button>}
