@@ -25,6 +25,7 @@ import B2BManagement from './pages/B2BManagement.tsx';
 import B2BPortal from './pages/B2BPortal.tsx';
 import Branches from './pages/Branches.tsx';
 import AuditLogs from './pages/AuditLogs.tsx';
+import MpesaTransactions from './pages/MpesaTransactions.tsx';
 
 import { PERMISSIONS } from './config/permissions.ts';
 
@@ -50,6 +51,7 @@ const App: React.FC = () => {
             <Route path="pos" element={<ProtectedRoute permission={PERMISSIONS.USE_POS}><POS /></ProtectedRoute>} />
             <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.VIEW_INVENTORY}><Inventory /></ProtectedRoute>} />
             <Route path="sales" element={<ProtectedRoute permission={PERMISSIONS.VIEW_SALES}><Sales /></ProtectedRoute>} />
+            <Route path="mpesa-transactions" element={<ProtectedRoute permission={PERMISSIONS.VIEW_MPESA_LOGS}><MpesaTransactions /></ProtectedRoute>} />
             <Route path="customers" element={<ProtectedRoute permission={PERMISSIONS.VIEW_CUSTOMERS}><Customers /></ProtectedRoute>} />
             <Route path="quotations" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_QUOTATIONS}><Quotations /></ProtectedRoute>} />
             <Route path="invoices" element={<ProtectedRoute permission={PERMISSIONS.MANAGE_INVOICES}><Invoices /></ProtectedRoute>} />

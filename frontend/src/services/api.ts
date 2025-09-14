@@ -1,6 +1,7 @@
 
 
 
+
 import axios from 'axios';
 import { 
     User, Product, Sale, Customer, Invoice, Quotation, ShippingLabel, Branch, 
@@ -9,7 +10,8 @@ import {
     ApplicationStatus, ShippingStatus, QuotationStatus, StockRequest, 
     CreateStockRequestPayload, StockRequestStatus, NotificationPayload, AuditLog,
     // FIX: Add missing InvoiceStatus import.
-    InvoiceStatus
+    InvoiceStatus,
+    MpesaTransaction
 } from '@masuma-ea/types';
 
 const api = axios.create({
@@ -278,6 +280,11 @@ export const getMpesaPaymentStatus = async (checkoutRequestId: string): Promise<
     const { data } = await api.get(`/mpesa/status/${checkoutRequestId}`);
     return data;
 };
+export const getMpesaTransactions = async (page: number, limit: number, status: string): Promise<{transactions: MpesaTransaction[], total: number}> => {
+    const { data } = await api.get('/mpesa/transactions', { params: { page, limit, status } });
+    return data;
+};
+
 
 // --- Notifications ---
 export const getNotifications = async (): Promise<NotificationPayload> => {

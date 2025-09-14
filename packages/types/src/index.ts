@@ -307,6 +307,19 @@ export interface AuditLog {
 
 // --- M-PESA TYPES ---
 
+export interface MpesaTransaction {
+  id: number;
+  checkout_request_id: string;
+  amount: number;
+  phone_number: string;
+  status: 'Pending' | 'Completed' | 'Failed';
+  result_desc: string;
+  mpesa_receipt_number?: string;
+  created_at: string;
+  sale_no?: string;
+  invoice_no?: string;
+}
+
 export interface MpesaCartItem {
     productId: string;
     quantity: number;

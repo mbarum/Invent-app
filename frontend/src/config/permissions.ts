@@ -19,6 +19,7 @@ export const PERMISSIONS = {
 
   // Sales
   VIEW_SALES: 'view:sales',
+  VIEW_MPESA_LOGS: 'view:mpesa_logs',
 
   // Customers
   VIEW_CUSTOMERS: 'view:customers',
@@ -61,6 +62,7 @@ export const ROLES: Record<UserRole, string[]> = {
     PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.MANAGE_INVENTORY,
     PERMISSIONS.VIEW_SALES,
+    PERMISSIONS.VIEW_MPESA_LOGS,
     PERMISSIONS.VIEW_CUSTOMERS,
     PERMISSIONS.MANAGE_CUSTOMERS,
     PERMISSIONS.MANAGE_QUOTATIONS,
