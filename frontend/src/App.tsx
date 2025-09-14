@@ -1,5 +1,5 @@
-
-
+// FIX: Add missing React import to resolve namespace and JSX-related errors.
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 

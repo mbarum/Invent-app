@@ -1,11 +1,16 @@
+/// <reference types="node" />
+
 // FIX: Import express namespace to avoid global type conflicts.
 // FIX: Import Request, Response, NextFunction to resolve type conflicts with global types.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Removed Request from named imports to use express.Request directly and avoid global type conflicts.
+import express, { Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+// FIX: Added import for fileURLToPath to derive __dirname in an ES module.
+import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
@@ -40,11 +45,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// FIX: __dirname is not available in ES modules. This correctly derives it.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 // --- TYPE AUGMENTATION ---
 // Adds the `user` property to the Express Request type after authentication.
 // FIX: Use Request to avoid global type conflicts.
-export interface AuthenticatedRequest extends Request {
+// FIX: Extended express.Request to resolve conflicts with global Request type.
+export interface AuthenticatedRequest extends express.Request {
   user?: User;
 }
 
@@ -246,7 +256,8 @@ const finalizeSale = async (payload: MpesaTransactionPayload, trx: Knex.Transact
 
 // --- Auth Routes ---
 // FIX: Use explicit express types for handler signature.
-app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.post('/api/auth/login', validate(loginSchema), async (req: express.Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
         const user = await db('users').where({ email }).first();
@@ -262,7 +273,8 @@ app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Res
 });
 
 // FIX: Use explicit express types for handler signature.
-app.post('/api/auth/google', validate(googleLoginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.post('/api/auth/google', validate(googleLoginSchema), async (req: express.Request, res: Response, next: NextFunction) => {
     try {
         const { token: googleToken } = req.body;
         const ticket = await googleClient.verifyIdToken({ idToken: googleToken, audience: GOOGLE_CLIENT_ID });
@@ -280,7 +292,8 @@ app.post('/api/auth/google', validate(googleLoginSchema), async (req: Request, r
 });
 
 // FIX: Use explicit express types for handler signature.
-app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: express.Request, res: Response, next: NextFunction) => {
     try {
         const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -306,7 +319,8 @@ app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }
 
 // --- Product Routes ---
 // FIX: Use explicit express types for handler signature.
-app.get('/api/products', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.get('/api/products', async (req: express.Request, res: Response, next: NextFunction) => {
     try {
         const products = await db('products').select('id', 'part_number as partNumber', 'name', 'retail_price as retailPrice', 'wholesale_price as wholesalePrice', 'stock', 'notes');
         const oemNumbers = await db('product_oem_numbers').select('product_id', 'oem_number');
@@ -545,7 +559,8 @@ app.post('/api/customers', authenticate, validate(createCustomerSchema), async (
 });
 
 // FIX: Use explicit express types for handler signature.
-app.get('/api/branches', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.get('/api/branches', async (req: express.Request, res: Response, next: NextFunction) => {
     try {
         const branches = await db('branches').select('*');
         res.json(branches);
@@ -643,7 +658,8 @@ app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, 
     } catch (error) { next(error); }
 });
 
-app.post('/api/mpesa/callback', async (req: Request, res: Response) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.post('/api/mpesa/callback', async (req: express.Request, res: Response) => {
     console.log('--- M-Pesa Callback Received ---');
     console.log(JSON.stringify(req.body, null, 2));
 
@@ -806,7 +822,8 @@ app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: 
 
 // --- GLOBAL ERROR HANDLER ---
 // FIX: Use explicit express types for handler signature.
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request to avoid conflict with global Request type.
+app.use((err: any, req: express.Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
