@@ -1,8 +1,7 @@
-
 import { UserRole } from '@masuma-ea/types';
 
 // IMPORTANT: Replace with your actual Google Client ID from Google Cloud Console
-export const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 
 // Base URL for accessing uploaded documents from the backend
 export const DOCS_BASE_URL = '/';

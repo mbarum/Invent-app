@@ -1,16 +1,13 @@
 /// <reference types="node" />
 
-// FIX: Import express namespace to avoid global type conflicts.
-// FIX: Import Request, Response, NextFunction to resolve type conflicts with global types.
-// FIX: Removed Request from named imports to use express.Request directly and avoid global type conflicts.
-import express, { Response, NextFunction } from 'express';
+// FIX: Change import to use express namespace and avoid global type conflicts.
+// FIX: Added explicit Request, Response, NextFunction imports to resolve global type conflicts.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
-// FIX: Added import for fileURLToPath to derive __dirname in an ES module.
-import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
@@ -34,27 +31,26 @@ import {
     // FIX: Import StockRequestStatus enum.
     StockRequestStatus,
     MpesaTransactionPayload,
-    Sale as SaleType
+    Sale as SaleType,
+    // FIX: Add missing type imports for new endpoints.
+    DashboardStats,
+    ShippingStatus,
+    InvoiceStatus
 } from '@masuma-ea/types';
 
 
 // --- SETUP ---
 dotenv.config();
-const app = express();
+const app: express.Express = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// FIX: __dirname is not available in ES modules. This correctly derives it.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 
 // --- TYPE AUGMENTATION ---
 // Adds the `user` property to the Express Request type after authentication.
-// FIX: Use Request to avoid global type conflicts.
 // FIX: Extended express.Request to resolve conflicts with global Request type.
-export interface AuthenticatedRequest extends express.Request {
+export interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
@@ -67,6 +63,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded documents
+// In a CommonJS module environment (as configured in tsconfig.json),
+// __dirname is a global variable, so we can use it directly.
 const UPLOADS_DIR = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(UPLOADS_DIR));
 
@@ -79,7 +77,7 @@ const upload = multer({ storage });
 
 
 // --- AUTH MIDDLEWARE ---
-// FIX: Use explicit express types for middleware signature.
+// FIX: Use explicit express types for middleware signature to resolve global type conflicts.
 const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -107,7 +105,7 @@ const authenticate = async (req: AuthenticatedRequest, res: Response, next: Next
     }
 };
 
-// FIX: Use explicit express types for middleware signature.
+// FIX: Use explicit express types for middleware signature to resolve global type conflicts.
 const hasPermission = (permission: string) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // This is a placeholder for a real permission system (e.g., Casl, custom logic).
     // For now, we'll allow admins to do everything.
@@ -255,9 +253,8 @@ const finalizeSale = async (payload: MpesaTransactionPayload, trx: Knex.Transact
 // --- API ROUTES ---
 
 // --- Auth Routes ---
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.post('/api/auth/login', validate(loginSchema), async (req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
         const user = await db('users').where({ email }).first();
@@ -272,9 +269,8 @@ app.post('/api/auth/login', validate(loginSchema), async (req: express.Request, 
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.post('/api/auth/google', validate(googleLoginSchema), async (req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.post('/api/auth/google', validate(googleLoginSchema), async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { token: googleToken } = req.body;
         const ticket = await googleClient.verifyIdToken({ idToken: googleToken, audience: GOOGLE_CLIENT_ID });
@@ -291,9 +287,8 @@ app.post('/api/auth/google', validate(googleLoginSchema), async (req: express.Re
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -316,11 +311,108 @@ app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }
     } catch (error) { next(error); }
 });
 
+// --- Dashboard Routes ---
+// FIX: Add missing dashboard data endpoints.
+app.get('/api/dashboard/stats', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+
+        const salesQuery = db('sales').whereBetween('created_at', [startDate, endDate]);
+        const shipmentsQuery = db('shipping_labels').whereBetween('created_at', [startDate, endDate]);
+
+        if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+            salesQuery.andWhere('branch_id', branchId);
+            shipmentsQuery.andWhere('from_branch_id', branchId);
+        }
+
+        const [totalRevenueResult, totalSalesResult, activeCustomersResult, totalShipments, pendingShipments, salesTargetResult] = await Promise.all([
+            salesQuery.clone().sum('total_amount as total').first(),
+            salesQuery.clone().count('id as count').first(),
+            salesQuery.clone().distinct('customer_id').then(r => r.length),
+            shipmentsQuery.clone().count('id as count').first(),
+            shipmentsQuery.clone().whereNot('status', ShippingStatus.SHIPPED).count('id as count').first(),
+            db('app_settings').where('setting_key', 'salesTarget').first(),
+        ]);
+        
+        const stats: DashboardStats = {
+            totalRevenue: Number((totalRevenueResult as any)?.total || 0),
+            totalSales: Number((totalSalesResult as any)?.count || 0),
+            activeCustomers: activeCustomersResult,
+            totalShipments: Number((totalShipments as any)?.count || 0),
+            pendingShipments: Number((pendingShipments as any)?.count || 0),
+            salesTarget: Number(salesTargetResult?.setting_value || 5000000), // Default target
+        };
+        res.json(stats);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/dashboard/sales-chart', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
+        
+        const query = db('sales')
+            .select(
+                db.raw('DATE(created_at) as name'),
+                db.raw('COUNT(id) as sales'),
+                db.raw('SUM(total_amount) as revenue')
+            )
+            .whereBetween('created_at', [new Date(start), new Date(end)])
+            .groupBy('name')
+            .orderBy('name', 'asc');
+        
+        if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+            query.andWhere('branch_id', branchId);
+        }
+            
+        const data = await query;
+        res.json(data);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/dashboard/fast-moving', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
+
+        const salesSubquery = db('sales')
+            .whereBetween('created_at', [new Date(start), new Date(end)]);
+        if (branchId && branchId !== 'null' && branchId !== 'undefined') {
+            salesSubquery.andWhere('branch_id', branchId);
+        }
+
+        const productSales = await db('sale_items as si')
+            .join(salesSubquery.as('s'), 'si.sale_id', 's.id')
+            .join('products as p', 'si.product_id', 'p.id')
+            .select('p.id', 'p.name', 'p.stock as currentStock')
+            .sum('si.quantity as totalSold')
+            .groupBy('p.id', 'p.name', 'p.stock')
+            .orderBy('totalSold', 'desc')
+            .limit(10);
+            
+        res.json(productSales);
+    } catch (error) { next(error); }
+});
+
+app.put('/api/dashboard/sales-target', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { target } = req.body;
+        if (typeof target !== 'number' || target < 0) {
+            return res.status(400).json({ message: "Invalid target value." });
+        }
+        await db('app_settings')
+            .insert({ setting_key: 'salesTarget', setting_value: target.toString() })
+            .onConflict('setting_key')
+            .merge();
+        await logAuditEvent(req.user!.id, 'UPDATE_SALES_TARGET', { newTarget: target });
+        res.json({ salesTarget: target });
+    } catch (error) { next(error); }
+});
+
 
 // --- Product Routes ---
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.get('/api/products', async (req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.get('/api/products', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const products = await db('products').select('id', 'part_number as partNumber', 'name', 'retail_price as retailPrice', 'wholesale_price as wholesalePrice', 'stock', 'notes');
         const oemNumbers = await db('product_oem_numbers').select('product_id', 'oem_number');
@@ -334,7 +426,7 @@ app.get('/api/products', async (req: express.Request, res: Response, next: NextF
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/products', authenticate, validate(productSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { oemNumbers, ...productData } = req.body;
@@ -350,7 +442,7 @@ app.post('/api/products', authenticate, validate(productSchema), async (req: Aut
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.put('/api/products/:id', authenticate, validate(updateProductSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -376,7 +468,7 @@ app.put('/api/products/:id', authenticate, validate(updateProductSchema), async 
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.delete('/api/products/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -389,7 +481,7 @@ app.delete('/api/products/:id', authenticate, async (req: AuthenticatedRequest, 
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/products/import', authenticate, validate(Joi.object({ products: bulkProductSchema })), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // A simplified import that updates on conflict.
     try {
@@ -401,7 +493,7 @@ app.post('/api/products/import', authenticate, validate(Joi.object({ products: b
 });
 
 // --- B2B Routes ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/b2b/applications', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const applications = await db('b2b_applications').select(
@@ -413,7 +505,7 @@ app.get('/api/b2b/applications', authenticate, async (req: AuthenticatedRequest,
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.patch('/api/b2b/applications/:id', authenticate, validate(updateB2BStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -442,7 +534,7 @@ app.patch('/api/b2b/applications/:id', authenticate, validate(updateB2BStatusSch
 });
 
 // --- Stock Requests (B2B) ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/stock-requests', authenticate, validate(createStockRequestSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { branchId, items } = req.body;
@@ -473,7 +565,7 @@ app.post('/api/stock-requests', authenticate, validate(createStockRequestSchema)
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/stock-requests/my-requests', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const requests = await db('stock_requests as sr')
@@ -485,7 +577,7 @@ app.get('/api/stock-requests/my-requests', authenticate, async (req: Authenticat
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/stock-requests', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const requests = await db('stock_requests as sr')
@@ -497,7 +589,7 @@ app.get('/api/stock-requests', authenticate, async (req: AuthenticatedRequest, r
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/stock-requests/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -513,7 +605,7 @@ app.get('/api/stock-requests/:id', authenticate, async (req: AuthenticatedReques
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.patch('/api/stock-requests/:id/status', authenticate, validate(updateStockRequestStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -542,7 +634,7 @@ app.patch('/api/stock-requests/:id/status', authenticate, validate(updateStockRe
 });
 
 // --- General Data Routes (Customers, Branches, Users) ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/customers', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const customers = await db('customers').select('*');
@@ -550,7 +642,7 @@ app.get('/api/customers', authenticate, async (req: AuthenticatedRequest, res: R
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/customers', authenticate, validate(createCustomerSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const [newCustomer] = await db('customers').insert(req.body).returning('*');
@@ -558,16 +650,15 @@ app.post('/api/customers', authenticate, validate(createCustomerSchema), async (
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.get('/api/branches', async (req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.get('/api/branches', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const branches = await db('branches').select('*');
         res.json(branches);
     } catch(error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/users', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const users = await db('users').select('id', 'name', 'email', 'role', 'status');
@@ -575,8 +666,79 @@ app.get('/api/users', authenticate, async (req: AuthenticatedRequest, res: Respo
     } catch(error) { next(error); }
 });
 
+
+// --- Invoices Routes ---
+// FIX: Add missing endpoints for managing invoices.
+app.get('/api/invoices', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { status } = req.query;
+        const query = db('invoices as i')
+            .join('customers as c', 'i.customer_id', 'c.id')
+            .select('i.*', 'c.name as customerName')
+            .orderBy('i.created_at', 'desc');
+
+        if (status && status !== 'All') {
+            query.where('i.status', status as string);
+        }
+        
+        const invoices = await query;
+        res.json(invoices);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/invoices/snippets/unpaid', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const snippets = await db('invoices')
+            .where('status', InvoiceStatus.UNPAID)
+            .select('id', 'invoice_no');
+        res.json(snippets);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/invoices/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const invoice = await db('invoices as i')
+            .join('customers as c', 'i.customer_id', 'c.id')
+            .join('branches as b', 'i.branch_id', 'b.id')
+            .where('i.id', id)
+            .select('i.*', 'c.name as customerName', 'c.address as customerAddress', 'c.phone as customerPhone', 'b.name as branchName', 'b.address as branchAddress', 'b.phone as branchPhone')
+            .first();
+
+        if (!invoice) {
+            return res.status(404).json({ message: 'Invoice not found.' });
+        }
+        
+        const items = await db('invoice_items as ii')
+            .join('products as p', 'ii.product_id', 'p.id')
+            .where('ii.invoice_id', id)
+            .select('ii.*', 'p.name as productName', 'p.part_number as partNumber');
+        
+        const fullInvoice: Invoice = {
+            ...invoice,
+            totalAmount: invoice.total_amount,
+            amount_paid: invoice.amount_paid,
+            customer: {
+                id: invoice.customer_id,
+                name: invoice.customerName,
+                address: invoice.customerAddress,
+                phone: invoice.customerPhone,
+            },
+            branch: {
+                id: invoice.branch_id,
+                name: invoice.branchName,
+                address: invoice.branchAddress,
+                phone: invoice.branchPhone
+            },
+            items: items,
+        };
+        
+        res.json(fullInvoice);
+    } catch (error) { next(error); }
+});
+
 // --- Sales & POS ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/sales', authenticate, validate(createSaleSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         await db.transaction(async trx => {
@@ -586,12 +748,44 @@ app.post('/api/sales', authenticate, validate(createSaleSchema), async (req: Aut
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/sales', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const sales = await db('sales').orderBy('created_at', 'desc');
         res.json(sales);
     } catch(error) { next(error); }
+});
+
+// --- Shipping Routes ---
+// FIX: Add missing endpoints for managing shipping labels.
+app.get('/api/shipping', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const labels = await db('shipping_labels').orderBy('created_at', 'desc');
+        res.json(labels);
+    } catch(error) { next(error); }
+});
+
+app.post('/api/shipping', authenticate, validate(createLabelSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const id = uuidv4();
+        const [newLabel] = await db('shipping_labels').insert({ 
+            id, 
+            ...req.body, 
+            status: ShippingStatus.DRAFT 
+        }).returning('*');
+        await logAuditEvent(req.user!.id, 'CREATE_SHIPPING_LABEL', { labelId: id, orderId: req.body.sale_id || req.body.invoice_id });
+        res.status(201).json(newLabel);
+    } catch (error) { next(error); }
+});
+
+app.patch('/api/shipping/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const [updatedLabel] = await db('shipping_labels').where({ id }).update({ status }).returning('*');
+        await logAuditEvent(req.user!.id, 'UPDATE_SHIPPING_STATUS', { labelId: id, newStatus: status });
+        res.json(updatedLabel);
+    } catch (error) { next(error); }
 });
 
 
@@ -610,6 +804,7 @@ const getDarajaToken = async (consumerKey: string, consumerSecret: string): Prom
     return data.access_token;
 };
 
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const { amount, phoneNumber, ...saleDetails } = req.body;
     try {
@@ -658,8 +853,8 @@ app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, 
     } catch (error) { next(error); }
 });
 
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.post('/api/mpesa/callback', async (req: express.Request, res: Response) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.post('/api/mpesa/callback', async (req: Request, res: Response) => {
     console.log('--- M-Pesa Callback Received ---');
     console.log(JSON.stringify(req.body, null, 2));
 
@@ -701,6 +896,7 @@ app.post('/api/mpesa/callback', async (req: express.Request, res: Response) => {
     }
 });
 
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/mpesa/status/:checkoutRequestId', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { checkoutRequestId } = req.params;
@@ -735,14 +931,14 @@ const getAppSettings = async (trx?: Knex.Transaction): Promise<Partial<AppSettin
     }, {} as any);
 };
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/settings', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         res.json(await getAppSettings());
     } catch (error) { next(error); }
 });
 
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.put('/api/settings', authenticate, validate(updateSettingsSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         await db.transaction(async trx => {
@@ -756,7 +952,7 @@ app.put('/api/settings', authenticate, validate(updateSettingsSchema), async (re
 });
 
 // --- Notifications ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const user = req.user!;
@@ -764,8 +960,9 @@ app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, re
 
         // Fetch all unread user-specific alerts for the notification center
         const userNotifications = await db('notifications')
-            .where({ user_id: user.id, is_read: false })
+            .where({ user_id: user.id })
             .orderBy('created_at', 'desc')
+            .limit(50) // Limit to last 50 notifications for performance
             .select('*');
         
         payload.userAlerts = userNotifications;
@@ -776,6 +973,7 @@ app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, re
     }
 });
 
+// FIX: Use explicit express types to resolve global type conflicts.
 app.post('/api/notifications/mark-read', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const { ids } = req.body;
@@ -795,7 +993,7 @@ app.post('/api/notifications/mark-read', authenticate, async (req: Authenticated
 
 
 // --- Audit Logs ---
-// FIX: Use explicit express types for handler signature.
+// FIX: Use explicit express types to resolve global type conflicts.
 app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const page = parseInt(req.query.page as string) || 1;
@@ -821,9 +1019,8 @@ app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: 
 
 
 // --- GLOBAL ERROR HANDLER ---
-// FIX: Use explicit express types for handler signature.
-// FIX: Use express.Request to avoid conflict with global Request type.
-app.use((err: any, req: express.Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types to resolve global type conflicts.
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';

@@ -58,11 +58,11 @@ export async function seed(knex: Knex): Promise<void> {
 
         // Insert Users (Admin)
         const salt = await bcrypt.genSalt(10);
-        const adminPasswordHash = await bcrypt.hash('masuma123', salt);
+        const adminPasswordHash = await bcrypt.hash('jesuslord1J', salt);
         await trx('users').insert({
             id: '93288475-93a8-4e45-ae9c-e19d6ecb26ca', // Use a static UUID for the main admin
             name: 'System Admin',
-            email: 'admin@masuma.ea',
+            email: 'systems@masuma.africa',
             password_hash: adminPasswordHash,
             role: UserRole.SYSTEM_ADMINISTRATOR,
             status: 'Active'

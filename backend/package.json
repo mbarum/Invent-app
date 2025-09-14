@@ -7,8 +7,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "db:migrate": "knex migrate:latest",
-    "db:seed": "knex seed:run"
+    "build:types": "npm run build --prefix ../packages/types",
+    "db:migrate": "npm run build:types && knex migrate:latest",
+    "db:seed": "npm run build:types && knex seed:run"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
@@ -37,7 +38,9 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.12.12",
     "@types/uuid": "^9.0.8",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"
   }
 }
