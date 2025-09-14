@@ -1,7 +1,8 @@
 /// <reference types="node" />
 
-// FIX: Importing Request, Response, and NextFunction directly to ensure correct type resolution against potential global DOM conflicts.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Importing Request, Response, and NextFunction from express to ensure correct type resolution against potential global DOM conflicts.
+// MODIFIED: Changed import to only bring in NextFunction to avoid ambiguity with global Request/Response types. Will use express.Request and express.Response explicitly.
+import express, { NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
@@ -52,20 +53,10 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 
 
 // --- TYPE AUGMENTATION ---
-// FIX: Explicitly extend Request from express to avoid global type conflicts.
-export interface AuthenticatedRequest extends Request {
+// FIX: Explicitly extend express.Request to avoid global type conflicts.
+export interface AuthenticatedRequest extends express.Request {
   user?: User;
 }
-
-
-// --- MIDDLEWARE ---
-app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Multer setup for file uploads
 const storage = multer.diskStorage({
@@ -75,9 +66,56 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 
+// --- MIDDLEWARE ---
+app.use(cors());
+app.use(helmet());
+app.use(morgan('dev'));
+
+// FIX: The B2B registration route uses multipart/form-data for file uploads.
+// It must be defined BEFORE the general express.json() body parser to prevent
+// the JSON parser from trying to handle the multipart stream, which causes a network error.
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: express.Request, res: express.Response, next: NextFunction) => {
+    try {
+        const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
+        
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        if (!files || !files.certOfInc?.[0] || !files.cr12?.[0]) {
+            return res.status(400).json({ message: 'Both Certificate of Incorporation and CR12 documents must be uploaded.' });
+        }
+        
+        const certOfIncUrl = files.certOfInc[0].path;
+        const cr12Url = files.cr12[0].path;
+        
+        const passwordHash = await bcrypt.hash(password, 10);
+        const application = {
+            id: uuidv4(),
+            business_name: businessName,
+            kra_pin: kraPin,
+            contact_name: contactName,
+            contact_email: contactEmail,
+            contact_phone: contactPhone,
+            password_hash: passwordHash,
+            cert_of_inc_url: path.relative(path.join(__dirname, '..'), certOfIncUrl),
+            cr12_url: path.relative(path.join(__dirname, '..'), cr12Url),
+        };
+        await db('b2b_applications').insert(application);
+        res.status(201).json({ message: 'Application submitted successfully.' });
+    } catch (error) { next(error); }
+});
+
+
+// General body parsers for JSON and URL-encoded data.
+// These must come AFTER any routes that handle multipart data.
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/uploads', express.static(UPLOADS_DIR));
+
 // --- AUTH MIDDLEWARE ---
-// FIX: Use Response and NextFunction from express to avoid global type conflicts.
-const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Use express.Response and NextFunction from express to avoid global type conflicts.
+// MODIFIED: Use express.Response for type safety.
+const authenticate = async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ message: 'Authentication token required.' });
@@ -103,8 +141,9 @@ const authenticate = async (req: AuthenticatedRequest, res: Response, next: Next
     }
 };
 
-// FIX: Use Response and NextFunction from express to avoid global type conflicts.
-const hasPermission = (permission: string) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Use express.Response and NextFunction from express to avoid global type conflicts.
+// MODIFIED: Use express.Response for type safety.
+const hasPermission = (permission: string) => (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     if (req.user?.role === UserRole.SYSTEM_ADMINISTRATOR) {
         return next();
     }
@@ -231,8 +270,9 @@ const finalizeSale = async (payload: MpesaTransactionPayload, trx: Knex.Transact
 // --- API ROUTES ---
 
 // --- Auth Routes ---
-// FIX: Use Request, Response, and NextFunction from express to avoid global type conflicts.
-app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response to avoid global type conflicts.
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.post('/api/auth/login', validate(loginSchema), async (req: express.Request, res: express.Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
         const user = await db('users').where({ email }).first();
@@ -247,7 +287,8 @@ app.post('/api/auth/login', validate(loginSchema), async (req: Request, res: Res
     } catch (error) { next(error); }
 });
 
-app.post('/api/auth/google', validate(googleLoginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.post('/api/auth/google', validate(googleLoginSchema), async (req: express.Request, res: express.Response, next: NextFunction) => {
     try {
         const { token: googleToken } = req.body;
         const ticket = await googleClient.verifyIdToken({ idToken: googleToken, audience: GOOGLE_CLIENT_ID });
@@ -264,38 +305,9 @@ app.post('/api/auth/google', validate(googleLoginSchema), async (req: Request, r
     } catch (error) { next(error); }
 });
 
-app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
-        
-        // FIX: Changed express.Multer.File to Express.Multer.File to use the augmented namespace from @types/multer.
-        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-        if (!files || !files.certOfInc?.[0] || !files.cr12?.[0]) {
-            return res.status(400).json({ message: 'Both Certificate of Incorporation and CR12 documents must be uploaded.' });
-        }
-        
-        const certOfIncUrl = files.certOfInc[0].path;
-        const cr12Url = files.cr12[0].path;
-        
-        const passwordHash = await bcrypt.hash(password, 10);
-        const application = {
-            id: uuidv4(),
-            business_name: businessName,
-            kra_pin: kraPin,
-            contact_name: contactName,
-            contact_email: contactEmail,
-            contact_phone: contactPhone,
-            password_hash: passwordHash,
-            cert_of_inc_url: path.relative(path.join(__dirname, '..'), certOfIncUrl),
-            cr12_url: path.relative(path.join(__dirname, '..'), cr12Url),
-        };
-        await db('b2b_applications').insert(application);
-        res.status(201).json({ message: 'Application submitted successfully.' });
-    } catch (error) { next(error); }
-});
-
 // --- Dashboard Routes ---
-app.get('/api/dashboard/stats', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/dashboard/stats', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
         const startDate = new Date(start);
@@ -330,7 +342,8 @@ app.get('/api/dashboard/stats', authenticate, async (req: AuthenticatedRequest, 
     } catch (error) { next(error); }
 });
 
-app.get('/api/dashboard/sales-chart', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/dashboard/sales-chart', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
         
@@ -353,7 +366,8 @@ app.get('/api/dashboard/sales-chart', authenticate, async (req: AuthenticatedReq
     } catch (error) { next(error); }
 });
 
-app.get('/api/dashboard/fast-moving', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/dashboard/fast-moving', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { start, end, branchId } = req.query as { start: string, end: string, branchId: string };
 
@@ -376,7 +390,8 @@ app.get('/api/dashboard/fast-moving', authenticate, async (req: AuthenticatedReq
     } catch (error) { next(error); }
 });
 
-app.put('/api/dashboard/sales-target', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.put('/api/dashboard/sales-target', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { target } = req.body;
         if (typeof target !== 'number' || target < 0) {
@@ -393,7 +408,8 @@ app.put('/api/dashboard/sales-target', authenticate, async (req: AuthenticatedRe
 
 
 // --- Product Routes ---
-app.get('/api/products', async (req: Request, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.get('/api/products', async (req: express.Request, res: express.Response, next: NextFunction) => {
     try {
         const products = await db('products').select('id', 'part_number as partNumber', 'name', 'retail_price as retailPrice', 'wholesale_price as wholesalePrice', 'stock', 'notes');
         const oemNumbers = await db('product_oem_numbers').select('product_id', 'oem_number');
@@ -407,7 +423,8 @@ app.get('/api/products', async (req: Request, res: Response, next: NextFunction)
     } catch (error) { next(error); }
 });
 
-app.post('/api/products', authenticate, validate(productSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/products', authenticate, validate(productSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { oemNumbers, ...productData } = req.body;
         const id = uuidv4();
@@ -422,7 +439,8 @@ app.post('/api/products', authenticate, validate(productSchema), async (req: Aut
     } catch (error) { next(error); }
 });
 
-app.put('/api/products/:id', authenticate, validate(updateProductSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.put('/api/products/:id', authenticate, validate(updateProductSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { oemNumbers, ...productData } = req.body;
@@ -446,7 +464,8 @@ app.put('/api/products/:id', authenticate, validate(updateProductSchema), async 
     } catch (error) { next(error); }
 });
 
-app.delete('/api/products/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.delete('/api/products/:id', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
 
@@ -493,7 +512,8 @@ app.delete('/api/products/:id', authenticate, async (req: AuthenticatedRequest, 
     }
 });
 
-app.post('/api/products/import', authenticate, validate(Joi.object({ products: bulkProductSchema })), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/products/import', authenticate, validate(Joi.object({ products: bulkProductSchema })), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { products } = req.body;
         await db('products').insert(products).onConflict('part_number').merge();
@@ -502,7 +522,8 @@ app.post('/api/products/import', authenticate, validate(Joi.object({ products: b
 });
 
 // --- B2B Routes ---
-app.get('/api/b2b/applications', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/b2b/applications', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const applications = await db('b2b_applications')
             .select(
@@ -522,7 +543,8 @@ app.get('/api/b2b/applications', authenticate, async (req: AuthenticatedRequest,
     } catch (error) { next(error); }
 });
 
-app.patch('/api/b2b/applications/:id', authenticate, validate(updateB2BStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.patch('/api/b2b/applications/:id', authenticate, validate(updateB2BStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -571,7 +593,8 @@ app.patch('/api/b2b/applications/:id', authenticate, validate(updateB2BStatusSch
 });
 
 // --- Stock Requests ---
-app.post('/api/stock-requests', authenticate, validate(createStockRequestSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/stock-requests', authenticate, validate(createStockRequestSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         if (req.user?.role !== UserRole.B2B_CLIENT) {
             return res.status(403).json({ message: 'Only B2B clients can create stock requests.' });
@@ -607,7 +630,8 @@ app.post('/api/stock-requests', authenticate, validate(createStockRequestSchema)
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests/my-requests', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/stock-requests/my-requests', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const requests = await db('stock_requests as sr')
             .join('branches as b', 'sr.branch_id', 'b.id')
@@ -618,7 +642,8 @@ app.get('/api/stock-requests/my-requests', authenticate, async (req: Authenticat
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/stock-requests', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const requests = await db('stock_requests as sr')
             .join('branches as b', 'sr.branch_id', 'b.id')
@@ -629,7 +654,8 @@ app.get('/api/stock-requests', authenticate, async (req: AuthenticatedRequest, r
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/stock-requests/:id', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const request = await db('stock_requests').where({ id }).first();
@@ -644,7 +670,8 @@ app.get('/api/stock-requests/:id', authenticate, async (req: AuthenticatedReques
     } catch (error) { next(error); }
 });
 
-app.patch('/api/stock-requests/:id/status', authenticate, validate(updateStockRequestStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.patch('/api/stock-requests/:id/status', authenticate, validate(updateStockRequestStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -655,7 +682,8 @@ app.patch('/api/stock-requests/:id/status', authenticate, validate(updateStockRe
 });
 
 // --- Customer Routes ---
-app.get('/api/customers', async (req: Request, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.get('/api/customers', async (req: express.Request, res: express.Response, next: NextFunction) => {
     try {
         const customers = await db('customers').select(
             'id', 'name', 'address', 'phone', 'kra_pin as kraPin'
@@ -664,7 +692,8 @@ app.get('/api/customers', async (req: Request, res: Response, next: NextFunction
     } catch(error) { next(error); }
 });
 
-app.post('/api/customers', authenticate, validate(createCustomerSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/customers', authenticate, validate(createCustomerSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const [id] = await db('customers').insert(req.body);
         res.status(201).json({ id, ...req.body });
@@ -672,7 +701,8 @@ app.post('/api/customers', authenticate, validate(createCustomerSchema), async (
 });
 
 // FIX: Added new endpoint to fetch all transactions for a specific customer.
-app.get('/api/customers/:id/transactions', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/customers/:id/transactions', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const [sales, invoices, quotations] = await Promise.all([
@@ -685,7 +715,8 @@ app.get('/api/customers/:id/transactions', authenticate, async (req: Authenticat
 });
 
 // --- Sales Routes ---
-app.get('/api/sales', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/sales', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const query = db('sales')
             .select('id', 'sale_no', 'customer_id', 'branch_id', 'total_amount as totalAmount', 'payment_method', 'created_at')
@@ -703,7 +734,8 @@ app.get('/api/sales', authenticate, async (req: AuthenticatedRequest, res: Respo
     } catch(error) { next(error); }
 });
 
-app.post('/api/sales', authenticate, validate(createSaleSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/sales', authenticate, validate(createSaleSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const sale = await db.transaction(async trx => {
             return await finalizeSale(req.body, trx);
@@ -714,7 +746,8 @@ app.post('/api/sales', authenticate, validate(createSaleSchema), async (req: Aut
 });
 
 // --- Quotations/Invoices Routes ---
-app.get('/api/quotations', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/quotations', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const quotations = await db('quotations as q')
             .join('customers as c', 'q.customer_id', 'c.id')
@@ -724,7 +757,8 @@ app.get('/api/quotations', authenticate, async (req: AuthenticatedRequest, res: 
     } catch(error) { next(error); }
 });
 
-app.get('/api/quotations/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/quotations/:id', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const quotation = await db('quotations').where({ id }).first();
@@ -740,7 +774,8 @@ app.get('/api/quotations/:id', authenticate, async (req: AuthenticatedRequest, r
     } catch(error) { next(error); }
 });
 
-app.post('/api/quotations', authenticate, validate(createQuotationSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/quotations', authenticate, validate(createQuotationSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { customerId, branchId, items, validUntil } = req.body;
         const quotation_no = `QUO-${Date.now()}`;
@@ -762,7 +797,8 @@ app.post('/api/quotations', authenticate, validate(createQuotationSchema), async
     } catch(error) { next(error); }
 });
 
-app.patch('/api/quotations/:id/status', authenticate, validate(updateQuotationStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.patch('/api/quotations/:id/status', authenticate, validate(updateQuotationStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -772,7 +808,8 @@ app.patch('/api/quotations/:id/status', authenticate, validate(updateQuotationSt
     } catch(error) { next(error); }
 });
 
-app.post('/api/quotations/:id/convert-to-invoice', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/quotations/:id/convert-to-invoice', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const newInvoice = await db.transaction(async trx => {
@@ -807,7 +844,8 @@ app.post('/api/quotations/:id/convert-to-invoice', authenticate, async (req: Aut
     } catch(error) { next(error); }
 });
 
-app.get('/api/invoices', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/invoices', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const query = db('invoices as i')
             .join('customers as c', 'i.customer_id', 'c.id')
@@ -823,14 +861,16 @@ app.get('/api/invoices', authenticate, async (req: AuthenticatedRequest, res: Re
     } catch(error) { next(error); }
 });
 
-app.get('/api/invoices/snippets/unpaid', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/invoices/snippets/unpaid', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const invoices = await db('invoices').where('status', InvoiceStatus.UNPAID).select('id', 'invoice_no').orderBy('created_at', 'desc');
         res.json(invoices);
     } catch(error) { next(error); }
 });
 
-app.get('/api/invoices/:id', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/invoices/:id', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const invoice = await db('invoices').where({ id }).first();
@@ -847,14 +887,16 @@ app.get('/api/invoices/:id', authenticate, async (req: AuthenticatedRequest, res
 });
 
 // --- Shipping Routes ---
-app.get('/api/shipping', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/shipping', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const labels = await db('shipping_labels').orderBy('created_at', 'desc');
         res.json(labels);
     } catch(error) { next(error); }
 });
 
-app.post('/api/shipping', authenticate, validate(createLabelSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/shipping', authenticate, validate(createLabelSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const id = uuidv4();
         await db('shipping_labels').insert({ id, ...req.body, status: ShippingStatus.DRAFT });
@@ -862,7 +904,8 @@ app.post('/api/shipping', authenticate, validate(createLabelSchema), async (req:
     } catch(error) { next(error); }
 });
 
-app.patch('/api/shipping/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.patch('/api/shipping/:id/status', authenticate, validate(updateLabelStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -873,14 +916,16 @@ app.patch('/api/shipping/:id/status', authenticate, validate(updateLabelStatusSc
 
 
 // --- User Routes ---
-app.get('/api/users', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/users', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const users = await db('users').select('id', 'name', 'email', 'role', 'status').orderBy('name');
         res.json(users);
     } catch(error) { next(error); }
 });
 
-app.post('/api/users', authenticate, validate(createUserSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/users', authenticate, validate(createUserSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { name, email, password, role, status } = req.body;
         const password_hash = await bcrypt.hash(password, 10);
@@ -891,7 +936,8 @@ app.post('/api/users', authenticate, validate(createUserSchema), async (req: Aut
     } catch(error) { next(error); }
 });
 
-app.put('/api/users/:id', authenticate, validate(updateUserSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.put('/api/users/:id', authenticate, validate(updateUserSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         await db('users').where({ id }).update(req.body);
@@ -900,7 +946,8 @@ app.put('/api/users/:id', authenticate, validate(updateUserSchema), async (req: 
     } catch(error) { next(error); }
 });
 
-app.patch('/api/users/me/password', authenticate, validate(updatePasswordSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.patch('/api/users/me/password', authenticate, validate(updatePasswordSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { currentPassword, newPassword } = req.body;
         const user = await db('users').where({ id: req.user!.id }).first();
@@ -917,21 +964,24 @@ app.patch('/api/users/me/password', authenticate, validate(updatePasswordSchema)
 });
 
 // --- Branch Routes ---
-app.get('/api/branches', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/branches', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const branches = await db('branches').select('*');
         res.json(branches);
     } catch (error) { next(error); }
 });
 
-app.post('/api/branches', authenticate, validate(createBranchSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/branches', authenticate, validate(createBranchSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const [id] = await db('branches').insert(req.body);
         res.status(201).json({ id, ...req.body });
     } catch (error) { next(error); }
 });
 
-app.put('/api/branches/:id', authenticate, validate(updateBranchSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.put('/api/branches/:id', authenticate, validate(updateBranchSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         await db('branches').where({ id }).update(req.body);
@@ -949,14 +999,16 @@ const getAppSettings = async (trx?: Knex.Transaction): Promise<Partial<AppSettin
     }, {} as Partial<AppSettings>);
 };
 
-app.get('/api/settings', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/settings', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const settings = await getAppSettings();
         res.json(settings);
     } catch (error) { next(error); }
 });
 
-app.put('/api/settings', authenticate, validate(updateSettingsSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.put('/api/settings', authenticate, validate(updateSettingsSchema), async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const settings: AppSettings = req.body;
         await db.transaction(async trx => {
@@ -975,7 +1027,8 @@ app.put('/api/settings', authenticate, validate(updateSettingsSchema), async (re
 });
 
 // --- VIN Picker ---
-app.get('/api/vin/:vin', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/vin/:vin', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     // This is a placeholder for a real VIN lookup service API call
     // In a real app, you would call an external API here.
     try {
@@ -992,7 +1045,8 @@ app.get('/api/vin/:vin', authenticate, async (req: AuthenticatedRequest, res: Re
 });
 
 // --- Reports ---
-app.get('/api/reports/shipments', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/reports/shipments', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { start, end } = req.query as { start: string, end: string };
         const shipments = await db('shipping_labels').whereBetween('created_at', [new Date(start), new Date(end)]);
@@ -1001,7 +1055,8 @@ app.get('/api/reports/shipments', authenticate, async (req: AuthenticatedRequest
 });
 
 // --- Audit Log ---
-app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const page = parseInt(req.query.page as string, 10) || 1;
         const limit = parseInt(req.query.limit as string, 10) || 15;
@@ -1024,7 +1079,8 @@ app.get('/api/audit-logs', authenticate, async (req: AuthenticatedRequest, res: 
 
 
 // --- Notifications ---
-app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const userAlerts = await db('notifications')
             .where('user_id', req.user!.id)
@@ -1041,7 +1097,8 @@ app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, re
     } catch(error) { next(error); }
 });
 
-app.post('/api/notifications/mark-read', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/notifications/mark-read', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { ids } = req.body;
         if (!Array.isArray(ids) || ids.length === 0) {
@@ -1070,7 +1127,8 @@ const getMpesaToken = async (settings: Partial<AppSettings>): Promise<string> =>
     return data.access_token;
 };
 
-app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { amount, phoneNumber, ...salePayload } = req.body;
         const settings = await getAppSettings();
@@ -1116,7 +1174,8 @@ app.post('/api/mpesa/stk-push', authenticate, async (req: AuthenticatedRequest, 
     }
 });
 
-app.get('/api/mpesa/status/:checkoutRequestId', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// MODIFIED: Use express.Response for type safety.
+app.get('/api/mpesa/status/:checkoutRequestId', authenticate, async (req: AuthenticatedRequest, res: express.Response, next: NextFunction) => {
     try {
         const { checkoutRequestId } = req.params;
         const transaction = await db('mpesa_transactions').where({ checkout_request_id: checkoutRequestId }).first();
@@ -1144,7 +1203,8 @@ app.get('/api/mpesa/status/:checkoutRequestId', authenticate, async (req: Authen
     } catch(error) { next(error); }
 });
 
-app.post('/api/mpesa/callback', async (req: Request, res: Response) => {
+// MODIFIED: Use express.Request and express.Response for type safety.
+app.post('/api/mpesa/callback', async (req: express.Request, res: express.Response) => {
     console.log('M-Pesa Callback Received:', JSON.stringify(req.body, null, 2));
     const { Body: { stkCallback } } = req.body;
     
@@ -1197,12 +1257,18 @@ app.get('*', (req, res) => {
 });
 
 // --- GLOBAL ERROR HANDLER ---
-// FIX: Use Request, Response, and NextFunction from express to avoid global type conflicts.
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response, and NextFunction to avoid global type conflicts.
+// MODIFIED: Use express types for safety.
+app.use((err: any, req: express.Request, res: express.Response, next: NextFunction) => {
     console.error(err.stack);
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
     res.status(statusCode).json({ message });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`✅ Backend server is running on http://localhost:${PORT}`);
 });
 
 export default app;

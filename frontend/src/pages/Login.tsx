@@ -7,6 +7,7 @@ import { Lock, LoaderCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { GOOGLE_CLIENT_ID } from '../config/permissions.ts';
+import Logo from '../components/Logo.tsx';
 
 const GoogleLogo = () => (
     <svg className="mr-2 h-5 w-5" viewBox="0 0 48 48" aria-hidden="true">
@@ -84,9 +85,7 @@ const Login: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen bg-gray-900 px-4 py-8">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white">
-                        <span className="text-orange-500">Masuma</span> EA Hub
-                    </h1>
+                    <Logo showHub={true} className="w-auto h-12 mx-auto" />
                     <p className="text-gray-400 mt-2">Admin & Wholesale Portal</p>
                 </div>
                 <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700">

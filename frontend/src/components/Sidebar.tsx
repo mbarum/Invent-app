@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { Home, ShoppingCart, Users, Truck, FileText, Wrench, BarChart2, Settings, UserCircle, LogOut, Building, Briefcase, FileClock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { PERMISSIONS } from '../config/permissions.ts';
+import Logo from './Logo.tsx';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -48,10 +49,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setSidebarOpen }) => {
     <>
       <aside className={`no-print fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 border-r border-gray-700 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0`}>
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-20 border-b border-gray-700">
-             <h1 className="text-2xl font-bold text-white">
-                <span className="text-orange-500">Masuma</span> EA
-            </h1>
+          <div className="flex items-center justify-center h-20 border-b border-gray-700 px-6">
+             <Logo className="w-full h-auto" />
           </div>
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             
