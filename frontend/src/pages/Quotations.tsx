@@ -124,7 +124,7 @@ const Quotations: React.FC = () => {
     const handleConvertToInvoice = async (id: number) => {
         try {
             const newInvoice = await convertQuotationToInvoice(id);
-            toast.success(`Invoice ${newInvoice.invoice_no} created successfully!`);
+            toast.success(`Invoice ${newInvoice.invoiceNo} created successfully!`);
             fetchQuotations(); // Refresh list
             navigate('/invoices');
         } catch (err: any) {
@@ -146,7 +146,7 @@ const Quotations: React.FC = () => {
             const imgProps= pdf.getImageProperties(imgData);
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Quotation-${viewingQuotation.quotation_no}.pdf`);
+            pdf.save(`Quotation-${viewingQuotation.quotationNo}.pdf`);
             toast.success('PDF downloaded!', { id: toastId });
         } catch (error) {
             console.error(error);
@@ -223,10 +223,10 @@ const Quotations: React.FC = () => {
                     <TableBody>
                         {paginatedQuotations.map((q) => (
                             <TableRow key={q.id}>
-                                <TableCell className="font-mono">{q.quotation_no}</TableCell>
+                                <TableCell className="font-mono">{q.quotationNo}</TableCell>
                                 <TableCell>{q.customerName}</TableCell>
-                                <TableCell>{new Date(q.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell>{new Date(q.valid_until).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(q.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(q.validUntil).toLocaleDateString()}</TableCell>
                                 <TableCell>{getStatusBadge(q.status)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(q.totalAmount || 0)}</TableCell>
                                 <TableCell className="space-x-1">
@@ -314,7 +314,7 @@ const Quotations: React.FC = () => {
             </Modal>
             
             {viewingQuotation && (
-                 <Modal isOpen={!!viewingQuotation} onClose={() => setViewingQuotation(null)} title={`Quotation Details: ${viewingQuotation.quotation_no}`} className="max-w-4xl">
+                 <Modal isOpen={!!viewingQuotation} onClose={() => setViewingQuotation(null)} title={`Quotation Details: ${viewingQuotation.quotationNo}`} className="max-w-4xl">
                      <div className="flex space-x-2 mb-4">
                         <Button onClick={() => setIsPrintView(true)} variant="secondary">
                             <Printer className="mr-2 h-4 w-4" /> Print

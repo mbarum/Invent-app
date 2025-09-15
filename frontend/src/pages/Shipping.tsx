@@ -60,7 +60,7 @@ const Shipping: React.FC = () => {
     }
   }, [labelToPrint]);
   
-  const getOrderRef = (label: ShippingLabel) => label.sale_id ? `SALE-${label.sale_id}` : `INV-${label.invoice_id}`;
+  const getOrderRef = (label: ShippingLabel) => label.saleId ? `SALE-${label.saleId}` : `INV-${label.invoiceId}`;
 
   const filteredLabels = localLabels
     .filter(label => statusFilter === 'All' || label.status === statusFilter)
@@ -70,7 +70,7 @@ const Shipping: React.FC = () => {
         return (
             label.id.toLowerCase().includes(term) ||
             orderRef.includes(term) ||
-            label.to_name.toLowerCase().includes(term)
+            label.toName.toLowerCase().includes(term)
         )
     });
 
@@ -93,7 +93,7 @@ const Shipping: React.FC = () => {
   const handleAutoFill = async (type: 'sale' | 'invoice', id: string) => {
     const numericId = parseInt(id);
     if (!numericId) {
-        setFormData(prev => ({ ...prev, from_branch_id: undefined, to_customer_id: undefined, from_name: '', from_address: '', from_phone: '', to_name: '', to_address: '', to_phone: '' }));
+        setFormData(prev => ({ ...prev, fromBranchId: undefined, toCustomerId: undefined, fromName: '', fromAddress: '', fromPhone: '', toName: '', toAddress: '', toPhone: '' }));
         return;
     }
 
@@ -107,8 +107,8 @@ const Shipping: React.FC = () => {
             const sale = sales.find(s => s.id === numericId);
             if (!sale) { toast.error("Sale details not found."); return; }
             const branchesData = await getBranches(); // Still might need to fetch this if not in store
-            branch = branchesData.find(b => b.id === sale.branch_id);
-            customer = customers.find(c => c.id === sale.customer_id);
+            branch = branchesData.find(b => b.id === sale.branchId);
+            customer = customers.find(c => c.id === sale.customerId);
             sourceSaleId = sale.id;
         } else { // type === 'invoice'
             const invoiceDetails = await getInvoiceDetails(numericId);
@@ -119,10 +119,10 @@ const Shipping: React.FC = () => {
 
         if (branch && customer) {
             setFormData(prev => ({
-                ...prev, sale_id: sourceSaleId, invoice_id: sourceInvoiceId,
-                from_branch_id: branch.id, to_customer_id: customer.id,
-                from_name: branch.name, from_address: branch.address, from_phone: branch.phone,
-                to_name: customer.name, to_address: customer.address, to_phone: customer.phone,
+                ...prev, saleId: sourceSaleId, invoiceId: sourceInvoiceId,
+                fromBranchId: branch.id, toCustomerId: customer.id,
+                fromName: branch.name, fromAddress: branch.address, fromPhone: branch.phone,
+                toName: customer.name, toAddress: customer.address, toPhone: customer.phone,
             }));
         } else {
              toast.error("Could not find complete branch or customer details.");
@@ -193,9 +193,9 @@ const Shipping: React.FC = () => {
               <TableRow key={label.id}>
                 <TableCell className="font-mono">{label.id}</TableCell>
                 <TableCell>{getOrderRef(label)}</TableCell>
-                <TableCell>{label.to_name}</TableCell>
+                <TableCell>{label.toName}</TableCell>
                 <TableCell>{getStatusBadge(label.status)}</TableCell>
-                <TableCell>{new Date(label.created_at).toLocaleString()}</TableCell>
+                <TableCell>{new Date(label.createdAt).toLocaleString()}</TableCell>
                 {canManageShipping && (
                   <TableCell className="space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => handlePrint(label, 'thermal')}><Printer className="h-4 w-4 mr-1"/> Thermal</Button>
@@ -271,25 +271,25 @@ const Shipping: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Create from Sale" onChange={e => handleAutoFill('sale', e.target.value)}>
                     <option value="">Select a Sale...</option>
-                    {sales.map(s => <option key={s.id} value={s.id}>{s.sale_no}</option>)}
+                    {sales.map(s => <option key={s.id} value={s.id}>{s.saleNo}</option>)}
                 </Select>
                 <Select label="Create from Invoice" onChange={e => handleAutoFill('invoice', e.target.value)}>
                     <option value="">Select an Invoice...</option>
-                    {invoices.map(i => <option key={i.id} value={i.id}>{i.invoice_no}</option>)}
+                    {invoices.map(i => <option key={i.id} value={i.id}>{i.invoiceNo}</option>)}
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-6 pt-4">
                 <div>
                   <h4 className="font-semibold mb-2">FROM</h4>
-                  <Input label="Name" value={formData.from_name || ''} readOnly />
-                  <Input label="Address" value={formData.from_address || ''} readOnly />
-                  <Input label="Phone" value={formData.from_phone || ''} readOnly />
+                  <Input label="Name" value={formData.fromName || ''} readOnly />
+                  <Input label="Address" value={formData.fromAddress || ''} readOnly />
+                  <Input label="Phone" value={formData.fromPhone || ''} readOnly />
                 </div>
                  <div>
                   <h4 className="font-semibold mb-2">TO</h4>
-                  <Input label="Name" value={formData.to_name || ''} readOnly />
-                  <Input label="Address" value={formData.to_address || ''} readOnly />
-                  <Input label="Phone" value={formData.to_phone || ''} readOnly />
+                  <Input label="Name" value={formData.toName || ''} readOnly />
+                  <Input label="Address" value={formData.toAddress || ''} readOnly />
+                  <Input label="Phone" value={formData.toPhone || ''} readOnly />
                 </div>
               </div>
                <div className="grid grid-cols-2 gap-4">

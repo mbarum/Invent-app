@@ -17,7 +17,7 @@ const QrCodePlaceholder = () => (
 const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }) => {
   if (!label) return null;
 
-  const orderRef = label.sale_id ? `SALE-${String(label.sale_id).padStart(5, '0')}` : `INV-${String(label.invoice_id).padStart(5, '0')}`;
+  const orderRef = label.saleId ? `SALE-${String(label.saleId).padStart(5, '0')}` : `INV-${String(label.invoiceId).padStart(5, '0')}`;
 
   return (
     <div className={`print-area hidden ${format === 'a5' ? 'a5-page' : ''}`}>
@@ -30,7 +30,7 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
           </div>
           <div className="text-right">
             <p className="font-bold text-sm">SHIPPING LABEL</p>
-            <p className="text-xs">Date: {new Date(label.created_at).toLocaleDateString()}</p>
+            <p className="text-xs">Date: {new Date(label.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
 
@@ -38,15 +38,15 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
         <div className="flex-1 grid grid-cols-2 gap-4 py-4 border-b-2 border-black">
           <div>
             <p className="text-xs uppercase font-bold">FROM:</p>
-            <p className="text-lg font-bold">{label.from_name}</p>
-            <p className="text-sm">{label.from_address}</p>
-            <p className="text-sm">Phone: {label.from_phone}</p>
+            <p className="text-lg font-bold">{label.fromName}</p>
+            <p className="text-sm">{label.fromAddress}</p>
+            <p className="text-sm">Phone: {label.fromPhone}</p>
           </div>
           <div className="border-l-2 border-black pl-4">
             <p className="text-xs uppercase font-bold">TO:</p>
-            <p className="text-xl font-bold">{label.to_name}</p>
-            <p className="text-base">{label.to_address}</p>
-            <p className="text-base">Phone: {label.to_phone}</p>
+            <p className="text-xl font-bold">{label.toName}</p>
+            <p className="text-base">{label.toAddress}</p>
+            <p className="text-base">Phone: {label.toPhone}</p>
           </div>
         </div>
 

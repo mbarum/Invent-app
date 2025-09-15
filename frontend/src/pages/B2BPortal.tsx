@@ -169,12 +169,14 @@ const RequestHistory = () => {
             <CardContent>
             {requests.length === 0 ? <p className="text-center text-gray-400 py-8">You have not made any requests yet.</p> :
             <Table>
-                <TableHeader><TableRow><TableHead>Request ID</TableHead><TableHead>Date</TableHead><TableHead>Branch</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Request ID</TableHead><TableHead>Date</TableHead><TableHead>Branch</TableHead><TableHead className="text-center">Items</TableHead><TableHead className="text-right">Value (KES)</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                 <TableBody>{requests.map(req => (
                     <TableRow key={req.id}>
                         <TableCell className="font-mono">REQ-{String(req.id).padStart(5, '0')}</TableCell>
-                        <TableCell>{new Date(req.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{(req as any).branchName}</TableCell>
+                        <TableCell className="text-center">{req.itemCount || 0}</TableCell>
+                        <TableCell className="text-right">{(req.totalValue || 0).toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(req.status)}</TableCell>
                         <TableCell><Button variant="ghost" size="sm" onClick={() => handleViewDetails(req)}>View Details</Button></TableCell>
                     </TableRow>
@@ -188,10 +190,10 @@ const RequestHistory = () => {
                     <TableBody>
                         {selectedRequest.items?.map(item => (
                             <TableRow key={item.id}>
-                                <TableCell className="font-mono text-xs">{(item as any).partNumber}</TableCell>
-                                <TableCell>{(item as any).productName}</TableCell>
+                                <TableCell className="font-mono text-xs">{item.partNumber}</TableCell>
+                                <TableCell>{item.productName}</TableCell>
                                 <TableCell>{item.quantity}</TableCell>
-                                <TableCell className="text-right">KES {item.wholesale_price_at_request.toLocaleString()}</TableCell>
+                                <TableCell className="text-right">KES {item.wholesalePriceAtRequest.toLocaleString()}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

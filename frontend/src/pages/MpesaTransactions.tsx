@@ -92,13 +92,13 @@ const MpesaTransactions: React.FC = () => {
                     <TableBody>
                         {transactions.map((tx) => (
                             <TableRow key={tx.id}>
-                                <TableCell>{new Date(tx.created_at).toLocaleString()}</TableCell>
+                                <TableCell>{new Date(tx.createdAt).toLocaleString()}</TableCell>
                                 <TableCell className="font-semibold">{formatCurrency(tx.amount)}</TableCell>
-                                <TableCell>{tx.phone_number}</TableCell>
+                                <TableCell>{tx.phoneNumber}</TableCell>
                                 <TableCell>{getStatusBadge(tx.status as MpesaStatus)}</TableCell>
-                                <TableCell className="font-mono text-xs">{tx.mpesa_receipt_number || 'N/A'}</TableCell>
-                                <TableCell className="font-mono text-xs">{tx.sale_no || tx.invoice_no || 'N/A'}</TableCell>
-                                <TableCell className="font-mono text-xs">{tx.checkout_request_id}</TableCell>
+                                <TableCell className="font-mono text-xs">{tx.mpesaReceiptNumber || 'N/A'}</TableCell>
+                                <TableCell className="font-mono text-xs">{tx.saleNo || tx.invoiceNo || 'N/A'}</TableCell>
+                                <TableCell className="font-mono text-xs">{tx.checkoutRequestId}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

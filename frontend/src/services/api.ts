@@ -1,7 +1,3 @@
-
-
-
-
 import axios from 'axios';
 import { 
     User, Product, Sale, Customer, Invoice, Quotation, ShippingLabel, Branch, 
@@ -148,7 +144,7 @@ export const getInvoices = async (status?: InvoiceStatus): Promise<Invoice[]> =>
     const { data } = await api.get('/invoices', { params: { status } });
     return data;
 };
-export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id' | 'invoice_no'>[]> => {
+export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> => {
     const { data } = await api.get('/invoices/snippets/unpaid');
     return data;
 }

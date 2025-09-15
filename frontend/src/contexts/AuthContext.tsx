@@ -24,15 +24,16 @@ const decodeToken = (token: string): User | null => {
         sessionStorage.removeItem('authToken');
         return null;
     }
+    // FIX: Changed payload.userId to payload.id to match the standardized token structure.
     return {
-      id: payload.userId,
+      id: payload.id,
       email: payload.email,
       name: payload.name,
       role: payload.role,
       businessId: payload.businessId,
       businessName: payload.businessName,
       status: payload.status || 'Active', // The user must be active to log in.
-      customer_id: payload.customerId,
+      customerId: payload.customerId,
     };
   } catch (error) {
     console.error("Failed to decode token:", error);

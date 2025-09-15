@@ -1,7 +1,4 @@
 import Joi from 'joi';
-// FIX: Replaced default Express import with a named import for RequestHandler.
-// This resolves a module-level type conflict that was causing incorrect type
-// inference for Express objects (Request, Response) in other files.
 import { RequestHandler } from 'express';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
 
@@ -10,7 +7,6 @@ import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, User
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Updated type to use the named RequestHandler import.
 export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     if (error) {

@@ -60,8 +60,8 @@ const AuditLogs: React.FC = () => {
                     <TableBody>
                         {logs.map((log) => (
                             <TableRow key={log.id}>
-                                <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
-                                <TableCell>{log.userName || log.user_id}</TableCell>
+                                <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
+                                <TableCell>{log.userName || log.userId}</TableCell>
                                 <TableCell><span className="font-mono bg-gray-700/50 px-2 py-1 rounded text-xs">{log.action}</span></TableCell>
                                 <TableCell className="text-xs text-gray-400"><pre>{JSON.stringify(log.details, null, 2)}</pre></TableCell>
                             </TableRow>

@@ -96,8 +96,8 @@ const Customers: React.FC = () => {
                 const [customersData, salesData] = await Promise.all([getCustomers(), getSales()]);
 
                 const salesByCustomerId = salesData.reduce<Record<number, Sale[]>>((acc, sale) => {
-                    if (!acc[sale.customer_id]) acc[sale.customer_id] = [];
-                    acc[sale.customer_id].push(sale);
+                    if (!acc[sale.customerId]) acc[sale.customerId] = [];
+                    acc[sale.customerId].push(sale);
                     return acc;
                 }, {});
 
@@ -106,7 +106,7 @@ const Customers: React.FC = () => {
                     const totalSpending = customerSales.reduce((sum, s) => sum + s.totalAmount, 0);
                     const totalOrders = customerSales.length;
                     const lastPurchaseDate = customerSales.length > 0
-                        ? new Date(Math.max(...customerSales.map(s => new Date(s.created_at).getTime())))
+                        ? new Date(Math.max(...customerSales.map(s => new Date(s.createdAt).getTime())))
                         : null;
 
                     return { ...customer, totalSpending, totalOrders, lastPurchaseDate };
@@ -199,9 +199,9 @@ const Customers: React.FC = () => {
     const handleExportHistory = () => {
         if (!historyData || !historyCustomer) return;
         const allData = [
-            ...historyData.sales.map(s => ({ type: 'Sale', ...s, date: s.created_at, ref: s.sale_no })),
-            ...historyData.invoices.map(i => ({ type: 'Invoice', ...i, date: i.created_at, ref: i.invoice_no })),
-            ...historyData.quotations.map(q => ({ type: 'Quotation', ...q, date: q.created_at, ref: q.quotation_no }))
+            ...historyData.sales.map(s => ({ type: 'Sale', ...s, date: s.createdAt, ref: s.saleNo })),
+            ...historyData.invoices.map(i => ({ type: 'Invoice', ...i, date: i.createdAt, ref: i.invoiceNo })),
+            ...historyData.quotations.map(q => ({ type: 'Quotation', ...q, date: q.createdAt, ref: q.quotationNo }))
         ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         exportToCsv(`${historyCustomer.name}_history`, ['Type', 'Ref No.', 'Date', 'Amount', 'Status'], allData, ['type', 'ref', 'date', 'totalAmount', 'status']);
@@ -291,9 +291,9 @@ const Customers: React.FC = () => {
                 <Button onClick={handleExportHistory} disabled={!historyData || historyLoading}><Download className="mr-2 h-4 w-4"/> Export History</Button>
                 <div className="mt-4 max-h-[60vh] overflow-y-auto">
                     {historyLoading ? <div className="flex justify-center p-8"><LoaderCircle className="w-8 h-8 animate-spin"/></div> : <>
-                        <HistorySection title="Sales" data={historyData?.sales} columns={['sale_no', 'created_at', 'totalAmount']} formatCurrency={formatCurrency}/>
-                        <HistorySection title="Invoices" data={historyData?.invoices} columns={['invoice_no', 'created_at', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
-                        <HistorySection title="Quotations" data={historyData?.quotations} columns={['quotation_no', 'created_at', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Sales" data={historyData?.sales} columns={['saleNo', 'createdAt', 'totalAmount']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Invoices" data={historyData?.invoices} columns={['invoiceNo', 'createdAt', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
+                        <HistorySection title="Quotations" data={historyData?.quotations} columns={['quotationNo', 'createdAt', 'totalAmount', 'status']} formatCurrency={formatCurrency}/>
                     </>}
                 </div>
             </Modal>
@@ -303,9 +303,9 @@ const Customers: React.FC = () => {
 
 const HistorySection: React.FC<{title: string, data: any[] | undefined, columns: string[], formatCurrency: (v: number) => string}> = ({ title, data, columns, formatCurrency }) => {
     if (!data || data.length === 0) return null;
-    return <div className="mb-6"><h3 className="text-xl font-semibold mb-2">{title}</h3><Table><TableHeader><TableRow>{columns.map(c => <TableHead key={c}>{c.replace(/_/g, ' ').replace('totalAmount', 'Amount').toUpperCase()}</TableHead>)}</TableRow></TableHeader><TableBody>
+    return <div className="mb-6"><h3 className="text-xl font-semibold mb-2">{title}</h3><Table><TableHeader><TableRow>{columns.map(c => <TableHead key={c}>{c.replace(/_/g, ' ').replace('totalAmount', 'Amount').replace(/([A-Z])/g, ' $1').toUpperCase()}</TableHead>)}</TableRow></TableHeader><TableBody>
         {data.map(item => <TableRow key={item.id}>{columns.map(col => <TableCell key={col}>
-            {col.includes('Amount') ? formatCurrency(item[col] || 0) : col.includes('at') ? new Date(item[col]).toLocaleDateString() : item[col]}
+            {col.includes('Amount') ? formatCurrency(item[col] || 0) : col.includes('At') || col.includes('Date') ? new Date(item[col]).toLocaleDateString() : item[col]}
         </TableCell>)}</TableRow>)}
     </TableBody></Table></div>
 };

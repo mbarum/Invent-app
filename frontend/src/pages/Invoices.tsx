@@ -112,7 +112,7 @@ const Invoices: React.FC = () => {
             const imgProps= pdf.getImageProperties(imgData);
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Invoice-${viewingInvoice.invoice_no}.pdf`);
+            pdf.save(`Invoice-${viewingInvoice.invoiceNo}.pdf`);
             toast.success('PDF downloaded!', { id: toastId });
         } catch (error) {
             console.error(error);
@@ -150,10 +150,10 @@ const Invoices: React.FC = () => {
                     <TableBody>
                         {paginatedInvoices.map((invoice) => (
                             <TableRow key={invoice.id}>
-                                <TableCell className="font-mono">{invoice.invoice_no}</TableCell>
+                                <TableCell className="font-mono">{invoice.invoiceNo}</TableCell>
                                 <TableCell>{invoice.customerName}</TableCell>
-                                <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(invoice.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                                 <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(invoice.totalAmount || 0)}</TableCell>
                                 <TableCell>
@@ -203,7 +203,7 @@ const Invoices: React.FC = () => {
             </div>
 
             {viewingInvoice && (
-                <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice.invoice_no}`} className="max-w-4xl">
+                <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice.invoiceNo}`} className="max-w-4xl">
                     <div className="flex space-x-2 mb-4">
                         <Button onClick={() => setIsPrintView(true)} variant="secondary">
                             <Printer className="mr-2 h-4 w-4" /> Print

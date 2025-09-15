@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Quotation, AppSettings } from '@masuma-ea/types';
 
@@ -26,9 +25,9 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                     </div>
                     <div className="text-right">
                         <h1 className="text-4xl font-bold uppercase">Quotation</h1>
-                        <p className="text-sm mt-2"><b>Quote #:</b> {quotation.quotation_no}</p>
-                        <p className="text-sm"><b>Date:</b> {new Date(quotation.created_at).toLocaleDateString()}</p>
-                        <p className="text-sm"><b>Valid Until:</b> {new Date(quotation.valid_until).toLocaleDateString()}</p>
+                        <p className="text-sm mt-2"><b>Quote #:</b> {quotation.quotationNo}</p>
+                        <p className="text-sm"><b>Date:</b> {new Date(quotation.createdAt).toLocaleDateString()}</p>
+                        <p className="text-sm"><b>Valid Until:</b> {new Date(quotation.validUntil).toLocaleDateString()}</p>
                     </div>
                 </div>
 
@@ -46,11 +45,11 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                     <tbody>
                         {(quotation.items || []).map(item => (
                             <tr key={item.id} className="border-b border-gray-300">
-                                <td className="p-2 font-mono">{item.part_number}</td>
-                                <td className="p-2">{item.product_name}</td>
+                                <td className="p-2 font-mono">{item.partNumber}</td>
+                                <td className="p-2">{item.productName}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">{item.unit_price.toFixed(2)}</td>
-                                <td className="p-2 text-right">{(item.quantity * item.unit_price).toFixed(2)}</td>
+                                <td className="p-2 text-right">{item.unitPrice.toFixed(2)}</td>
+                                <td className="p-2 text-right">{(item.quantity * item.unitPrice).toFixed(2)}</td>
                             </tr>
                         ))}
                     </tbody>

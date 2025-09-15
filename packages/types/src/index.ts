@@ -79,7 +79,7 @@ export interface User {
   status: 'Active' | 'Inactive';
   businessId?: string;
   businessName?: string;
-  customer_id?: number;
+  customerId?: number;
 }
 
 export interface BusinessApplication {
@@ -97,24 +97,24 @@ export interface BusinessApplication {
 
 export interface SaleItem {
   id: number;
-  sale_id: number;
-  product_id: string;
-  part_number?: string;
-  product_name?: string;
+  saleId: number;
+  productId: string;
+  partNumber?: string;
+  productName?: string;
   quantity: number;
-  unit_price: number;
+  unitPrice: number;
 }
 
 export interface Sale {
   id: number;
-  sale_no: string;
-  customer_id: number;
-  branch_id: number;
-  tax_amount?: number;
-  discount_amount?: number;
+  saleNo: string;
+  customerId: number;
+  branchId: number;
+  taxAmount?: number;
+  discountAmount?: number;
   totalAmount: number;
-  payment_method: string;
-  created_at: string; // ISO date string
+  paymentMethod: string;
+  createdAt: string; // ISO date string
   items?: SaleItem[] | number;
   customer?: Partial<Customer>;
   branch?: Partial<Branch>;
@@ -122,23 +122,23 @@ export interface Sale {
 
 export interface QuotationItem {
   id: number;
-  quotation_id: number;
-  product_id: string;
-  part_number?: string;
-  product_name?: string;
+  quotationId: number;
+  productId: string;
+  partNumber?: string;
+  productName?: string;
   quantity: number;
-  unit_price: number;
+  unitPrice: number;
 }
 
 export interface Quotation {
   id: number;
-  quotation_no: string;
-  customer_id: number;
-  branch_id: number;
-  valid_until: string; // ISO date string
+  quotationNo: string;
+  customerId: number;
+  branchId: number;
+  validUntil: string; // ISO date string
   totalAmount: number;
   status: QuotationStatus;
-  created_at: string; // ISO date string
+  createdAt: string; // ISO date string
   customerName?: string;
   items?: QuotationItem[];
   customer?: Partial<Customer>;
@@ -147,25 +147,25 @@ export interface Quotation {
 
 export interface InvoiceItem {
   id: number;
-  invoice_id: number;
-  product_id: string;
-  part_number?: string;
-  product_name?: string;
+  invoiceId: number;
+  productId: string;
+  partNumber?: string;
+  productName?: string;
   quantity: number;
-  unit_price: number;
+  unitPrice: number;
 }
 
 export interface Invoice {
   id: number;
-  invoice_no: string;
-  customer_id: number;
-  branch_id: number;
-  quotation_id?: number;
-  due_date: string; // ISO date string
+  invoiceNo: string;
+  customerId: number;
+  branchId: number;
+  quotationId?: number;
+  dueDate: string; // ISO date string
   totalAmount: number;
-  amount_paid: number;
+  amountPaid: number;
   status: InvoiceStatus;
-  created_at: string; // ISO date string
+  createdAt: string; // ISO date string
   customerName?: string;
   items?: InvoiceItem[];
   customer?: Partial<Customer>;
@@ -174,20 +174,20 @@ export interface Invoice {
 
 export interface ShippingLabel {
   id: string; // uuid
-  sale_id?: number;
-  invoice_id?: number;
-  from_branch_id: number;
-  to_customer_id: number;
-  from_name: string;
-  from_address: string;
-  from_phone: string;
-  to_name: string;
-  to_address: string;
-  to_phone: string;
+  saleId?: number;
+  invoiceId?: number;
+  fromBranchId: number;
+  toCustomerId: number;
+  fromName: string;
+  fromAddress: string;
+  fromPhone: string;
+  toName: string;
+  toAddress: string;
+  toPhone: string;
   weight?: number;
   carrier?: string;
   status: ShippingStatus;
-  created_at: string; // ISO date string
+  createdAt: string; // ISO date string
 }
 
 export interface AppSettings {
@@ -209,19 +209,21 @@ export interface AppSettings {
 
 export interface StockRequestItem {
     id: number;
-    stock_request_id: number;
-    product_id: string;
+    stockRequestId: number;
+    productId: string;
     quantity: number;
-    wholesale_price_at_request: number;
+    wholesalePriceAtRequest: number;
 }
 
 export interface StockRequest {
     id: number;
-    b2b_user_id: string;
-    branch_id: number;
+    b2bUserId: string;
+    branchId: number;
     status: StockRequestStatus;
-    created_at: string; // ISO date string
+    createdAt: string; // ISO date string
     items?: StockRequestItem[];
+    itemCount?: number;
+    totalValue?: number;
 }
 
 
@@ -285,8 +287,8 @@ export interface UserNotification {
   id: number;
   message: string;
   link: string;
-  is_read: boolean;
-  created_at: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface NotificationPayload {
@@ -298,26 +300,26 @@ export interface NotificationPayload {
 
 export interface AuditLog {
   id: number;
-  user_id: string;
+  userId: string;
   userName?: string;
   action: string;
   details: any;
-  created_at: string;
+  createdAt: string;
 }
 
 // --- M-PESA TYPES ---
 
 export interface MpesaTransaction {
   id: number;
-  checkout_request_id: string;
+  checkoutRequestId: string;
   amount: number;
-  phone_number: string;
+  phoneNumber: string;
   status: 'Pending' | 'Completed' | 'Failed';
-  result_desc: string;
-  mpesa_receipt_number?: string;
-  created_at: string;
-  sale_no?: string;
-  invoice_no?: string;
+  resultDesc: string;
+  mpesaReceiptNumber?: string;
+  createdAt: string;
+  saleNo?: string;
+  invoiceNo?: string;
 }
 
 export interface MpesaCartItem {

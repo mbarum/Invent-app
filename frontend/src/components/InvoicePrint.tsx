@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Invoice, AppSettings } from '@masuma-ea/types';
 
@@ -11,7 +10,7 @@ interface InvoicePrintProps {
 const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPreview = false }) => {
     if (!invoice) return null;
     
-    const subtotal = (invoice.items || []).reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    const subtotal = (invoice.items || []).reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     // Tax is now stored on the sale record, but we can derive it for display if needed
     const taxAmount = (invoice.totalAmount || 0) - subtotal; 
 
@@ -30,9 +29,9 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPre
                     </div>
                     <div className="text-right">
                         <h1 className="text-4xl font-bold uppercase">Invoice</h1>
-                        <p className="text-sm mt-2"><b>Invoice #:</b> {invoice.invoice_no}</p>
-                        <p className="text-sm"><b>Date:</b> {new Date(invoice.created_at).toLocaleDateString()}</p>
-                        <p className="text-sm"><b>Due Date:</b> {new Date(invoice.due_date).toLocaleDateString()}</p>
+                        <p className="text-sm mt-2"><b>Invoice #:</b> {invoice.invoiceNo}</p>
+                        <p className="text-sm"><b>Date:</b> {new Date(invoice.createdAt).toLocaleDateString()}</p>
+                        <p className="text-sm"><b>Due Date:</b> {new Date(invoice.dueDate).toLocaleDateString()}</p>
                     </div>
                 </div>
 
@@ -58,11 +57,11 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPre
                     <tbody>
                         {(invoice.items || []).map(item => (
                             <tr key={item.id} className="border-b border-gray-300">
-                                <td className="p-2 font-mono">{item.part_number}</td>
-                                <td className="p-2">{item.product_name}</td>
+                                <td className="p-2 font-mono">{item.partNumber}</td>
+                                <td className="p-2">{item.productName}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">{item.unit_price.toFixed(2)}</td>
-                                <td className="p-2 text-right">{(item.quantity * item.unit_price).toFixed(2)}</td>
+                                <td className="p-2 text-right">{item.unitPrice.toFixed(2)}</td>
+                                <td className="p-2 text-right">{(item.quantity * item.unitPrice).toFixed(2)}</td>
                             </tr>
                         ))}
                     </tbody>

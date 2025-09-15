@@ -30,7 +30,8 @@ import MpesaTransactions from './pages/MpesaTransactions.tsx';
 import { PERMISSIONS } from './config/permissions.ts';
 
 // A wrapper to handle redirection for authenticated users trying to access login/register
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+// FIX: Explicitly typed as React.FC with children prop to fix type inference issue.
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? <Navigate to="/dashboard" /> : <>{children}</>;
 };

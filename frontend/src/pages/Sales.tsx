@@ -113,15 +113,15 @@ const Sales: React.FC = () => {
       let allSales = [...sales];
       
       if (selectedCustomerId !== 'All') {
-          allSales = allSales.filter(sale => sale.customer_id === parseInt(selectedCustomerId, 10));
+          allSales = allSales.filter(sale => sale.customerId === parseInt(selectedCustomerId, 10));
       }
 
       if (searchTerm) {
           const lowercasedTerm = searchTerm.toLowerCase();
           allSales = allSales.filter(sale => 
-              sale.sale_no.toLowerCase().includes(lowercasedTerm) ||
-              (customerMap[sale.customer_id] || '').toLowerCase().includes(lowercasedTerm) ||
-              (branchMap[sale.branch_id] || '').toLowerCase().includes(lowercasedTerm)
+              sale.saleNo.toLowerCase().includes(lowercasedTerm) ||
+              (customerMap[sale.customerId] || '').toLowerCase().includes(lowercasedTerm) ||
+              (branchMap[sale.branchId] || '').toLowerCase().includes(lowercasedTerm)
           );
       }
       return allSales;
@@ -134,10 +134,10 @@ const Sales: React.FC = () => {
   const handleExport = () => {
     const data = filteredSales.map(s => ({
         ...s,
-        customerName: customerMap[s.customer_id] || 'N/A',
-        branchName: branchMap[s.branch_id] || 'N/A'
+        customerName: customerMap[s.customerId] || 'N/A',
+        branchName: branchMap[s.branchId] || 'N/A'
     }));
-    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['sale_no', 'customerName', 'branchName', 'created_at', 'totalAmount', 'payment_method']);
+    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['saleNo', 'customerName', 'branchName', 'createdAt', 'totalAmount', 'paymentMethod']);
   };
   
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
@@ -164,10 +164,10 @@ const Sales: React.FC = () => {
           <TableBody>
             {paginatedSales.map((sale) => (
               <TableRow key={sale.id}>
-                <TableCell className="font-mono">{sale.sale_no}</TableCell>
-                <TableCell>{customerMap[sale.customer_id] || 'Unknown'}</TableCell>
-                <TableCell>{branchMap[sale.branch_id] || 'Unknown'}</TableCell>
-                <TableCell>{new Date(sale.created_at).toLocaleString()}</TableCell>
+                <TableCell className="font-mono">{sale.saleNo}</TableCell>
+                <TableCell>{customerMap[sale.customerId] || 'Unknown'}</TableCell>
+                <TableCell>{branchMap[sale.branchId] || 'Unknown'}</TableCell>
+                <TableCell>{new Date(sale.createdAt).toLocaleString()}</TableCell>
                 <TableCell className="text-center">{typeof sale.items === 'number' ? sale.items : (Array.isArray(sale.items) ? sale.items.length : 0)}</TableCell>
                 <TableCell className="font-semibold text-right">{formatCurrency(sale.totalAmount || 0)}</TableCell>
               </TableRow>

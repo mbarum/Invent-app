@@ -245,19 +245,19 @@ const POS: React.FC = () => {
     const handleSelectInvoice = async (invoice: Invoice) => {
         try {
             const detailedInvoice = await getInvoiceDetails(invoice.id);
-            const customer = allCustomers.find(c => c.id === detailedInvoice.customer_id);
+            const customer = allCustomers.find(c => c.id === detailedInvoice.customerId);
             if(customer) selectCustomer(customer);
 
             const cartItems: CartItem[] = (detailedInvoice.items || []).map(item => ({
                 product: {
-                    id: item.product_id, partNumber: item.part_number || 'N/A', name: item.product_name || 'Unknown',
-                    retailPrice: item.unit_price, wholesalePrice: item.unit_price, stock: item.quantity
+                    id: item.productId, partNumber: item.partNumber || 'N/A', name: item.productName || 'Unknown',
+                    retailPrice: item.unitPrice, wholesalePrice: item.unitPrice, stock: item.quantity
                 },
                 quantity: item.quantity,
             }));
             setCart(cartItems);
             setPayingForInvoice(detailedInvoice);
-            toast.success(`Loaded invoice ${detailedInvoice.invoice_no}. Cart is now locked.`);
+            toast.success(`Loaded invoice ${detailedInvoice.invoiceNo}. Cart is now locked.`);
 
         } catch (err) {
             toast.error("Failed to load invoice details.");
@@ -284,7 +284,7 @@ const POS: React.FC = () => {
             };
             const saleResult = await createSale(payload);
             setCompletedSale(saleResult);
-            toast.success(`Sale ${saleResult.sale_no} completed!`);
+            toast.success(`Sale ${saleResult.saleNo} completed!`);
             refetchProducts(); refetchSales();
             if(payingForInvoice) { setUnpaidInvoices(prev => prev.filter(i => i.id !== payingForInvoice.id)); }
         } catch (err: any) {
@@ -345,7 +345,7 @@ const POS: React.FC = () => {
             const imgProps = pdf.getImageProperties(imgData);
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Receipt-${completedSale.sale_no}.pdf`);
+            pdf.save(`Receipt-${completedSale.saleNo}.pdf`);
             toast.success('PDF downloaded!', { id: toastId });
         } catch (error) {
             console.error(error);
@@ -429,7 +429,7 @@ const POS: React.FC = () => {
                         <CardHeader>
                             <CardTitle>Checkout</CardTitle>
                             {payingForInvoice && <CardDescription className="!mt-2 flex items-center gap-2 p-2 rounded-md bg-orange-900/50 text-orange-300 border border-orange-800">
-                                <FileText className="h-4 w-4"/> Paying Invoice <b className="font-mono">{payingForInvoice.invoice_no}</b></CardDescription>}
+                                <FileText className="h-4 w-4"/> Paying Invoice <b className="font-mono">{payingForInvoice.invoiceNo}</b></CardDescription>}
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3 text-sm border-b border-gray-700 pb-4 mb-4">
@@ -507,7 +507,7 @@ const POS: React.FC = () => {
             <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <Card className="max-w-md w-full animate-in fade-in-0 zoom-in-95">
                     <CardHeader>
-                        <CardTitle>Sale Complete: {completedSale.sale_no}</CardTitle>
+                        <CardTitle>Sale Complete: {completedSale.saleNo}</CardTitle>
                         <CardDescription>Print or download the receipt for the customer.</CardDescription>
                     </CardHeader>
                     <CardContent>

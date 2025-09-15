@@ -133,8 +133,8 @@ const Header: React.FC<HeaderProps> = ({ branches, currentBranch, onBranchChange
                         {notifications.length > 0 ? (
                             notifications.map(n => (
                                 <Link to={n.link} key={n.id} onClick={() => setPanelOpen(false)} className="block p-3 hover:bg-gray-700/50 border-b border-gray-700/50">
-                                    <p className={`text-sm ${!n.is_read ? 'text-gray-100' : 'text-gray-400'}`}>{n.message}</p>
-                                    <p className="text-xs text-gray-500 mt-1">{timeSince(new Date(n.created_at))}</p>
+                                    <p className={`text-sm ${!n.isRead ? 'text-gray-100' : 'text-gray-400'}`}>{n.message}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{timeSince(new Date(n.createdAt))}</p>
                                 </Link>
                             ))
                         ) : (

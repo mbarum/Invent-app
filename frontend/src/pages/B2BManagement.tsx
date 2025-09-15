@@ -184,7 +184,7 @@ const StockRequestsManager = () => {
     return (
         <>
             <Table>
-                <TableHeader><TableRow><TableHead>Request ID</TableHead><TableHead>B2B Client</TableHead><TableHead>Date</TableHead><TableHead>Branch</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Request ID</TableHead><TableHead>B2B Client</TableHead><TableHead>Date</TableHead><TableHead>Branch</TableHead><TableHead className="text-center">Items</TableHead><TableHead className="text-right">Value (KES)</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                     {requests.map((req) => (
                         <TableRow key={req.id}>
@@ -192,6 +192,8 @@ const StockRequestsManager = () => {
                             <TableCell>{(req as any).userName}</TableCell>
                             <TableCell>{new Date(req.created_at).toLocaleDateString()}</TableCell>
                             <TableCell>{(req as any).branchName}</TableCell>
+                            <TableCell className="text-center">{req.itemCount || 0}</TableCell>
+                            <TableCell className="text-right">{(req.totalValue || 0).toLocaleString()}</TableCell>
                             <TableCell>{getReqStatusBadge(req.status)}</TableCell>
                             <TableCell><Button variant="ghost" size="sm" onClick={() => handleViewDetails(req)}><Eye className="h-4 w-4 mr-1"/> View</Button></TableCell>
                         </TableRow>

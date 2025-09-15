@@ -12,7 +12,7 @@ interface SharedDataState {
   customers: Customer[];
   branches: Branch[];
   sales: Sale[];
-  legacyInvoices: Pick<Invoice, 'id' | 'invoice_no'>[];
+  legacyInvoices: Pick<Invoice, 'id' | 'invoiceNo'>[];
   shippingLabels: ShippingLabel[];
   appSettings: Partial<AppSettings>;
   notifications: UserNotification[];
@@ -114,7 +114,7 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
       try {
           const data = await getNotifications();
           const alerts = data.userAlerts || [];
-          const newUnreadCount = alerts.filter(n => !n.is_read).length;
+          const newUnreadCount = alerts.filter(n => !n.isRead).length;
           
           // Gently notify user only if there's a new, unseen alert
           if (newUnreadCount > get().unreadCount) {
@@ -129,14 +129,14 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   },
   
   markAllAsRead: async () => {
-      const unreadNotifications = get().notifications.filter(n => !n.is_read);
+      const unreadNotifications = get().notifications.filter(n => !n.isRead);
       if (unreadNotifications.length === 0) return;
       
       const idsToUpdate = unreadNotifications.map(n => n.id);
       
       // Optimistic UI update
       set(state => ({
-          notifications: state.notifications.map(n => ({ ...n, is_read: true })),
+          notifications: state.notifications.map(n => ({ ...n, isRead: true })),
           unreadCount: 0,
       }));
 
