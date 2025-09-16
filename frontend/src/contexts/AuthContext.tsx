@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { User } from '@masuma-ea/types';
-import { loginUser, loginWithGoogle as apiLoginWithGoogle } from '../services/api.ts';
-import { ROLES } from '../config/permissions.ts';
+// FIX: Remove .ts extension from imports for proper module resolution.
+import { loginUser, loginWithGoogle as apiLoginWithGoogle } from '../services/api';
+import { ROLES } from '../config/permissions';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +11,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: (googleToken: string) => Promise<void>;
   logout: () => void;
-  hasPermission: (permission: string) => boolean;
+  hasPermission: (permission: string | null) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

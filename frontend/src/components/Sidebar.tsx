@@ -1,10 +1,12 @@
 
 
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, ShoppingCart, Users, Truck, FileText, Wrench, BarChart2, Settings, UserCircle, LogOut, Building, Briefcase, FileClock, Smartphone } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { PERMISSIONS } from '../config/permissions.ts';
+// FIX: Remove .tsx and .ts file extensions from imports for proper module resolution.
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
 // FIX: Changed import to remove file extension for proper module resolution.
 import Logo from './Logo';
 

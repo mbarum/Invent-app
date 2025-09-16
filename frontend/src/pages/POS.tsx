@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import Input from '../components/ui/Input.tsx';
-import Button from '../components/ui/Button.tsx';
-import Select from '../components/ui/Select.tsx';
+// FIX: Remove .tsx and .ts file extensions from imports for proper module resolution.
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
 import { Product, Customer, Branch, Invoice, InvoiceStatus, Sale } from '@masuma-ea/types';
-import { createSale, getInvoices, getInvoiceDetails, initiateMpesaPayment, getMpesaPaymentStatus, createCustomer } from '../services/api.ts';
+import { createSale, getInvoices, getInvoiceDetails, initiateMpesaPayment, getMpesaPaymentStatus, createCustomer } from '../services/api';
 import { User, Search, X, Plus, Minus, Printer, LoaderCircle, FileText, Ban, Download, CheckCircle, XCircle, UserPlus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Modal from '../components/ui/Modal.tsx';
-import ReceiptPrint from '../components/ReceiptPrint.tsx';
+import Modal from '../components/ui/Modal';
+import ReceiptPrint from '../components/ReceiptPrint';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useDataStore } from '../store/dataStore.ts';
+import { useDataStore } from '../store/dataStore';
 
 interface OutletContextType {
   currentBranch: Branch;

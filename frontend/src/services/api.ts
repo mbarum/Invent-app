@@ -145,8 +145,9 @@ export const getSaleDetails = async (id: number): Promise<Sale> => {
 };
 
 // --- Invoices ---
-export const getInvoices = async (status?: InvoiceStatus): Promise<Invoice[]> => {
-    const { data } = await api.get('/invoices', { params: { status } });
+export const getInvoices = async (status?: InvoiceStatus | 'All'): Promise<Invoice[]> => {
+    const params = status && status !== 'All' ? { status } : {};
+    const { data } = await api.get('/invoices', { params });
     return data;
 };
 export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> => {

@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Input from '../components/ui/Input.tsx';
-import Select from '../components/ui/Select.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
-import Button from '../components/ui/Button.tsx';
-import Modal from '../components/ui/Modal.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Pagination from '../components/ui/Pagination';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download } from 'lucide-react';
-// FIX: Import CustomerTransactions from the types package instead of the api service.
+// FIX: Import types from the types package and remove extensions from local imports.
 import { Customer, Sale, CustomerTransactions } from '@masuma-ea/types';
-import { getCustomers, getSales, createCustomer, getCustomerTransactions } from '../services/api.ts';
+import { getCustomers, getSales, createCustomer, getCustomerTransactions } from '../services/api';
 import toast from 'react-hot-toast';
-import { useDataStore } from '../store/dataStore.ts';
+import { useDataStore } from '../store/dataStore';
 
 // Enriched customer data type that extends the base type for component-specific stats
 // FIX: Changed from interface extension to type intersection to resolve type inference issues.

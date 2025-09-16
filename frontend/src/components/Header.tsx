@@ -1,10 +1,12 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Bell, LogOut, Menu } from 'lucide-react';
 import { Branch } from '@masuma-ea/types';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { useDataStore } from '../store/dataStore.ts';
+// FIX: Remove .tsx and .ts file extensions from imports for proper module resolution.
+import { useAuth } from '../contexts/AuthContext';
+import { useDataStore } from '../store/dataStore';
 
 const useOnClickOutside = (ref: React.RefObject<HTMLDivElement>, handler: (event: MouseEvent | TouchEvent) => void) => {
     useEffect(() => {

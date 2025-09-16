@@ -1,11 +1,12 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.tsx';
+// FIX: Remove .tsx file extension from import for proper module resolution.
+import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  permission: string;
+  permission: string | null; // Allow null for routes accessible to all logged-in users
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission }) => {

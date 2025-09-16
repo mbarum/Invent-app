@@ -1,8 +1,8 @@
 // This line must be at the very top to ensure path aliases are registered
 import 'tsconfig-paths/register';
 
-// FIX: To fully resolve type conflicts with global DOM types, import `Request`, `Response`, and `NextFunction` directly.
-// FIX: Changed to default express import to use explicit types like express.Request and avoid global type conflicts.
+// FIX: Removed named imports that conflict with global DOM types.
+// All Express types will be referenced via the `express` namespace (e.g., `express.Request`).
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -28,7 +28,7 @@ import { User, UserRole, ApplicationStatus, NotificationPayload, SaleItem, Sale,
 dotenv.config();
 
 // --- SETUP ---
-const app: express.Express = express();
+const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -48,7 +48,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
 
 // --- CUSTOM TYPES ---
-// FIX: Explicitly extend express.Request to avoid type conflicts with DOM Request.
+// FIX: Extended from `express.Request` to avoid type collision with global DOM `Request`.
 export interface AuthenticatedRequest extends express.Request {
     user?: User;
 }
@@ -104,7 +104,7 @@ const createNotification = async (
 };
 
 // --- AUTHENTICATION MIDDLEWARE ---
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction` for correctness.
 const authenticateToken = (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -121,7 +121,7 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
     });
 };
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction` for correctness.
 const authorizeRole = (requiredRoles: UserRole | UserRole[]) => (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
     if (!req.user || !roles.includes(req.user.role)) {
@@ -135,7 +135,7 @@ const authorizeRole = (requiredRoles: UserRole | UserRole[]) => (req: Authentica
 // --- PUBLIC API ROUTES ---
 // =================================================================
 
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.post('/api/auth/login', V.validate(V.loginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { email, password } = req.body;
@@ -152,7 +152,7 @@ app.post('/api/auth/login', V.validate(V.loginSchema), async (req: express.Reque
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.post('/api/auth/google', V.validate(V.googleLoginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { token: googleToken } = req.body;
@@ -171,7 +171,7 @@ app.post('/api/auth/google', V.validate(V.googleLoginSchema), async (req: expres
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), V.validate(V.registerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
@@ -204,10 +204,10 @@ app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }
 // =================================================================
 // --- PROTECTED API ROUTES ---
 // =================================================================
-app.use('/api', authenticateToken as express.RequestHandler);
+app.use('/api', authenticateToken);
 
 // --- Dashboard ---
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
@@ -227,7 +227,7 @@ app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: express.R
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.put('/api/dashboard/sales-target', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { target } = req.body;
@@ -236,7 +236,7 @@ app.put('/api/dashboard/sales-target', async (req: AuthenticatedRequest, res: ex
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/dashboard/sales-chart', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
@@ -247,7 +247,7 @@ app.get('/api/dashboard/sales-chart', async (req: AuthenticatedRequest, res: exp
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/dashboard/fast-moving', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
@@ -262,7 +262,7 @@ app.get('/api/dashboard/fast-moving', async (req: AuthenticatedRequest, res: exp
 });
 
 // --- Products & Inventory ---
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/products', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const products = await db('products').select('*');
@@ -276,7 +276,8 @@ app.get('/api/products', async (req: express.Request, res: express.Response, nex
         res.json(products.map(p => ({ ...p, oemNumbers: oemMap[p.id] || [] })));
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/products', V.validate(V.productSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { oemNumbers, ...productData } = req.body;
@@ -294,7 +295,8 @@ app.post('/api/products', V.validate(V.productSchema), async (req: Authenticated
         res.status(201).json(newProduct);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/products/import', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { products } = req.body;
@@ -321,7 +323,8 @@ app.post('/api/products/import', async (req: AuthenticatedRequest, res: express.
         res.status(201).json({ count: products.length });
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.put('/api/products/:id', V.validate(V.updateProductSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -343,7 +346,8 @@ app.put('/api/products/:id', V.validate(V.updateProductSchema), async (req: Auth
         res.json({ ...updated, oemNumbers: updatedOems.map(o => o.oemNumber) });
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.delete('/api/products/:id', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         await db('products').where({ id: req.params.id }).del(); // onDelete('CASCADE') handles oem_numbers
@@ -353,7 +357,7 @@ app.delete('/api/products/:id', async (req: AuthenticatedRequest, res: express.R
 });
 
 // --- Sales & POS ---
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/sales', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end } = req.query;
@@ -365,7 +369,8 @@ app.get('/api/sales', async (req: express.Request, res: express.Response, next: 
         res.json(await query);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/sales/:id', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -405,7 +410,8 @@ app.get('/api/sales/:id', async (req: AuthenticatedRequest, res: express.Respons
         next(error);
     }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/sales', V.validate(V.createSaleSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { customerId, branchId, items, taxAmount, totalAmount, paymentMethod, invoiceId, discountAmount } = req.body;
@@ -451,7 +457,7 @@ app.post('/api/sales', V.validate(V.createSaleSchema), async (req: Authenticated
 });
 
 // --- Invoices & Quotations ---
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/invoices', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { status } = req.query;
@@ -460,11 +466,13 @@ app.get('/api/invoices', async (req: express.Request, res: express.Response, nex
         res.json(await query);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/invoices/snippets/unpaid', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('invoices').select('id', 'invoiceNo').where('status', InvoiceStatus.UNPAID).orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/invoices/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const invoice = await db('invoices').where('invoices.id', req.params.id).join('customers', 'invoices.customerId', 'customers.id').join('branches', 'invoices.branchId', 'branches.id').select('invoices.*', 'customers.name as customerName', 'customers.address as customerAddress', 'customers.phone as customerPhone', 'branches.name as branchName', 'branches.address as branchAddress', 'branches.phone as branchPhone').first();
@@ -473,11 +481,13 @@ app.get('/api/invoices/:id', async (req: express.Request, res: express.Response,
         res.json({ ...invoice, items, customer: { name: invoice.customerName, address: invoice.customerAddress, phone: invoice.customerPhone }, branch: { name: invoice.branchName, address: invoice.branchAddress, phone: invoice.branchPhone } });
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/quotations', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('quotations').select('quotations.*', 'customers.name as customerName').join('customers', 'quotations.customerId', 'customers.id').orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/quotations/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const quote = await db('quotations').where('quotations.id', req.params.id).join('customers', 'quotations.customerId', 'customers.id').join('branches', 'quotations.branchId', 'branches.id').select('quotations.*', 'customers.name as customerName', 'customers.address as customerAddress', 'customers.phone as customerPhone', 'branches.name as branchName', 'branches.address as branchAddress', 'branches.phone as branchPhone').first();
@@ -486,7 +496,8 @@ app.get('/api/quotations/:id', async (req: express.Request, res: express.Respons
         res.json({ ...quote, items, customer: { name: quote.customerName, address: quote.customerAddress, phone: quote.customerPhone }, branch: { name: quote.branchName, address: quote.branchAddress, phone: quote.branchPhone } });
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/quotations', V.validate(V.createQuotationSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
@@ -511,7 +522,8 @@ app.post('/api/quotations', V.validate(V.createQuotationSchema), async (req: Aut
         res.status(201).json(newQuote);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.patch('/api/quotations/:id/status', V.validate(V.updateQuotationStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -520,7 +532,8 @@ app.patch('/api/quotations/:id/status', V.validate(V.updateQuotationStatusSchema
         res.json(updated);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/quotations/:id/convert-to-invoice', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const newInvoice = await db.transaction(async trx => {
@@ -547,11 +560,12 @@ app.post('/api/quotations/:id/convert-to-invoice', async (req: AuthenticatedRequ
 });
 
 // --- Shipping ---
-// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
 app.get('/api/shipping', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('shipping_labels').orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/shipping', V.validate(V.createLabelSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const labelId = uuidv4();
@@ -560,7 +574,8 @@ app.post('/api/shipping', V.validate(V.createLabelSchema), async (req: Authentic
         res.status(201).json(newLabelData);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.patch('/api/shipping/:id/status', V.validate(V.updateLabelStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -569,7 +584,8 @@ app.patch('/api/shipping/:id/status', V.validate(V.updateLabelStatusSchema), asy
         res.json(updated);
     } catch (error) { next(error); }
 });
-// FIX: Explicitly use express.Response and express.NextFunction types.
+
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/reports/shipments', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end } = req.query;
@@ -578,7 +594,7 @@ app.get('/api/reports/shipments', async (req: AuthenticatedRequest, res: express
 });
 
 // --- B2B Management ---
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/b2b/applications', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const applications = await db('b2b_applications').orderBy('submittedAt', 'desc');
@@ -586,7 +602,7 @@ app.get('/api/b2b/applications', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, U
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -640,7 +656,7 @@ app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), auth
 });
 
 // --- Stock Requests (B2B Portal & Admin) ---
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/stock-requests', V.validate(V.createStockRequestSchema), authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { branchId, items } = req.body;
@@ -670,7 +686,7 @@ app.post('/api/stock-requests', V.validate(V.createStockRequestSchema), authoriz
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/stock-requests/my-requests', authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const requests = await db('stock_requests')
@@ -686,7 +702,7 @@ app.get('/api/stock-requests/my-requests', authorizeRole(UserRole.B2B_CLIENT), a
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/stock-requests', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const requests = await db('stock_requests')
@@ -702,7 +718,7 @@ app.get('/api/stock-requests', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, Use
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/stock-requests/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER, UserRole.B2B_CLIENT]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -727,7 +743,7 @@ app.get('/api/stock-requests/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR,
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.patch('/api/stock-requests/:id/status', V.validate(V.updateStockRequestStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
@@ -747,7 +763,7 @@ app.patch('/api/stock-requests/:id/status', V.validate(V.updateStockRequestStatu
 });
 
 // --- User Management ---
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.get('/api/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const users = await db('users').select('id', 'name', 'email', 'role', 'status');
@@ -755,7 +771,7 @@ app.get('/api/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRA
     } catch (error) { next(error); }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.post('/api/users', V.validate(V.createUserSchema), authorizeRole(UserRole.SYSTEM_ADMINISTRATOR), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { name, email, password, role, status } = req.body;
@@ -770,5 +786,56 @@ app.post('/api/users', V.validate(V.createUserSchema), authorizeRole(UserRole.SY
     }
 });
 
-// FIX: Explicitly use express.Response and express.NextFunction types.
+// FIX: Updated types to `express.Response` and `express.NextFunction`.
 app.put('/api/users/:id', V.validate(V.updateUserSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { id } = req.params;
+        const { password, ...updateData } = req.body;
+
+        // B2B clients cannot be edited via this generic endpoint
+        const userToUpdate = await db('users').where({ id }).first();
+        if (userToUpdate && userToUpdate.role === UserRole.B2B_CLIENT) {
+            return res.status(403).json({ message: 'B2B client data cannot be modified here.' });
+        }
+
+        if (password) {
+            (updateData as any).passwordHash = await bcrypt.hash(password, 10);
+        }
+
+        await db('users').where({ id }).update(updateData);
+        await createAuditLog(req.user!.id, 'UPDATE_USER', { userId: id, changes: Object.keys(updateData) });
+        
+        const updatedUser = await db('users').where({ id }).select('id', 'name', 'email', 'role', 'status').first();
+        res.json(updatedUser);
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+// =================================================================
+// --- STATIC SERVING & ERROR HANDLING (Must be at the end) ---
+// =================================================================
+
+// Serve frontend in production
+if (process.env.NODE_ENV === 'production') {
+    const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
+    app.use(express.static(frontendDist));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(frontendDist, 'index.html'));
+    });
+}
+
+// Custom Error Handler
+// FIX: Updated types to `express.Request`, `express.Response`, and `express.NextFunction`.
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error(err.stack);
+    const statusCode = err.statusCode || 500;
+    const message = err.message || 'Internal Server Error';
+    res.status(statusCode).json({ message });
+});
+
+// Start the server
+app.listen(PORT, () => {
+    console.log(`✅ Server is running on http://localhost:${PORT}`);
+});

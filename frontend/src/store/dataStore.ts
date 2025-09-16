@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-// FIX: Changed import path for 'types' to allow module resolution by removing the file extension.
 import { Product, Customer, Branch, Sale, Invoice, ShippingLabel, AppSettings, UserNotification } from '@masuma-ea/types';
-// FIX: Changed getLegacyInvoices to getUnpaidInvoiceSnippets to match the exported function from api.ts
-import { getProducts, getCustomers, getBranches, getSales, getUnpaidInvoiceSnippets, getShippingLabels, getSettings, getNotifications, markNotificationsRead } from '../services/api.ts';
+import { getProducts, getCustomers, getBranches, getSales, getUnpaidInvoiceSnippets, getShippingLabels, getSettings, getNotifications, markNotificationsRead } from '../services/api';
 import toast from 'react-hot-toast';
 
 let notificationInterval: number | undefined;

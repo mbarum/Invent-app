@@ -3,31 +3,33 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
-import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
-import ProtectedRoute from './components/ProtectedRoute.tsx';
-import Layout from './components/Layout.tsx';
-import Login from './pages/Login.tsx';
-import Register from './pages/Register.tsx';
-import Dashboard from './pages/Dashboard.tsx';
-import Inventory from './pages/Inventory.tsx';
-import Sales from './pages/Sales.tsx';
-import Customers from './pages/Customers.tsx';
-import POS from './pages/POS.tsx';
-import Shipping from './pages/Shipping.tsx';
-import VinPicker from './pages/VinPicker.tsx';
-import Reports from './pages/Reports.tsx';
-import Settings from './pages/Settings.tsx';
-import Users from './pages/Users.tsx';
-import Profile from './pages/Profile.tsx';
-import Invoices from './pages/Invoices.tsx';
-import Quotations from './pages/Quotations.tsx';
-import B2BManagement from './pages/B2BManagement.tsx';
-import B2BPortal from './pages/B2BPortal.tsx';
-import Branches from './pages/Branches.tsx';
-import AuditLogs from './pages/AuditLogs.tsx';
-import MpesaTransactions from './pages/MpesaTransactions.tsx';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Inventory from './pages/Inventory';
+import Sales from './pages/Sales';
+import Customers from './pages/Customers';
+import POS from './pages/POS';
+import Shipping from './pages/Shipping';
+import VinPicker from './pages/VinPicker';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
+import Users from './pages/Users';
+import Profile from './pages/Profile';
+import Invoices from './pages/Invoices';
+import Quotations from './pages/Quotations';
+import B2BManagement from './pages/B2BManagement';
+import B2BPortal from './pages/B2BPortal';
+import Branches from './pages/Branches';
+import AuditLogs from './pages/AuditLogs';
+import MpesaTransactions from './pages/MpesaTransactions';
 
-import { PERMISSIONS } from './config/permissions.ts';
+// FIX: Remove .ts file extensions from imports for proper module resolution.
+import { PERMISSIONS } from './config/permissions';
 
 // A wrapper to handle redirection for authenticated users trying to access login/register
 // FIX: Explicitly typed as React.FC with children prop to fix type inference issue.

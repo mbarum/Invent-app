@@ -1,6 +1,6 @@
 import React from 'react';
 import { Quotation, AppSettings } from '@masuma-ea/types';
-// FIX: Changed import to a default import to match the export from Logo.tsx
+// FIX: Changed import to remove file extension for proper module resolution.
 import Logo from './Logo';
 
 interface QuotationPrintProps {

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
+// FIX: Remove .tsx and .ts file extensions from imports for proper module resolution.
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle, Pencil, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getDashboardStats, updateSalesTarget, getSalesChartData, getFastMovingProducts } from '../services/api.ts';
-import Button from '../components/ui/Button.tsx';
-import Input from '../components/ui/Input.tsx';
+import { getDashboardStats, updateSalesTarget, getSalesChartData, getFastMovingProducts } from '../services/api';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
 import toast from 'react-hot-toast';
-import DateRangePicker from '../components/ui/DateRangePicker.tsx';
+import DateRangePicker from '../components/ui/DateRangePicker';
 import { DashboardStats, SalesChartDataPoint, Branch, FastMovingProduct } from '@masuma-ea/types';
 
 interface OutletContextType {

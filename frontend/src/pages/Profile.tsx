@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import Input from '../components/ui/Input.tsx';
-import Button from '../components/ui/Button.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { updateCurrentUserPassword } from '../services/api.ts';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import { useAuth } from '../contexts/AuthContext';
+import { updateCurrentUserPassword } from '../services/api';
 import toast from 'react-hot-toast';
 import { LoaderCircle, Save } from 'lucide-react';
 

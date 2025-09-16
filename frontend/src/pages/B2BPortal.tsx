@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Button from '../components/ui/Button.tsx';
-import Select from '../components/ui/Select.tsx';
-import Input from '../components/ui/Input.tsx';
-import Modal from '../components/ui/Modal.tsx';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
+import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, Search, Plus, Minus, X, CheckCircle, PackagePlus, History } from 'lucide-react';
-import { useDataStore } from '../store/dataStore.ts';
-// FIX: Import CreateStockRequestPayload from the types package instead of the api service.
+import { useDataStore } from '../store/dataStore';
+// FIX: Import types from the types package and remove extensions from local imports.
 import { Product, Branch, StockRequest, StockRequestStatus, StockRequestItem, CreateStockRequestPayload } from '@masuma-ea/types';
-import { createStockRequest, getMyStockRequests, getStockRequestDetails } from '../services/api.ts';
+import { createStockRequest, getMyStockRequests, getStockRequestDetails } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface RequestCartItem {

@@ -1,14 +1,12 @@
-
-
-
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar.tsx';
-import Header from './Header.tsx';
+// FIX: Remove .tsx and .ts extensions from imports for proper module resolution.
+import Sidebar from './Sidebar';
+import Header from './Header';
 import { Branch } from '@masuma-ea/types';
-import { useAuth } from '../contexts/AuthContext.tsx';
+import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
-import { useDataStore } from '../store/dataStore.ts';
+import { useDataStore } from '../store/dataStore';
 
 // Base currency is KES
 const exchangeRates = {
