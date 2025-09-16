@@ -103,7 +103,7 @@ const Customers: React.FC = () => {
 
                 const enrichedCustomers = customersData.map((customer): CustomerSegmentData => {
                     const customerSales = salesByCustomerId[customer.id] || [];
-                    const totalSpending = customerSales.reduce((sum, s) => sum + s.totalAmount, 0);
+                    const totalSpending = customerSales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
                     const totalOrders = customerSales.length;
                     const lastPurchaseDate = customerSales.length > 0
                         ? new Date(Math.max(...customerSales.map(s => new Date(s.createdAt).getTime())))

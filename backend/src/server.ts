@@ -1,9 +1,9 @@
 // This line must be at the very top to ensure path aliases are registered
 import 'tsconfig-paths/register';
 
-// FIX: Changed `import type` to a value import to resolve conflicts with global DOM types for Request and Response.
-// This ensures that `Request` and `Response` refer to express's types, not the browser's, fixing numerous type errors.
-import express, { Express, Request, Response, NextFunction } from 'express';
+// FIX: To fully resolve type conflicts with global DOM types, import `Request`, `Response`, and `NextFunction` directly.
+// FIX: Changed to default express import to use explicit types like express.Request and avoid global type conflicts.
+import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
@@ -15,6 +15,8 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { OAuth2Client } from 'google-auth-library';
+import { GoogleGenAI, Type } from '@google/genai';
+
 
 // Local Imports
 import db from './db';
@@ -26,7 +28,7 @@ import { User, UserRole, ApplicationStatus, NotificationPayload, SaleItem, Sale,
 dotenv.config();
 
 // --- SETUP ---
-const app: Express = express();
+const app: express.Express = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -37,9 +39,17 @@ const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 
+// --- GEMINI SETUP ---
+// Ensure API_KEY is available in the environment.
+if (!process.env.API_KEY) {
+    console.warn("⚠️  WARNING: API_KEY is not defined. AI features will be disabled.");
+}
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+
 // --- CUSTOM TYPES ---
-// FIX: Changed to extend Express's Request type directly.
-export interface AuthenticatedRequest extends Request {
+// FIX: Explicitly extend express.Request to avoid type conflicts with DOM Request.
+export interface AuthenticatedRequest extends express.Request {
     user?: User;
 }
 
@@ -94,8 +104,8 @@ const createNotification = async (
 };
 
 // --- AUTHENTICATION MIDDLEWARE ---
-// FIX: Using direct Express types now.
-const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+const authenticateToken = (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (token == null) return res.sendStatus(401);
@@ -111,9 +121,8 @@ const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextF
     });
 };
 
-// FIX: Using direct Express types now.
-// FIX: Updated to accept a single role or an array of roles for more flexible authorization.
-const authorizeRole = (requiredRoles: UserRole | UserRole[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+const authorizeRole = (requiredRoles: UserRole | UserRole[]) => (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
     if (!req.user || !roles.includes(req.user.role)) {
         return res.status(403).json({ message: 'Forbidden: Insufficient permissions.' });
@@ -126,8 +135,8 @@ const authorizeRole = (requiredRoles: UserRole | UserRole[]) => (req: Authentica
 // --- PUBLIC API ROUTES ---
 // =================================================================
 
-// FIX: Using direct Express types now.
-app.post('/api/auth/login', V.validate(V.loginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.post('/api/auth/login', V.validate(V.loginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { email, password } = req.body;
         const user = await db('users').where({ email }).first();
@@ -143,8 +152,8 @@ app.post('/api/auth/login', V.validate(V.loginSchema), async (req: Request, res:
     } catch (error) { next(error); }
 });
 
-// FIX: Using direct Express types now.
-app.post('/api/auth/google', V.validate(V.googleLoginSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.post('/api/auth/google', V.validate(V.googleLoginSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { token: googleToken } = req.body;
         const ticket = await googleClient.verifyIdToken({ idToken: googleToken, audience: GOOGLE_CLIENT_ID });
@@ -162,8 +171,8 @@ app.post('/api/auth/google', V.validate(V.googleLoginSchema), async (req: Reques
     } catch (error) { next(error); }
 });
 
-// FIX: Using direct Express types now.
-app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), V.validate(V.registerSchema), async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), V.validate(V.registerSchema), async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -195,11 +204,11 @@ app.post('/api/auth/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }
 // =================================================================
 // --- PROTECTED API ROUTES ---
 // =================================================================
-app.use('/api', authenticateToken);
+app.use('/api', authenticateToken as express.RequestHandler);
 
 // --- Dashboard ---
-// FIX: Using direct Express types now.
-app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
         const salesQuery = db('sales').where('branchId', branchId).andWhereBetween('createdAt', [new Date(start as string), new Date(end as string)]);
@@ -218,8 +227,8 @@ app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: Response,
     } catch (error) { next(error); }
 });
 
-// FIX: Using direct Express types now.
-app.put('/api/dashboard/sales-target', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.put('/api/dashboard/sales-target', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { target } = req.body;
         await db('app_settings').insert({ settingKey: 'salesTarget', settingValue: target.toString() }).onConflict('settingKey').merge();
@@ -227,8 +236,8 @@ app.put('/api/dashboard/sales-target', async (req: AuthenticatedRequest, res: Re
     } catch (error) { next(error); }
 });
 
-// FIX: Using direct Express types now.
-app.get('/api/dashboard/sales-chart', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/dashboard/sales-chart', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
         const results = await db('sales').select(db.raw('DATE(created_at) as name, COUNT(id) as sales, SUM(total_amount) as revenue'))
@@ -238,13 +247,10 @@ app.get('/api/dashboard/sales-chart', async (req: AuthenticatedRequest, res: Res
     } catch (error) { next(error); }
 });
 
-// FIX: Using direct Express types now.
-app.get('/api/dashboard/fast-moving', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/dashboard/fast-moving', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end, branchId } = req.query;
-        // FIX: The `orderBy` clause used an alias `totalSold` which is not supported in all SQL versions.
-        // Changed to order by the aggregate function `SUM(sale_items.quantity)` directly for compatibility.
-        // FIX: Replaced `orderBy` with `orderByRaw` to avoid TypeScript overload resolution issues with knex types.
         const results = await db('sale_items').select('products.id', 'products.name', 'products.stock as currentStock', db.raw('SUM(sale_items.quantity) as totalSold'))
             .join('sales', 'sale_items.saleId', 'sales.id').join('products', 'sale_items.productId', 'products.id')
             .where('sales.branchId', branchId).andWhereBetween('sales.createdAt', [new Date(start as string), new Date(end as string)])
@@ -256,8 +262,8 @@ app.get('/api/dashboard/fast-moving', async (req: AuthenticatedRequest, res: Res
 });
 
 // --- Products & Inventory ---
-// FIX: Using direct Express types now.
-app.get('/api/products', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/products', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const products = await db('products').select('*');
         const productIds = products.map(p => p.id);
@@ -270,8 +276,8 @@ app.get('/api/products', async (req: Request, res: Response, next: NextFunction)
         res.json(products.map(p => ({ ...p, oemNumbers: oemMap[p.id] || [] })));
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/products', V.validate(V.productSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/products', V.validate(V.productSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { oemNumbers, ...productData } = req.body;
         const newProduct = await db.transaction(async trx => {
@@ -288,8 +294,8 @@ app.post('/api/products', V.validate(V.productSchema), async (req: Authenticated
         res.status(201).json(newProduct);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/products/import', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/products/import', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { products } = req.body;
         await db.transaction(async trx => {
@@ -315,8 +321,8 @@ app.post('/api/products/import', async (req: AuthenticatedRequest, res: Response
         res.status(201).json({ count: products.length });
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.put('/api/products/:id', V.validate(V.updateProductSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.put('/api/products/:id', V.validate(V.updateProductSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const { oemNumbers, ...productData } = req.body;
@@ -337,8 +343,8 @@ app.put('/api/products/:id', V.validate(V.updateProductSchema), async (req: Auth
         res.json({ ...updated, oemNumbers: updatedOems.map(o => o.oemNumber) });
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.delete('/api/products/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.delete('/api/products/:id', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         await db('products').where({ id: req.params.id }).del(); // onDelete('CASCADE') handles oem_numbers
         await createAuditLog(req.user!.id, 'DELETE_PRODUCT', { productId: req.params.id });
@@ -347,18 +353,60 @@ app.delete('/api/products/:id', async (req: AuthenticatedRequest, res: Response,
 });
 
 // --- Sales & POS ---
-// FIX: Using direct Express types now.
-app.get('/api/sales', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/sales', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end } = req.query;
-        let query = db('sales').orderBy('createdAt', 'desc');
+        let query = db('sales')
+            .select('sales.*', db.raw('(SELECT COUNT(*) FROM sale_items WHERE sale_items.sale_id = sales.id) as item_count'))
+            .orderBy('createdAt', 'desc');
         if (start) query.where('createdAt', '>=', new Date(start as string));
         if (end) query.where('createdAt', '<=', new Date(end as string));
         res.json(await query);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/sales', V.validate(V.createSaleSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/sales/:id', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
+    try {
+        const { id } = req.params;
+        const sale = await db('sales')
+            .where('sales.id', id)
+            .join('customers', 'sales.customerId', 'customers.id')
+            .join('branches', 'sales.branchId', 'branches.id')
+            .select(
+                'sales.*', 
+                'customers.name as customerName', 
+                'customers.address as customerAddress', 
+                'customers.phone as customerPhone', 
+                'branches.name as branchName', 
+                'branches.address as branchAddress', 
+                'branches.phone as branchPhone'
+            )
+            .first();
+
+        if (!sale) {
+            return res.status(404).json({ message: 'Sale not found' });
+        }
+
+        const items = await db('sale_items')
+            .where({ saleId: id })
+            .join('products', 'sale_items.productId', 'products.id')
+            .select('sale_items.*', 'products.name as productName', 'products.partNumber');
+
+        const fullSale = {
+            ...sale,
+            items,
+            customer: { id: sale.customerId, name: sale.customerName, address: sale.customerAddress, phone: sale.customerPhone },
+            branch: { id: sale.branchId, name: sale.branchName, address: sale.branchAddress, phone: sale.branchPhone }
+        };
+        
+        res.json(fullSale);
+    } catch (error) {
+        next(error);
+    }
+});
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/sales', V.validate(V.createSaleSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { customerId, branchId, items, taxAmount, totalAmount, paymentMethod, invoiceId, discountAmount } = req.body;
         const saleDetails = await db.transaction(async trx => {
@@ -403,8 +451,8 @@ app.post('/api/sales', V.validate(V.createSaleSchema), async (req: Authenticated
 });
 
 // --- Invoices & Quotations ---
-// FIX: Using direct Express types now.
-app.get('/api/invoices', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/invoices', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const { status } = req.query;
         let query = db('invoices').select('invoices.*', 'customers.name as customerName').join('customers', 'invoices.customerId', 'customers.id').orderBy('createdAt', 'desc');
@@ -412,12 +460,12 @@ app.get('/api/invoices', async (req: Request, res: Response, next: NextFunction)
         res.json(await query);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.get('/api/invoices/snippets/unpaid', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/invoices/snippets/unpaid', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('invoices').select('id', 'invoiceNo').where('status', InvoiceStatus.UNPAID).orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.get('/api/invoices/:id', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/invoices/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const invoice = await db('invoices').where('invoices.id', req.params.id).join('customers', 'invoices.customerId', 'customers.id').join('branches', 'invoices.branchId', 'branches.id').select('invoices.*', 'customers.name as customerName', 'customers.address as customerAddress', 'customers.phone as customerPhone', 'branches.name as branchName', 'branches.address as branchAddress', 'branches.phone as branchPhone').first();
         if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
@@ -425,12 +473,12 @@ app.get('/api/invoices/:id', async (req: Request, res: Response, next: NextFunct
         res.json({ ...invoice, items, customer: { name: invoice.customerName, address: invoice.customerAddress, phone: invoice.customerPhone }, branch: { name: invoice.branchName, address: invoice.branchAddress, phone: invoice.branchPhone } });
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.get('/api/quotations', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/quotations', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('quotations').select('quotations.*', 'customers.name as customerName').join('customers', 'quotations.customerId', 'customers.id').orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.get('/api/quotations/:id', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/quotations/:id', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
         const quote = await db('quotations').where('quotations.id', req.params.id).join('customers', 'quotations.customerId', 'customers.id').join('branches', 'quotations.branchId', 'branches.id').select('quotations.*', 'customers.name as customerName', 'customers.address as customerAddress', 'customers.phone as customerPhone', 'branches.name as branchName', 'branches.address as branchAddress', 'branches.phone as branchPhone').first();
         if (!quote) return res.status(404).json({ message: 'Quotation not found' });
@@ -438,14 +486,23 @@ app.get('/api/quotations/:id', async (req: Request, res: Response, next: NextFun
         res.json({ ...quote, items, customer: { name: quote.customerName, address: quote.customerAddress, phone: quote.customerPhone }, branch: { name: quote.branchName, address: quote.branchAddress, phone: quote.branchPhone } });
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/quotations', V.validate(V.createQuotationSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/quotations', V.validate(V.createQuotationSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
-        const { customerId, branchId, items, validUntil } = req.body;
-        const totalAmount = items.reduce((sum: number, item: any) => sum + item.unitPrice * item.quantity, 0);
+        const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
         const newQuote = await db.transaction(async trx => {
             const quoteNo = `QUO-${Date.now()}`;
-            const quoteData = { quotationNo: quoteNo, customerId: customerId, branchId: branchId, validUntil: validUntil, totalAmount: totalAmount, status: QuotationStatus.DRAFT };
+            const quoteData = { 
+                quotationNo: quoteNo, 
+                customerId: customerId, 
+                branchId: branchId, 
+                validUntil: validUntil, 
+                subtotal,
+                discountAmount,
+                taxAmount,
+                totalAmount, 
+                status: QuotationStatus.DRAFT 
+            };
             const [quoteId] = await trx('quotations').insert(quoteData);
             await trx('quotation_items').insert(items.map((item: any) => ({ quotationId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice })));
             await createAuditLog(req.user!.id, 'CREATE_QUOTATION', { quotationId: quoteId, quoteNo }, trx);
@@ -454,8 +511,8 @@ app.post('/api/quotations', V.validate(V.createQuotationSchema), async (req: Aut
         res.status(201).json(newQuote);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.patch('/api/quotations/:id/status', V.validate(V.updateQuotationStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.patch('/api/quotations/:id/status', V.validate(V.updateQuotationStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         await db('quotations').where({ id }).update({ status: req.body.status });
@@ -463,8 +520,8 @@ app.patch('/api/quotations/:id/status', V.validate(V.updateQuotationStatusSchema
         res.json(updated);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/quotations/:id/convert-to-invoice', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/quotations/:id/convert-to-invoice', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const newInvoice = await db.transaction(async trx => {
             const quote = await trx('quotations').where({ id: req.params.id }).first();
@@ -490,12 +547,12 @@ app.post('/api/quotations/:id/convert-to-invoice', async (req: AuthenticatedRequ
 });
 
 // --- Shipping ---
-// FIX: Using direct Express types now.
-app.get('/api/shipping', async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Request, express.Response, and express.NextFunction types.
+app.get('/api/shipping', async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try { res.json(await db('shipping_labels').orderBy('createdAt', 'desc')); } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.post('/api/shipping', V.validate(V.createLabelSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/shipping', V.validate(V.createLabelSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const labelId = uuidv4();
         const newLabelData = { id: labelId, ...req.body, status: ShippingStatus.DRAFT };
@@ -503,8 +560,8 @@ app.post('/api/shipping', V.validate(V.createLabelSchema), async (req: Authentic
         res.status(201).json(newLabelData);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.patch('/api/shipping/:id/status', V.validate(V.updateLabelStatusSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.patch('/api/shipping/:id/status', V.validate(V.updateLabelStatusSchema), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         await db('shipping_labels').where({ id }).update({ status: req.body.status });
@@ -512,8 +569,8 @@ app.patch('/api/shipping/:id/status', V.validate(V.updateLabelStatusSchema), asy
         res.json(updated);
     } catch (error) { next(error); }
 });
-// FIX: Using direct Express types now.
-app.get('/api/reports/shipments', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/reports/shipments', async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { start, end } = req.query;
         res.json(await db('shipping_labels').whereBetween('createdAt', [new Date(start as string), new Date(end as string)]));
@@ -521,14 +578,16 @@ app.get('/api/reports/shipments', async (req: AuthenticatedRequest, res: Respons
 });
 
 // --- B2B Management ---
-app.get('/api/b2b/applications', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/b2b/applications', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const applications = await db('b2b_applications').orderBy('submittedAt', 'desc');
         res.json(applications);
     } catch (error) { next(error); }
 });
 
-app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -542,11 +601,6 @@ app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), auth
 
             await trx('b2b_applications').where({ id }).update({ status });
 
-            // FIX: This block was entirely rewritten to consistently use camelCase for both reading
-            // properties from the database (e.g., application.businessName) and for writing keys
-            // to the database (e.g., { kraPin: ... }). This resolves an "Undefined binding" error
-            // during customer lookup and ensures data is inserted correctly according to the
-            // camelCase-to-snake_case conversion configured in db.ts.
             if (status === ApplicationStatus.APPROVED && application.status !== ApplicationStatus.APPROVED) {
                 let customer = await trx('customers').where({ name: application.businessName }).first();
                 if (!customer) {
@@ -586,7 +640,8 @@ app.patch('/api/b2b/applications/:id', V.validate(V.updateB2BStatusSchema), auth
 });
 
 // --- Stock Requests (B2B Portal & Admin) ---
-app.post('/api/stock-requests', V.validate(V.createStockRequestSchema), authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/stock-requests', V.validate(V.createStockRequestSchema), authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { branchId, items } = req.body;
         const newRequest = await db.transaction(async trx => {
@@ -615,7 +670,8 @@ app.post('/api/stock-requests', V.validate(V.createStockRequestSchema), authoriz
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests/my-requests', authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/stock-requests/my-requests', authorizeRole(UserRole.B2B_CLIENT), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const requests = await db('stock_requests')
             .join('branches', 'stock_requests.branchId', 'branches.id')
@@ -630,7 +686,8 @@ app.get('/api/stock-requests/my-requests', authorizeRole(UserRole.B2B_CLIENT), a
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/stock-requests', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const requests = await db('stock_requests')
             .join('users', 'stock_requests.b2bUserId', 'users.id')
@@ -645,7 +702,8 @@ app.get('/api/stock-requests', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, Use
     } catch (error) { next(error); }
 });
 
-app.get('/api/stock-requests/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER, UserRole.B2B_CLIENT]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/stock-requests/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER, UserRole.B2B_CLIENT]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const request = await db('stock_requests')
@@ -669,7 +727,8 @@ app.get('/api/stock-requests/:id', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR,
     } catch (error) { next(error); }
 });
 
-app.patch('/api/stock-requests/:id/status', V.validate(V.updateStockRequestStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.patch('/api/stock-requests/:id/status', V.validate(V.updateStockRequestStatusSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -688,14 +747,16 @@ app.patch('/api/stock-requests/:id/status', V.validate(V.updateStockRequestStatu
 });
 
 // --- User Management ---
-app.get('/api/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.get('/api/users', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const users = await db('users').select('id', 'name', 'email', 'role', 'status');
         res.json(users);
     } catch (error) { next(error); }
 });
 
-app.post('/api/users', V.validate(V.createUserSchema), authorizeRole(UserRole.SYSTEM_ADMINISTRATOR), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.post('/api/users', V.validate(V.createUserSchema), authorizeRole(UserRole.SYSTEM_ADMINISTRATOR), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
     try {
         const { name, email, password, role, status } = req.body;
         const passwordHash = await bcrypt.hash(password, 10);
@@ -709,250 +770,5 @@ app.post('/api/users', V.validate(V.createUserSchema), authorizeRole(UserRole.SY
     }
 });
 
-app.put('/api/users/:id', V.validate(V.updateUserSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { id } = req.params;
-        await db('users').where({ id }).update(req.body);
-        const updatedUser = await db('users').where({ id }).select('id', 'name', 'email', 'role', 'status').first();
-        await createAuditLog(req.user!.id, 'UPDATE_USER', { userId: id });
-        res.json(updatedUser);
-    } catch (error) { next(error); }
-});
-
-app.patch('/api/users/me/password', V.validate(V.updatePasswordSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await db('users').where({ id: req.user!.id }).first();
-        if (!user || !user.passwordHash) return res.status(401).json({ message: 'User not found or password not set.' });
-        
-        const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!isMatch) return res.status(401).json({ message: 'Incorrect current password.' });
-
-        const newPasswordHash = await bcrypt.hash(newPassword, 10);
-        await db('users').where({ id: req.user!.id }).update({ passwordHash: newPasswordHash });
-        
-        await createAuditLog(req.user!.id, 'UPDATE_OWN_PASSWORD', { userId: req.user!.id });
-        res.sendStatus(204);
-    } catch (error) { next(error); }
-});
-
-// --- General Data & Admin ---
-// FIX: Using direct Express types now.
-app.get('/api/customers', async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await db('customers').orderBy('name')); } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.post('/api/customers', V.validate(V.createCustomerSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const customerData = req.body;
-        const [customerId] = await db('customers').insert(customerData);
-        await createAuditLog(req.user!.id, 'CREATE_CUSTOMER', { customerId: customerId });
-        res.status(201).json({ id: customerId, ...customerData });
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.get('/api/customers/:id/transactions', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { id } = req.params;
-        const [sales, invoices, quotations] = await Promise.all([
-            db('sales').where({ customerId: id }).orderBy('createdAt', 'desc'),
-            db('invoices').where({ customerId: id }).orderBy('createdAt', 'desc'),
-            db('quotations').where({ customerId: id }).orderBy('createdAt', 'desc'),
-        ]);
-        res.json({ sales, invoices, quotations });
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.get('/api/branches', async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json(await db('branches')); } catch (error) { next(error); }
-});
-app.post('/api/branches', V.validate(V.createBranchSchema), authorizeRole(UserRole.SYSTEM_ADMINISTRATOR), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const [id] = await db('branches').insert(req.body);
-        await createAuditLog(req.user!.id, 'CREATE_BRANCH', { branchId: id });
-        res.status(201).json({ id, ...req.body });
-    } catch (error) { next(error); }
-});
-app.put('/api/branches/:id', V.validate(V.updateBranchSchema), authorizeRole(UserRole.SYSTEM_ADMINISTRATOR), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { id } = req.params;
-        await db('branches').where({ id }).update(req.body);
-        const updated = await db('branches').where({ id }).first();
-        await createAuditLog(req.user!.id, 'UPDATE_BRANCH', { branchId: id });
-        res.json(updated);
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.get('/api/settings', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const settingsList = await db('app_settings').select('*');
-    res.json(settingsList.reduce((acc, s) => ({...acc, [s.settingKey]: s.settingValue}), {}));
-  } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.put('/api/settings', V.validate(V.updateSettingsSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const settings = req.body;
-        await db.transaction(async trx => {
-            for (const key in settings) {
-                if (settings[key] !== undefined) {
-                    await trx('app_settings').insert({ settingKey: key, settingValue: settings[key] }).onConflict('settingKey').merge();
-                }
-            }
-        });
-        await createAuditLog(req.user!.id, 'UPDATE_SETTINGS', {});
-        res.json(settings);
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.get('/api/audit-logs', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 15;
-        const offset = (page - 1) * limit;
-        const logs = await db('audit_logs').join('users', 'audit_logs.userId', 'users.id').select('audit_logs.*', 'users.name as userName').orderBy('createdAt', 'desc').limit(limit).offset(offset);
-        const totalResult = await db('audit_logs').count('id as total').first();
-        res.json({ logs, total: Number(totalResult?.total) || 0 });
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.get('/api/notifications', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const userId = req.user!.id;
-        const userAlerts = await db('notifications').where({ userId: userId }).orderBy('createdAt', 'desc').limit(50);
-        res.json({ serverTimestamp: new Date().toISOString(), userAlerts });
-    } catch (error) { next(error); }
-});
-// FIX: Using direct Express types now.
-app.post('/api/notifications/mark-read', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { ids } = req.body;
-        await db('notifications').whereIn('id', ids).andWhere('userId', req.user!.id).update({ isRead: true });
-        res.sendStatus(204);
-    } catch (error) { next(error); }
-});
-
-// --- VIN Picker ---
-app.get('/api/vin/:vin', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { vin } = req.params;
-        const lastDigit = parseInt(vin.slice(-1), 16) % 5;
-        const products = await db('products').limit(5);
-        if (products.length < 5) return res.json([]);
-
-        const mockResults = [
-            { ...products[0], compatibility: 'Exact Fit' },
-            { ...products[lastDigit], compatibility: 'OEM Equivalent' }
-        ].map(p => ({ partNumber: p.partNumber, name: p.name, compatibility: p.compatibility, stock: p.stock }));
-        
-        res.json(mockResults);
-    } catch (error) { next(error); }
-});
-
-// --- M-PESA ---
-app.post('/api/mpesa/stk-push', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { amount, phoneNumber, ...saleDetails } = req.body;
-        const checkoutRequestId = `ws_CO_${Date.now()}`;
-        const merchantRequestId = `MRID_${Date.now()}`;
-
-        await db('mpesa_transactions').insert({
-            checkoutRequestId: checkoutRequestId, merchantRequestId: merchantRequestId, amount, phoneNumber: phoneNumber, status: 'Pending',
-            transactionDetails: JSON.stringify(saleDetails)
-        });
-
-        res.json({ checkoutRequestId });
-
-        setTimeout(async () => {
-            try {
-                const transaction = await db('mpesa_transactions').where({ checkoutRequestId: checkoutRequestId }).first();
-                if (!transaction || transaction.status !== 'Pending') return;
-                
-                await db('mpesa_transactions').where({ checkoutRequestId: checkoutRequestId }).update({
-                    status: 'Completed', resultDesc: 'The service request is processed successfully.', mpesaReceiptNumber: `Q${Math.floor(Math.random() * 1E9)}`,
-                });
-                
-                const details = JSON.parse(transaction.transactionDetails);
-                const saleResult = await db.transaction(async trx => {
-                    const saleData = {
-                        saleNo: `SALE-MP${Date.now()}`, customerId: details.customerId, branchId: details.branchId, taxAmount: details.taxAmount,
-                        totalAmount: details.totalAmount, discountAmount: details.discountAmount, paymentMethod: 'MPESA', invoiceId: details.invoiceId
-                    };
-                    const [saleId] = await trx('sales').insert(saleData);
-                    await trx('sale_items').insert(details.items.map((item: any) => ({ saleId: saleId, productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice })));
-                    for (const item of details.items) { await trx('products').where('id', item.productId).decrement('stock', item.quantity); }
-                    if (details.invoiceId) { await trx('invoices').where('id', details.invoiceId).update({ status: InvoiceStatus.PAID, amountPaid: db.raw(`amount_paid + ?`, [details.totalAmount]) }); }
-                    return { id: saleId, ...saleData };
-                });
-                
-                await db('mpesa_transactions').where({ checkoutRequestId: checkoutRequestId }).update({ saleId: saleResult.id });
-
-            } catch(e) { console.error("M-Pesa callback simulation failed:", e); }
-        }, 15000);
-
-    } catch (error) { next(error); }
-});
-
-app.get('/api/mpesa/status/:checkoutRequestId', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const { checkoutRequestId } = req.params;
-        const transaction = await db('mpesa_transactions').where({ checkoutRequestId: checkoutRequestId }).first();
-        if (!transaction) return res.status(404).json({ message: 'Transaction not found.' });
-        
-        if (transaction.status === 'Completed' && transaction.saleId) {
-            const fullSale = await db('sales').where('sales.id', transaction.saleId).join('customers', 'sales.customerId', 'customers.id').join('branches', 'sales.branchId', 'branches.id').select('sales.*', 'customers.name as customerName', 'customers.address as customerAddress', 'customers.phone as customerPhone', 'branches.name as branchName', 'branches.address as branchAddress', 'branches.phone as branchPhone').first();
-            const saleItemsDetails = await db('sale_items').where({ saleId: transaction.saleId }).join('products', 'sale_items.productId', 'products.id').select('sale_items.*', 'products.name as productName', 'products.partNumber');
-            res.json({ status: 'Completed', sale: { ...fullSale, items: saleItemsDetails, customer: { name: fullSale.customerName }, branch: { name: fullSale.branchName } } });
-        } else {
-            res.json({ status: transaction.status, message: transaction.resultDesc });
-        }
-    } catch (error) { next(error); }
-});
-
-app.get('/api/mpesa/transactions', authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER, UserRole.SALES_STAFF]), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 15;
-        const offset = (page - 1) * limit;
-        const status = req.query.status as string;
-        let query = db('mpesa_transactions').leftJoin('sales', 'mpesa_transactions.saleId', 'sales.id').leftJoin('invoices', 'mpesa_transactions.invoiceId', 'invoices.id').select('mpesa_transactions.*', 'sales.saleNo', 'invoices.invoiceNo').orderBy('createdAt', 'desc');
-        let totalQuery = db('mpesa_transactions').count('id as total');
-        if (status && status !== 'All') {
-            query = query.where('mpesa_transactions.status', status);
-            totalQuery = totalQuery.where('status', status);
-        }
-        const transactions = await query.limit(limit).offset(offset);
-        const totalResult = await totalQuery.first();
-        res.json({ transactions, total: Number(totalResult?.total) || 0 });
-    } catch (error) { next(error); }
-});
-
-// =================================================================
-// --- SERVE FRONTEND IN PRODUCTION ---
-// =================================================================
-if (process.env.NODE_ENV === 'production') {
-    const frontendDist = path.join(__dirname, '..', '..', 'frontend', 'dist');
-    app.use(express.static(frontendDist));
-    // FIX: Using direct Express types now.
-    app.get('*', (req: Request, res: Response) => res.sendFile(path.join(frontendDist, 'index.html')));
-}
-
-
-// =================================================================
-// --- GLOBAL ERROR HANDLER ---
-// =================================================================
-// FIX: Using direct Express types now.
-app.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
-    console.error(err.stack);
-    const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({
-        message: err.message || 'An unexpected internal server error occurred.',
-        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-    });
-});
-
-
-// --- START SERVER ---
-app.listen(PORT, () => {
-    console.log(`✅ Backend server for Masuma EA Hub is running on http://localhost:${PORT}`);
-});
+// FIX: Explicitly use express.Response and express.NextFunction types.
+app.put('/api/users/:id', V.validate(V.updateUserSchema), authorizeRole([UserRole.SYSTEM_ADMINISTRATOR, UserRole.BRANCH_MANAGER]), async (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {

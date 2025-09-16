@@ -115,7 +115,8 @@ export interface Sale {
   totalAmount: number;
   paymentMethod: string;
   createdAt: string; // ISO date string
-  items?: SaleItem[] | number;
+  items?: SaleItem[];
+  itemCount?: number;
   customer?: Partial<Customer>;
   branch?: Partial<Branch>;
 }
@@ -136,6 +137,9 @@ export interface Quotation {
   customerId: number;
   branchId: number;
   validUntil: string; // ISO date string
+  subtotal?: number;
+  discountAmount?: number;
+  taxAmount?: number;
   totalAmount: number;
   status: QuotationStatus;
   createdAt: string; // ISO date string
@@ -211,6 +215,8 @@ export interface StockRequestItem {
     id: number;
     stockRequestId: number;
     productId: string;
+    partNumber?: string;
+    productName?: string;
     quantity: number;
     wholesalePriceAtRequest: number;
 }
@@ -273,6 +279,10 @@ export interface QuotationPayload {
         unitPrice: number;
     }[];
     validUntil: string;
+    subtotal: number;
+    discountAmount: number;
+    taxAmount: number;
+    totalAmount: number;
 }
 
 export interface CreateStockRequestPayload {

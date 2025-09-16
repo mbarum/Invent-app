@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/Card.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
 import Button from '../components/ui/Button.tsx';
 import Pagination from '../components/ui/Pagination.tsx';
@@ -10,6 +10,7 @@ import { Quotation, QuotationStatus, Branch, Customer, Product, QuotationPayload
 import { getQuotations, createQuotation, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api.ts';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input.tsx';
+import Select from '../components/ui/Select.tsx';
 import QuotationPrint from '../components/QuotationPrint.tsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -60,6 +61,8 @@ const Quotations: React.FC = () => {
     const [validUntil, setValidUntil] = useState('');
     const [customerSearch, setCustomerSearch] = useState('');
     const [productSearch, setProductSearch] = useState('');
+    const [discount, setDiscount] = useState(0);
+    const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('fixed');
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -95,6 +98,8 @@ const Quotations: React.FC = () => {
         setCustomerSearch('');
         setProductSearch('');
         setCart([]);
+        setDiscount(0);
+        setDiscountType('fixed');
     };
     
     const handleViewQuotation = async (id: number) => {
@@ -177,7 +182,21 @@ const Quotations: React.FC = () => {
         else setCart(prev => prev.map(i => i.product.id === productId ? {...i, quantity} : i));
     };
 
-    const subtotal = cart.reduce((sum, item) => sum + item.product.retailPrice * item.quantity, 0);
+    const { subtotal, discountAmount, taxAmount, total } = useMemo(() => {
+        const TAX_RATE = (appSettings.taxRate || 0) / 100;
+        const sub = cart.reduce((acc, item) => acc + Number(item.product.retailPrice) * item.quantity, 0);
+        let disc = 0;
+        if (discountType === 'percent') {
+            disc = sub * (discount / 100);
+        } else {
+            disc = discount;
+        }
+        const subtotalAfterDiscount = sub - disc;
+        const tax = subtotalAfterDiscount * TAX_RATE;
+        const tot = subtotalAfterDiscount + tax;
+
+        return { subtotal: sub, discountAmount: disc, taxAmount: tax, total: tot };
+    }, [cart, discount, discountType, appSettings.taxRate]);
 
     const handleSaveQuotation = async () => {
         if (!selectedCustomer || cart.length === 0) {
@@ -190,13 +209,17 @@ const Quotations: React.FC = () => {
                 branchId: currentBranch.id,
                 items: cart.map(item => ({ productId: item.product.id, quantity: item.quantity, unitPrice: item.product.retailPrice })),
                 validUntil,
+                subtotal,
+                discountAmount,
+                taxAmount,
+                totalAmount: total,
             };
             const newQuotation = await createQuotation(payload);
             setQuotations(prev => [newQuotation, ...prev]);
             toast.success("Quotation created successfully!");
             handleCloseCreateModal();
-        } catch (err) {
-            toast.error("Failed to save quotation.");
+        } catch (err: any) {
+            toast.error(`Failed to save quotation: ${err.message}`);
         }
     };
 
@@ -302,7 +325,14 @@ const Quotations: React.FC = () => {
                             </div>
                         }
                         <div className="border-t border-gray-700 pt-3 mt-3 space-y-2">
-                             <div className="flex justify-between font-bold text-lg"><p>Total</p><p>{formatCurrency(subtotal)}</p></div>
+                            <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+                            <div className="flex justify-between items-center text-sm"><span>Discount</span><div className="flex items-center w-1/2">
+                                <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 w-full mr-1"/>
+                                <Select value={discountType} onChange={e => setDiscountType(e.target.value as any)} className="h-8">
+                                    <option value="fixed">{currentCurrency}</option><option value="percent">%</option></Select>
+                            </div></div>
+                            <div className="flex justify-between text-sm"><span>VAT ({(appSettings.taxRate || 16)}%)</span><span>{formatCurrency(taxAmount)}</span></div>
+                            <div className="flex justify-between font-bold text-lg"><p>Total</p><p>{formatCurrency(total)}</p></div>
                              <Input type="date" label="Valid Until" value={validUntil} onChange={e => setValidUntil(e.target.value)} />
                         </div>
                     </CardContent></Card></div>

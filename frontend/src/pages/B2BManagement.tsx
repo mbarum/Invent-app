@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
@@ -137,7 +136,7 @@ const StockRequestsManager = () => {
     
     const totalAmount = useMemo(() => {
         if (!selectedRequest || !selectedRequest.items) return 0;
-        return selectedRequest.items.reduce((sum, item) => sum + (item.quantity * item.wholesale_price_at_request), 0);
+        return selectedRequest.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.wholesalePriceAtRequest)), 0);
     }, [selectedRequest]);
 
     const fetchRequests = async () => {
@@ -190,10 +189,10 @@ const StockRequestsManager = () => {
                         <TableRow key={req.id}>
                             <TableCell className="font-mono">REQ-{String(req.id).padStart(5, '0')}</TableCell>
                             <TableCell>{(req as any).userName}</TableCell>
-                            <TableCell>{new Date(req.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>{(req as any).branchName}</TableCell>
                             <TableCell className="text-center">{req.itemCount || 0}</TableCell>
-                            <TableCell className="text-right">{(req.totalValue || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{Number(req.totalValue || 0).toLocaleString()}</TableCell>
                             <TableCell>{getReqStatusBadge(req.status)}</TableCell>
                             <TableCell><Button variant="ghost" size="sm" onClick={() => handleViewDetails(req)}><Eye className="h-4 w-4 mr-1"/> View</Button></TableCell>
                         </TableRow>
@@ -206,7 +205,7 @@ const StockRequestsManager = () => {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                            <p><strong>Client:</strong> {(selectedRequest as any).userName}</p>
                            <p><strong>Branch:</strong> {(selectedRequest as any).branchName}</p>
-                           <p><strong>Date:</strong> {new Date(selectedRequest.created_at).toLocaleString()}</p>
+                           <p><strong>Date:</strong> {new Date(selectedRequest.createdAt).toLocaleString()}</p>
                            <p><strong>Status:</strong> {getReqStatusBadge(selectedRequest.status)}</p>
                         </div>
                         <div className="border-t border-gray-700 pt-4">

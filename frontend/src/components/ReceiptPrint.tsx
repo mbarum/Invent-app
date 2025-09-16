@@ -8,7 +8,7 @@ interface ReceiptPrintProps {
 const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ sale }) => {
   if (!sale) return null;
 
-  const subtotal = Array.isArray(sale.items) ? sale.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) : 0;
+  const subtotal = Array.isArray(sale.items) ? sale.items.reduce((sum, item) => sum + (Number(item.unitPrice || 0) * item.quantity), 0) : 0;
 
   return (
     <div className="bg-white text-black p-4 font-mono text-xs w-[300px] mx-auto">
@@ -33,18 +33,18 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ sale }) => {
                     <tr key={item.id}>
                         <td className="text-left">{item.productName}</td>
                         <td className="text-center">{item.quantity}</td>
-                        <td className="text-right">{(item.unitPrice * item.quantity).toFixed(2)}</td>
+                        <td className="text-right">{(Number(item.unitPrice || 0) * item.quantity).toFixed(2)}</td>
                     </tr>
                 ))}
             </tbody>
         </table>
         <hr className="my-2 border-black border-dashed"/>
         <p className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></p>
-        {(sale.discountAmount || 0) > 0 && (
-            <p className="flex justify-between"><span>Discount:</span> <span>-{(sale.discountAmount || 0).toFixed(2)}</span></p>
+        {(Number(sale.discountAmount) || 0) > 0 && (
+            <p className="flex justify-between"><span>Discount:</span> <span>-{(Number(sale.discountAmount) || 0).toFixed(2)}</span></p>
         )}
-        <p className="flex justify-between"><span>VAT (16%):</span> <span>{(sale.taxAmount || 0).toFixed(2)}</span></p>
-        <p className="flex justify-between font-bold"><span>TOTAL:</span> <span>{sale.totalAmount.toFixed(2)}</span></p>
+        <p className="flex justify-between"><span>VAT (16%):</span> <span>{(Number(sale.taxAmount) || 0).toFixed(2)}</span></p>
+        <p className="flex justify-between font-bold"><span>TOTAL:</span> <span>{(Number(sale.totalAmount) || 0).toFixed(2)}</span></p>
         <hr className="my-2 border-black border-dashed"/>
         <p>Paid via: {sale.paymentMethod}</p>
         <p className="text-center mt-4 font-semibold">Thank you for choosing Masuma Autospares</p>

@@ -10,9 +10,9 @@ interface InvoicePrintProps {
 const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPreview = false }) => {
     if (!invoice) return null;
     
-    const subtotal = (invoice.items || []).reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const subtotal = (invoice.items || []).reduce((sum, item) => sum + (Number(item.unitPrice || 0) * item.quantity), 0);
     // Tax is now stored on the sale record, but we can derive it for display if needed
-    const taxAmount = (invoice.totalAmount || 0) - subtotal; 
+    const taxAmount = (Number(invoice.totalAmount) || 0) - subtotal; 
 
     const containerClasses = isPreview ? "bg-white text-black p-8 font-sans w-full" : "print-area a4-page";
 
@@ -60,8 +60,8 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPre
                                 <td className="p-2 font-mono">{item.partNumber}</td>
                                 <td className="p-2">{item.productName}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">{item.unitPrice.toFixed(2)}</td>
-                                <td className="p-2 text-right">{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                                <td className="p-2 text-right">{(Number(item.unitPrice) || 0).toFixed(2)}</td>
+                                <td className="p-2 text-right">{(item.quantity * Number(item.unitPrice || 0)).toFixed(2)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -86,7 +86,7 @@ const InvoicePrint: React.FC<InvoicePrintProps> = ({ invoice, appSettings, isPre
                     <div className="w-1/3 space-y-2">
                         <div className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></div>
                         <div className="flex justify-between"><span>VAT (16%):</span> <span>{taxAmount > 0 ? taxAmount.toFixed(2) : '0.00'}</span></div>
-                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2"><span>Total (KES):</span> <span>{(invoice.totalAmount || 0).toFixed(2)}</span></div>
+                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2"><span>Total (KES):</span> <span>{(Number(invoice.totalAmount) || 0).toFixed(2)}</span></div>
                     </div>
                 </div>
 

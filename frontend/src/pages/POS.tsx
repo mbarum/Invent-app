@@ -215,7 +215,7 @@ const POS: React.FC = () => {
 
     const { subtotal, discountAmount, taxAmount, total } = useMemo(() => {
         const TAX_RATE = 0.16;
-        const sub = cart.reduce((acc, item) => acc + item.product.retailPrice * item.quantity, 0);
+        const sub = cart.reduce((acc, item) => acc + Number(item.product.retailPrice) * item.quantity, 0);
         let disc = 0;
         if (!payingForInvoice) {
             if (discountType === 'percent') {

@@ -4,13 +4,18 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../co
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
 import Input from '../components/ui/Input.tsx';
 import Pagination from '../components/ui/Pagination.tsx';
-import { LoaderCircle, AlertTriangle, Download } from 'lucide-react';
+import { LoaderCircle, AlertTriangle, Download, Eye, Printer } from 'lucide-react';
 import { Sale, Customer, Branch } from '@masuma-ea/types';
-import { getSales, getCustomers } from '../services/api.ts';
+import { getSales, getCustomers, getSaleDetails } from '../services/api.ts';
 import DateRangePicker from '../components/ui/DateRangePicker.tsx';
 import Button from '../components/ui/Button.tsx';
 import { useDataStore } from '../store/dataStore.ts';
 import Select from '../components/ui/Select.tsx';
+import Modal from '../components/ui/Modal.tsx';
+import ReceiptPrint from '../components/ReceiptPrint.tsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 
 interface OutletContextType {
   currentBranch: Branch;
@@ -65,6 +70,9 @@ const Sales: React.FC = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+  
+  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,6 +116,48 @@ const Sales: React.FC = () => {
         currency: currentCurrency,
     }).format(convertedAmount);
   };
+  
+  const handleViewReceipt = async (sale: Sale) => {
+    try {
+        const detailedSale = await getSaleDetails(sale.id);
+        setViewingSale(detailedSale);
+        setIsReceiptModalOpen(true);
+    } catch (err) {
+        toast.error("Failed to load receipt details.");
+    }
+  };
+  
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById('receipt-to-print');
+    if (!element || !viewingSale) return;
+    const toastId = toast.loading('Generating PDF...', { duration: 5000 });
+    try {
+        const canvas = await html2canvas(element, { scale: 2, backgroundColor: null });
+        const imgData = canvas.toDataURL('image/png');
+        // Using a custom page size for the small receipt
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [80, 200] // Approximate thermal receipt paper size
+        });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Receipt-${viewingSale.saleNo}.pdf`);
+        toast.success('PDF downloaded!', { id: toastId });
+    } catch (error) {
+        console.error(error);
+        toast.error('Failed to generate PDF.', { id: toastId });
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (viewingSale) {
+        window.print();
+    }
+  };
+
 
   const filteredSales = useMemo(() => {
       let allSales = [...sales];
@@ -159,6 +209,7 @@ const Sales: React.FC = () => {
               <TableHead>Date</TableHead>
               <TableHead className="text-center">Items</TableHead>
               <TableHead className="text-right">Amount ({currentCurrency})</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -168,8 +219,13 @@ const Sales: React.FC = () => {
                 <TableCell>{customerMap[sale.customerId] || 'Unknown'}</TableCell>
                 <TableCell>{branchMap[sale.branchId] || 'Unknown'}</TableCell>
                 <TableCell>{new Date(sale.createdAt).toLocaleString()}</TableCell>
-                <TableCell className="text-center">{typeof sale.items === 'number' ? sale.items : (Array.isArray(sale.items) ? sale.items.length : 0)}</TableCell>
+                <TableCell className="text-center">{sale.itemCount || 0}</TableCell>
                 <TableCell className="font-semibold text-right">{formatCurrency(sale.totalAmount || 0)}</TableCell>
+                <TableCell>
+                    <Button variant="ghost" size="sm" onClick={() => handleViewReceipt(sale)}>
+                        <Eye className="h-4 w-4 mr-1" /> View
+                    </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -179,6 +235,7 @@ const Sales: React.FC = () => {
   };
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
@@ -228,6 +285,20 @@ const Sales: React.FC = () => {
           </CardContent>
       </Card>
     </div>
+
+    <Modal isOpen={isReceiptModalOpen} onClose={() => setIsReceiptModalOpen(false)} title={`Receipt: ${viewingSale?.saleNo}`}>
+        <div className="flex space-x-2 mb-4 no-print">
+            <Button onClick={handlePrintReceipt} variant="secondary" className="w-full"><Printer className="mr-2 h-4 w-4" /> Print Receipt</Button>
+            <Button onClick={handleDownloadPdf} className="w-full"><Download className="mr-2 h-4 w-4" /> Download PDF</Button>
+        </div>
+        <div id="receipt-to-print" className="border border-gray-700 rounded-md p-2 bg-gray-900">
+            <ReceiptPrint sale={viewingSale} />
+        </div>
+    </Modal>
+    <div className="hidden print:block">
+        <ReceiptPrint sale={viewingSale} />
+    </div>
+    </>
   );
 };
 

@@ -128,16 +128,16 @@ export const createSaleSchema = Joi.object({
 
 // --- Shipping ---
 export const createLabelSchema = Joi.object({
-    sale_id: id.optional().allow(null),
-    invoice_id: id.optional().allow(null),
-    from_branch_id: id.required(),
-    to_customer_id: id.required(),
-    from_name: Joi.string().required(),
-    from_address: Joi.string().required(),
-    from_phone: Joi.string().required(),
-    to_name: Joi.string().required(),
-    to_address: Joi.string().required(),
-    to_phone: Joi.string().required(),
+    saleId: id.optional().allow(null),
+    invoiceId: id.optional().allow(null),
+    fromBranchId: id.required(),
+    toCustomerId: id.required(),
+    fromName: Joi.string().required(),
+    fromAddress: Joi.string().required(),
+    fromPhone: Joi.string().required(),
+    toName: Joi.string().required(),
+    toAddress: Joi.string().required(),
+    toPhone: Joi.string().required(),
     weight: Joi.number().positive().optional(),
     carrier: Joi.string().optional(),
 });
@@ -158,6 +158,10 @@ export const createQuotationSchema = Joi.object({
     branchId: id.required(),
     items: Joi.array().items(quotationItemSchema).min(1).required(),
     validUntil: Joi.date().iso().required(),
+    subtotal: Joi.number().min(0).required(),
+    discountAmount: Joi.number().min(0).required(),
+    taxAmount: Joi.number().min(0).required(),
+    totalAmount: Joi.number().min(0).required(),
 });
 
 export const updateQuotationStatusSchema = Joi.object({

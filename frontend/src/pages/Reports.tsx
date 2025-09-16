@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Branch, Sale, Customer, ShippingLabel, ShippingStatus } from '@masuma-ea/types';
@@ -118,18 +114,18 @@ const Reports: React.FC = () => {
   };
 
   const stats = useMemo(() => {
-      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
-      const activeCustomers = new Set(sales.map(s => s.customer_id)).size;
+      const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.totalAmount || 0), 0);
+      const activeCustomers = new Set(sales.map(s => s.customerId)).size;
       return { totalRevenue, totalSales: sales.length, activeCustomers, totalShipments: shipments.length };
   }, [sales, shipments]);
 
   const handleExportSales = () => {
-    const data = sales.map(s => ({ ...s, customerName: customerMap[s.customer_id] || 'N/A' }));
-    exportToCsv(`sales_report_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Date', 'Amount (KES)'], data, ['sale_no', 'customerName', 'created_at', 'totalAmount']);
+    const data = sales.map(s => ({ ...s, customerName: customerMap[s.customerId] || 'N/A' }));
+    exportToCsv(`sales_report_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Date', 'Amount (KES)'], data, ['saleNo', 'customerName', 'createdAt', 'totalAmount']);
   };
   
   const handleExportShipments = () => {
-    exportToCsv(`shipments_report_${dateRange.start}_to_${dateRange.end}`, ['Order Ref', 'Customer', 'Date', 'Status'], shipments, ['id', 'to_name', 'created_at', 'status']);
+    exportToCsv(`shipments_report_${dateRange.start}_to_${dateRange.end}`, ['Order Ref', 'Customer', 'Date', 'Status'], shipments, ['id', 'toName', 'createdAt', 'status']);
   };
 
   const paginatedSales = sales.slice((salesPage - 1) * itemsPerPage, salesPage * itemsPerPage);
@@ -200,9 +196,9 @@ const Reports: React.FC = () => {
                       <TableBody>
                           {paginatedSales.map(sale => (
                               <TableRow key={sale.id}>
-                                  <TableCell className="font-mono">{sale.sale_no}</TableCell>
-                                  <TableCell>{customerMap[sale.customer_id] || 'N/A'}</TableCell>
-                                  <TableCell className="text-right font-semibold">{formatCurrency(sale.totalAmount || 0)}</TableCell>
+                                  <TableCell className="font-mono">{sale.saleNo}</TableCell>
+                                  <TableCell>{customerMap[sale.customerId] || 'N/A'}</TableCell>
+                                  <TableCell className="text-right font-semibold">{formatCurrency(Number(sale.totalAmount || 0))}</TableCell>
                               </TableRow>
                           ))}
                       </TableBody>
@@ -225,8 +221,8 @@ const Reports: React.FC = () => {
                       <TableBody>
                            {paginatedShipments.map(shipment => (
                               <TableRow key={shipment.id}>
-                                  <TableCell className="font-mono">{shipment.sale_id ? `SALE-${shipment.sale_id}` : `INV-${shipment.invoice_id}`}</TableCell>
-                                  <TableCell>{shipment.to_name}</TableCell>
+                                  <TableCell className="font-mono">{shipment.saleId ? `SALE-${shipment.saleId}` : `INV-${shipment.invoiceId}`}</TableCell>
+                                  <TableCell>{shipment.toName}</TableCell>
                                   <TableCell>{getStatusBadge(shipment.status)}</TableCell>
                               </TableRow>
                           ))}

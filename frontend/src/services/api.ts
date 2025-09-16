@@ -108,7 +108,7 @@ export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<{
 
 // --- VIN Picker ---
 export const getPartsByVin = async (vin: string): Promise<VinSearchResult[]> => {
-    const { data } = await api.get(`/vin/${vin}`);
+    const { data } = await api.get(`/vin-lookup/${vin}`);
     return data;
 }
 
@@ -136,6 +136,11 @@ export const getSales = async (range?: {start: string, end: string}): Promise<Sa
 
 export const createSale = async (saleData: any): Promise<Sale> => {
     const { data } = await api.post('/sales', saleData);
+    return data;
+};
+
+export const getSaleDetails = async (id: number): Promise<Sale> => {
+    const { data } = await api.get(`/sales/${id}`);
     return data;
 };
 

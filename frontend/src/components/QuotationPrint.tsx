@@ -1,5 +1,7 @@
 import React from 'react';
 import { Quotation, AppSettings } from '@masuma-ea/types';
+// FIX: Changed import to a default import to match the export from Logo.tsx
+import Logo from './Logo';
 
 interface QuotationPrintProps {
   quotation: Quotation | null;
@@ -10,6 +12,11 @@ interface QuotationPrintProps {
 const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings, isPreview = false }) => {
     if (!quotation) return null;
 
+    const subtotal = (quotation.items || []).reduce((sum, item) => sum + (Number(item.unitPrice || 0) * item.quantity), 0);
+    // Use stored values if available, otherwise calculate for backward compatibility or display
+    const discount = Number(quotation.discountAmount || 0);
+    const tax = Number(quotation.taxAmount || 0) || ((subtotal - discount) * ((appSettings.taxRate || 16) / 100));
+    
     const containerClasses = isPreview ? "bg-white text-black p-8 font-sans w-full" : "print-area a4-page";
 
     return (
@@ -18,7 +25,7 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                 {/* Header */}
                 <div className="flex justify-between items-start pb-4 border-b-2 border-black">
                     <div>
-                        
+                        <Logo className="w-48 h-auto" />
                         <p className="text-sm font-bold mt-2">{appSettings.companyName || 'Masuma Autoparts East Africa LTD'}</p>
                         <p className="text-xs">{appSettings.companyAddress || quotation.branch?.address}</p>
                         <p className="text-xs">{appSettings.companyPhone || quotation.branch?.phone}</p>
@@ -48,8 +55,8 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                                 <td className="p-2 font-mono">{item.partNumber}</td>
                                 <td className="p-2">{item.productName}</td>
                                 <td className="p-2 text-center">{item.quantity}</td>
-                                <td className="p-2 text-right">{item.unitPrice.toFixed(2)}</td>
-                                <td className="p-2 text-right">{(item.quantity * item.unitPrice).toFixed(2)}</td>
+                                <td className="p-2 text-right">{(Number(item.unitPrice) || 0).toFixed(2)}</td>
+                                <td className="p-2 text-right">{(item.quantity * Number(item.unitPrice || 0)).toFixed(2)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -72,10 +79,13 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                         )}
                     </div>
                     <div className="w-1/3 space-y-2">
-                        <div className="flex justify-end">
-                            <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2 w-full">
-                                <span>Total (KES):</span> <span>{(quotation.totalAmount || 0).toFixed(2)}</span>
-                            </div>
+                         <div className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></div>
+                        {discount > 0 && (
+                            <div className="flex justify-between"><span>Discount:</span> <span>-{discount.toFixed(2)}</span></div>
+                        )}
+                        <div className="flex justify-between"><span>VAT ({(appSettings.taxRate || 16)}%):</span> <span>{tax.toFixed(2)}</span></div>
+                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2">
+                            <span>Total (KES):</span> <span>{(Number(quotation.totalAmount) || 0).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

@@ -41,7 +41,7 @@ const CreateRequest = ({ onSubmitted }: { onSubmitted: () => void }) => {
     }, [productSearch, products]);
     
     const subtotal = useMemo(() => {
-        return cart.reduce((sum, item) => sum + item.product.wholesalePrice * item.quantity, 0);
+        return cart.reduce((sum, item) => sum + Number(item.product.wholesalePrice || 0) * item.quantity, 0);
     }, [cart]);
 
     const addToCart = (product: Product) => {
@@ -55,7 +55,7 @@ const CreateRequest = ({ onSubmitted }: { onSubmitted: () => void }) => {
 
     const updateQuantity = (productId: string, quantity: number) => {
         if (quantity < 1) setCart(prev => prev.filter(i => i.product.id !== productId));
-        else setCart(prev => prev.map(i => i.product.id === productId ? { ...i, quantity } : i));
+        else setCart(prev => prev.map(i => i.product.id === productId ? {...i, quantity} : i));
     };
 
     const handleSubmit = async () => {
@@ -176,7 +176,7 @@ const RequestHistory = () => {
                         <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{(req as any).branchName}</TableCell>
                         <TableCell className="text-center">{req.itemCount || 0}</TableCell>
-                        <TableCell className="text-right">{(req.totalValue || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{Number(req.totalValue || 0).toLocaleString()}</TableCell>
                         <TableCell>{getStatusBadge(req.status)}</TableCell>
                         <TableCell><Button variant="ghost" size="sm" onClick={() => handleViewDetails(req)}>View Details</Button></TableCell>
                     </TableRow>
