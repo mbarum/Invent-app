@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -9,8 +9,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createQuotation = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
         const newQuotation = await db.transaction(async (trx) => {
@@ -44,8 +44,8 @@ const createQuotation = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getQuotations = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const quotations = await db('quotations')
             .select('quotations.*', 'customers.name as customerName')
@@ -57,8 +57,8 @@ const getQuotations = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getQuotationDetails = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const quotation = await db('quotations').where('quotations.id', id).first();
@@ -78,8 +78,8 @@ const getQuotationDetails = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateStatus = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -92,8 +92,8 @@ const updateStatus = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const convertToInvoice = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');
     const invoiceDueDays = settings.find(s => s.settingKey === 'invoiceDueDays')?.settingValue || 30;

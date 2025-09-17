@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -10,8 +10,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getUsers = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await db('users')
             .select('id', 'name', 'email', 'role', 'status', 'b2bApplicationId', 'customerId')
@@ -22,8 +22,8 @@ const getUsers = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createUser = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role, status } = req.body;
     try {
         const salt = await bcrypt.genSalt(10);
@@ -49,8 +49,8 @@ const createUser = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateUser = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
     try {
@@ -72,8 +72,8 @@ const updateUser = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateCurrentUserPassword = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateCurrentUserPassword = async (req: Request, res: Response, next: NextFunction) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;
     try {

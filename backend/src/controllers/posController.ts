@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
 import { Sale, InvoiceStatus } from '@masuma-ea/types';
@@ -53,8 +53,8 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
     return newSale;
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createSale = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createSale = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
             return createSaleInTransaction(req.body, trx);
@@ -72,8 +72,8 @@ const createSale = async (req, res, next) => {
 };
 
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getSales = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getSales = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -126,8 +126,8 @@ const getSaleDetailsById = async (id: number) => {
     return { ...sale, items, customer, branch };
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getSaleDetails = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const saleDetails = await getSaleDetailsById(Number(req.params.id));
         if (!saleDetails) return res.status(404).json({ message: 'Sale not found.' });

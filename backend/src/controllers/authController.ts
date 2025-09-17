@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db';
 import { User } from '@masuma-ea/types';
@@ -22,8 +22,8 @@ const sanitizeUser = (user: any): User => {
     return sanitizedUser as User;
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const login = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const login = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -48,8 +48,8 @@ const login = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const loginWithGoogle = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
     try {
         const ticket = await client.verifyIdToken({
@@ -83,8 +83,8 @@ const loginWithGoogle = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const logout = (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const logout = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
         if (err) {
@@ -98,8 +98,8 @@ const logout = (req, res, next) => {
     });
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const verifyAuth = (req, res) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const verifyAuth = (req: Request, res: Response) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);
     } else {

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
@@ -22,8 +22,8 @@ const formatSettings = (rows: { settingKey: string, settingValue: string }[]): P
     }, {});
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getSettings = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getSettings = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const settingsRows = await db('app_settings').select('*');
         const settings = formatSettings(settingsRows);
@@ -33,8 +33,8 @@ const getSettings = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateSettings = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateSettings = async (req: Request, res: Response, next: NextFunction) => {
     const settings: Partial<AppSettings> = req.body;
     try {
         const settingsToInsert = Object.entries(settings)

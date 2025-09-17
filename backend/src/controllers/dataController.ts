@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated } from '../middleware/authMiddleware';
 import { validate } from '../validation';
@@ -10,8 +10,8 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // --- Branches ---
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getBranches = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getBranches = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const branches = await db('branches').select('*');
         res.status(200).json(branches);
@@ -20,8 +20,8 @@ const getBranches = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createBranch = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createBranch = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [newBranch] = await db('branches').insert(req.body).returning('*');
         await auditLog(req.user!.id, 'BRANCH_CREATE', { branchId: newBranch.id, name: newBranch.name });
@@ -31,8 +31,8 @@ const createBranch = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateBranch = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateBranch = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [updatedBranch] = await db('branches').where({ id: req.params.id }).update(req.body).returning('*');
         if (!updatedBranch) return res.status(404).json({ message: 'Branch not found.' });
@@ -44,8 +44,8 @@ const updateBranch = async (req, res, next) => {
 };
 
 // --- Customers ---
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getCustomers = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getCustomers = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 10, searchTerm, spendingFilter, recencyFilter, sortKey = 'totalSpending', sortDirection = 'descending' } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -79,8 +79,8 @@ const getCustomers = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createCustomer = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createCustomer = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [newCustomer] = await db('customers').insert(req.body).returning('*');
         await auditLog(req.user!.id, 'CUSTOMER_CREATE', { customerId: newCustomer.id, name: newCustomer.name });
@@ -90,8 +90,8 @@ const createCustomer = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getCustomerTransactions = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getCustomerTransactions = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     try {
         const sales = await db('sales').where({ customerId }).orderBy('createdAt', 'desc');

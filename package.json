@@ -8,7 +8,9 @@
     "dev:types": "npm run dev --workspace=@masuma-ea/types",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspaces"
+    "build": "npm run build --workspaces",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend"
   },
   "workspaces": [
     "frontend",

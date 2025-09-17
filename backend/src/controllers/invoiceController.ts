@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -6,8 +6,8 @@ import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getInvoices = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     const { status } = req.query;
     try {
         const query = db('invoices')
@@ -26,8 +26,8 @@ const getInvoices = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getInvoiceDetails = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const invoice = await db('invoices').where('invoices.id', id).first();
@@ -47,8 +47,8 @@ const getInvoiceDetails = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getUnpaidSnippets = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getUnpaidSnippets = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const snippets = await db('invoices')
             .select('id', 'invoiceNo')

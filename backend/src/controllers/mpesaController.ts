@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import db from '../db';
 import { createSaleInTransaction } from './posController';
@@ -20,8 +20,8 @@ const getMpesaToken = async () => {
     return response.data.access_token;
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const initiateStkPush = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
     try {
@@ -73,8 +73,8 @@ const initiateStkPush = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const stkCallback = async (req, res) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const stkCallback = async (req: Request, res: Response) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
 
@@ -110,8 +110,8 @@ const stkCallback = async (req, res) => {
     res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getPaymentStatus = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
         const transaction = await db('mpesa_transactions').where({ checkoutRequestId }).first();
@@ -133,8 +133,8 @@ const getPaymentStatus = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getTransactions = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 

@@ -11,8 +11,11 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@masuma-ea/types": ["../packages/types/dist"]
+      "@masuma-ea/types": ["../packages/types/src/index.ts"]
     }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
   },
   "include": ["src/**/*"]
 }

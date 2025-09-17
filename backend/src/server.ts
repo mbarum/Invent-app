@@ -1,5 +1,3 @@
-
-
 // This line must be at the very top
 import 'tsconfig-paths/register';
 
@@ -111,8 +109,8 @@ if (process.env.NODE_ENV === 'production') {
 
     // The "catchall" handler: for any request that doesn't
     // match one above, send back React's index.html file.
-    // FIX: Removed explicit types for req and res to allow Express to infer them correctly, resolving overload errors.
-    app.get('*', (req, res) => {
+    // FIX: Explicitly typed handler parameters to resolve "No overload matches this call" error.
+    app.get('*', (req: Request, res: Response) => {
         res.sendFile(path.join(frontendDistPath, 'index.html'));
     });
 }
@@ -123,8 +121,8 @@ interface AppError extends Error {
     statusCode?: number;
 }
 
-// FIX: Removed explicit types for req, res, and next to allow for correct type inference.
-app.use((err: AppError, req, res, next) => {
+// FIX: Explicitly typed handler parameters to resolve "No overload matches this call" error.
+app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({

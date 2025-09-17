@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -18,8 +18,8 @@ const manageOemNumbers = async (trx: any, productId: string, oemNumbers: string[
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const getProducts = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const getProducts = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, searchTerm } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -53,8 +53,8 @@ const getProducts = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const createProduct = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const createProduct = async (req: Request, res: Response, next: NextFunction) => {
     const { oemNumbers, ...productData } = req.body;
     const productId = uuidv4();
 
@@ -70,8 +70,8 @@ const createProduct = async (req, res, next) => {
     }
 };
 
-// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
-const updateProduct = async (req, res, next) => {
+// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
+const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { oemNumbers, ...productData } = req.body;
 

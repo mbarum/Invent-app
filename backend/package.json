@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "db:migrate": "knex migrate:latest --knexfile ./knexfile.ts",
+    "db:seed": "knex seed:run --knexfile ./knexfile.ts"
   },
   "dependencies": {
     "@google/genai": "^1.19.0",

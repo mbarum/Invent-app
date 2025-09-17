@@ -1,14 +1,14 @@
 import Joi from 'joi';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
+import { Request, Response, NextFunction } from 'express';
 
 /**
  * A generic middleware to validate the request body against a Joi schema.
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Removed explicit 'RequestHandler' return type to allow for better type inference
-// by Express, resolving widespread "No overload matches this call" errors in controllers.
-export const validate = (schema: Joi.Schema) => (req: any, res: any, next: any) => {
+// FIX: Explicitly typed middleware parameters to ensure correct handler signature and resolve overload errors in controllers.
+export const validate = (schema: Joi.Schema) => (req: Request, res: Response, next: NextFunction) => {
     // We validate req.body for most POST/PUT, but some data might be in other places for multipart forms
     const dataToValidate = { ...req.body, ...req.params, ...req.query };
 
