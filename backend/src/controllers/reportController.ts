@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
@@ -6,7 +7,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+const getDashboardStats: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
         const salesQuery = db('sales').whereBetween('createdAt', [`${start} 00:00:00`, `${end} 23:59:59`]);
@@ -23,11 +24,11 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
         const salesTargetSetting = await db('app_settings').where({ settingKey: 'salesTarget' }).first();
         
         res.status(200).json({
-            totalRevenue: totalRevenueResult?.total || 0,
-            totalSales: totalSalesResult?.total || 0,
-            activeCustomers: activeCustomersResult?.total || 0,
-            totalShipments: totalShipmentsResult?.total || 0,
-            pendingShipments: pendingShipmentsResult?.total || 0,
+            totalRevenue: Number(totalRevenueResult?.total) || 0,
+            totalSales: Number(totalSalesResult?.total) || 0,
+            activeCustomers: Number(activeCustomersResult?.total) || 0,
+            totalShipments: Number(totalShipmentsResult?.total) || 0,
+            pendingShipments: Number(pendingShipmentsResult?.total) || 0,
             salesTarget: Number(salesTargetSetting?.settingValue) || 5000000,
         });
     } catch (error) {
@@ -36,7 +37,7 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateSalesTarget = async (req: Request, res: Response, next: NextFunction) => {
+const updateSalesTarget: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { salesTarget } = req.body;
     try {
         await db('app_settings')
@@ -50,7 +51,7 @@ const updateSalesTarget = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getSalesChartData = async (req: Request, res: Response, next: NextFunction) => {
+const getSalesChartData: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
         const query = db('sales')
@@ -71,7 +72,7 @@ const getSalesChartData = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getFastMovingProducts = async (req: Request, res: Response, next: NextFunction) => {
+const getFastMovingProducts: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
      const { start, end, branchId } = req.query;
     try {
         const query = db('sale_items')
@@ -94,7 +95,7 @@ const getFastMovingProducts = async (req: Request, res: Response, next: NextFunc
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getShipmentsReport = async (req: Request, res: Response, next: NextFunction) => {
+const getShipmentsReport: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end } = req.query;
     try {
         const shipments = await db('shipping_labels')

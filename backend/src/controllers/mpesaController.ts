@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import axios from 'axios';
 import db from '../db';
 import { createSaleInTransaction } from './posController';
@@ -21,7 +22,7 @@ const getMpesaToken = async () => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
+const initiateStkPush: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
     try {
@@ -74,7 +75,7 @@ const initiateStkPush = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const stkCallback = async (req: Request, res: Response) => {
+const stkCallback: RequestHandler = async (req: Request, res: Response) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
 
@@ -111,7 +112,7 @@ const stkCallback = async (req: Request, res: Response) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
+const getPaymentStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
         const transaction = await db('mpesa_transactions').where({ checkoutRequestId }).first();
@@ -134,7 +135,7 @@ const getPaymentStatus = async (req: Request, res: Response, next: NextFunction)
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
+const getTransactions: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -154,7 +155,7 @@ const getTransactions = async (req: Request, res: Response, next: NextFunction) 
 
         const [totalResult, transactions] = await Promise.all([totalQuery, dataQuery]);
 
-        res.status(200).json({ transactions, total: totalResult ? Number(totalResult.total) : 0 });
+        res.status(200).json({ transactions, total: totalResult ? Number((totalResult as any).total) : 0 });
 
     } catch (error) {
         next(error);

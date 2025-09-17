@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
@@ -6,7 +7,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getLogs = async (req: Request, res: Response, next: NextFunction) => {
+const getLogs: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 15;
     const offset = (page - 1) * limit;
@@ -23,7 +24,7 @@ const getLogs = async (req: Request, res: Response, next: NextFunction) => {
 
         const [logs, totalResult] = await Promise.all([logsQuery, totalQuery]);
 
-        res.status(200).json({ logs, total: totalResult ? Number(totalResult.total) : 0 });
+        res.status(200).json({ logs, total: totalResult ? Number((totalResult as any).total) : 0 });
     } catch (error) {
         next(error);
     }

@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { StockRequestStatus, UserRole } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -11,7 +12,7 @@ import { createNotification } from '../services/notificationService';
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createRequest = async (req: Request, res: Response, next: NextFunction) => {
+const createRequest: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { branchId, items } = req.body;
     const b2bUserId = req.user!.id;
 
@@ -62,7 +63,7 @@ const createRequest = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getMyRequests = async (req: Request, res: Response, next: NextFunction) => {
+const getMyRequests: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const b2bUserId = req.user!.id;
     try {
         const requests = await db('stock_requests')
@@ -79,7 +80,7 @@ const getMyRequests = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
+const getAllRequests: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
      try {
         const requests = await db('stock_requests')
             .select(
@@ -99,7 +100,7 @@ const getAllRequests = async (req: Request, res: Response, next: NextFunction) =
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getRequestDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const request = await db('stock_requests').where({ id }).first();
@@ -122,7 +123,7 @@ const getRequestDetails = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {

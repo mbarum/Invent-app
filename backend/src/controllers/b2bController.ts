@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -15,7 +16,7 @@ import { sendApplicationReceivedEmail, sendApplicationStatusEmail } from '../ser
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
+const registerB2B: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     if (!req.files || !('certOfInc' in req.files) || !('cr12' in req.files)) {
@@ -60,7 +61,7 @@ const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getApplications = async (req: Request, res: Response, next: NextFunction) => {
+const getApplications: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const applications = await db('b2b_applications').select('*').orderBy('submittedAt', 'desc');
         res.status(200).json(applications);
@@ -70,7 +71,7 @@ const getApplications = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateApplicationStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateApplicationStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body as { status: ApplicationStatus };
     const adminUser = req.user!;

@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db';
 import { User } from '@masuma-ea/types';
@@ -23,7 +24,7 @@ const sanitizeUser = (user: any): User => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const login = async (req: Request, res: Response, next: NextFunction) => {
+const login: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -49,7 +50,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
+const loginWithGoogle: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
     try {
         const ticket = await client.verifyIdToken({
@@ -84,7 +85,7 @@ const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const logout = (req: Request, res: Response, next: NextFunction) => {
+const logout: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
         if (err) {
@@ -99,7 +100,7 @@ const logout = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const verifyAuth = (req: Request, res: Response) => {
+const verifyAuth: RequestHandler = (req: Request, res: Response) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);
     } else {

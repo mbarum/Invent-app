@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { GoogleGenAI, Type } from "@google/genai";
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
@@ -10,7 +11,7 @@ const router = Router();
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const vinSearch = async (req: Request, res: Response, next: NextFunction) => {
+const vinSearch: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { vin } = req.body;
     if (!vin) {
         return res.status(400).json({ message: 'VIN is required.' });

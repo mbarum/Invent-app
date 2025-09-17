@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -10,7 +11,7 @@ import { auditLog } from '../services/auditService';
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
+const createQuotation: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
         const newQuotation = await db.transaction(async (trx) => {
@@ -45,7 +46,7 @@ const createQuotation = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
+const getQuotations: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const quotations = await db('quotations')
             .select('quotations.*', 'customers.name as customerName')
@@ -58,7 +59,7 @@ const getQuotations = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getQuotationDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const quotation = await db('quotations').where('quotations.id', id).first();
@@ -79,7 +80,7 @@ const getQuotationDetails = async (req: Request, res: Response, next: NextFuncti
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -93,7 +94,7 @@ const updateStatus = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
+const convertToInvoice: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');
     const invoiceDueDays = settings.find(s => s.settingKey === 'invoiceDueDays')?.settingValue || 30;

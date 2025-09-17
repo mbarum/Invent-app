@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
 import { Sale, InvoiceStatus } from '@masuma-ea/types';
@@ -54,7 +55,7 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createSale = async (req: Request, res: Response, next: NextFunction) => {
+const createSale: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
             return createSaleInTransaction(req.body, trx);
@@ -73,7 +74,7 @@ const createSale = async (req: Request, res: Response, next: NextFunction) => {
 
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getSales = async (req: Request, res: Response, next: NextFunction) => {
+const getSales: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -127,7 +128,7 @@ const getSaleDetailsById = async (id: number) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getSaleDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const saleDetails = await getSaleDetailsById(Number(req.params.id));
         if (!saleDetails) return res.status(404).json({ message: 'Sale not found.' });

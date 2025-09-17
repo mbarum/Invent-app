@@ -1,4 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { ShippingStatus } from '@masuma-ea/types';
@@ -11,7 +12,7 @@ import { auditLog } from '../services/auditService';
 const router = Router();
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getLabels = async (req: Request, res: Response, next: NextFunction) => {
+const getLabels: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const labels = await db('shipping_labels').select('*').orderBy('createdAt', 'desc');
         res.status(200).json(labels);
@@ -21,7 +22,7 @@ const getLabels = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createLabel = async (req: Request, res: Response, next: NextFunction) => {
+const createLabel: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [newLabel] = await db('shipping_labels').insert({
             id: uuidv4(),
@@ -37,7 +38,7 @@ const createLabel = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {

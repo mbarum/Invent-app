@@ -1,6 +1,7 @@
 import { User, UserRole } from '@masuma-ea/types';
 import { PERMISSIONS, ROLES } from '../config/permissions';
-import { Request, Response, NextFunction } from 'express';
+// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 
 // Extend the Express Request and Session interfaces
 declare global {
@@ -15,7 +16,7 @@ declare global {
 }
 
 // FIX: Explicitly typed middleware function parameters for correct type inference and to resolve overload errors.
-export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+export const isAuthenticated: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
     if (req.session && req.session.user) {
         req.user = req.session.user;
         return next();
@@ -24,7 +25,7 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
 };
 
 // FIX: Explicitly typed middleware function parameters for correct type inference and to resolve overload errors.
-export const hasPermission = (permission: string) => {
+export const hasPermission = (permission: string): RequestHandler => {
     return (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required.' });
