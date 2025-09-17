@@ -8,6 +8,7 @@ import Pagination from '../components/ui/Pagination';
 import { PlusCircle, Printer, X, LoaderCircle } from 'lucide-react';
 import { ShippingLabel, ShippingStatus, Branch, Customer } from '@masuma-ea/types';
 import ShippingLabelPrint from '../components/ShippingLabelPrint';
+// FIX: Removed .ts extension for proper module resolution.
 import { getBranches, createShippingLabel, updateShippingLabelStatus, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';

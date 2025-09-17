@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { User, UserRole } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import * as api from '../services/api';
 import { ROLES } from '../config/permissions';
 

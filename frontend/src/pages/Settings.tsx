@@ -3,6 +3,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../co
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Textarea from '../components/ui/Textarea';
+// FIX: Removed .ts extension for proper module resolution.
 import { updateSettings } from '../services/api';
 import { AppSettings } from '@masuma-ea/types';
 import toast from 'react-hot-toast';

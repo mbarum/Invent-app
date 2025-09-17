@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
+// FIX: Removed .ts extension for proper module resolution.
 import { registerUser } from '../services/api';
 import { LoaderCircle } from 'lucide-react';
 import Logo from '../components/Logo';

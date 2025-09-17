@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Product, Customer, Branch, Sale, Invoice, ShippingLabel, AppSettings, UserNotification } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { getProducts, getCustomers, getBranches, getSales, getUnpaidInvoiceSnippets, getShippingLabels, getSettings, getNotifications, markNotificationsRead } from '../services/api';
 import toast from 'react-hot-toast';
 

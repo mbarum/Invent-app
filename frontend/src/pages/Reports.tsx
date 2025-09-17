@@ -4,6 +4,7 @@ import { Branch, Sale, Customer, ShippingLabel, ShippingStatus } from '@masuma-e
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
+// FIX: Removed .ts extension for proper module resolution.
 import { getSales, getCustomers, getShipments } from '../services/api';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import toast from 'react-hot-toast';

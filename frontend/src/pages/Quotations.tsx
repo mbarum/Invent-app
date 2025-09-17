@@ -7,6 +7,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { PlusCircle, LoaderCircle, AlertTriangle, X, Minus, Plus, RefreshCw, Check, Send, Eye, Printer, Download } from 'lucide-react';
 import { Quotation, QuotationStatus, Branch, Customer, Product, QuotationPayload } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { getQuotations, createQuotation, updateQuotationStatus, convertQuotationToInvoice, getQuotationDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import Input from '../components/ui/Input';

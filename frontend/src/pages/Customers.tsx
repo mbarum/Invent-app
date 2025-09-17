@@ -10,6 +10,7 @@ import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download } from 'lucide-react';
 // FIX: Import types from the types package and remove extensions from local imports.
 import { Customer, CustomerTransactions } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { getCustomers, createCustomer, getCustomerTransactions } from '../services/api';
 import toast from 'react-hot-toast';
 import { useDataStore } from '../store/dataStore';

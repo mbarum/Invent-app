@@ -6,6 +6,7 @@ import Input from '../components/ui/Input';
 import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle, Download, Eye, Printer } from 'lucide-react';
 import { Sale, Customer, Branch } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { getSales, getCustomers, getSaleDetails } from '../services/api';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import Button from '../components/ui/Button';

@@ -8,6 +8,7 @@ import Pagination from '../components/ui/Pagination';
 import Modal from '../components/ui/Modal';
 import { Printer, Eye, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
 import { Invoice, InvoiceStatus, Branch } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { getInvoices, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';
 import InvoicePrint from '../components/InvoicePrint';

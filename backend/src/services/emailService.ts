@@ -1,104 +1,68 @@
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import { ApplicationStatus } from '@masuma-ea/types';
 
-dotenv.config();
-
-// --- SMTP Configuration ---
-// NOTE: These environment variables must be set in your .env file for emails to work.
-const smtpConfig = {
+const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: (process.env.SMTP_PORT === '465'), // true for 465, false for other ports
+    port: Number(process.env.SMTP_PORT),
+    secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-};
+});
 
-const transporter = nodemailer.createTransport(smtpConfig);
-
-const SENDER_EMAIL = 'notifications@masuma.africa';
-
-// Verify transporter configuration on startup
-if (smtpConfig.host && smtpConfig.auth.user) {
-    transporter.verify((error, success) => {
-        if (error) {
-            console.error('❌ Email service (SMTP) configuration error:', error.message);
-        } else {
-            console.log('✅ Email service (SMTP) is configured and ready to send messages.');
-        }
-    });
-} else {
-    console.warn('⚠️ Email service (SMTP) is not configured. Environment variables (SMTP_HOST, SMTP_USER, etc.) are missing. Emails will not be sent.');
-}
-
-/**
- * Sends a notification email.
- * @param to The recipient's email address.
- * @param subject The email subject.
- * @param html The HTML body of the email.
- */
-export const sendNotificationEmail = async (to: string, subject: string, html: string): Promise<void> => {
-    // Don't attempt to send if the service isn't configured.
-    if (!smtpConfig.host || !smtpConfig.auth.user) {
-        console.log(`Skipping email to ${to} because email service is not configured.`);
-        return;
-    }
-
-    const mailOptions = {
-        from: `"Masuma EA Hub" <${SENDER_EMAIL}>`,
-        to,
-        subject,
-        html,
-    };
-
+const sendEmail = async (to: string, subject: string, html: string) => {
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully to ${to} with subject: "${subject}"`);
+        await transporter.sendMail({
+            from: `"Masuma EA" <${process.env.SMTP_USER}>`,
+            to,
+            subject,
+            html,
+        });
+        console.log(`Email sent to ${to}`);
     } catch (error) {
-        console.error(`Failed to send email to ${to}:`, error);
-        // We log the error but don't re-throw it, so the main application flow is not interrupted.
+        console.error(`Error sending email to ${to}:`, error);
+        // In a production app, you might want to add more robust error handling or a retry mechanism.
     }
 };
 
-// --- HTML TEMPLATE HELPERS ---
+export const sendApplicationReceivedEmail = async (to: string, name: string) => {
+    const subject = 'Your Masuma EA Wholesale Application has been Received';
+    const html = `
+        <h1>Thank you for your application, ${name}!</h1>
+        <p>We have successfully received your application for a Masuma East Africa wholesale account.</p>
+        <p>Our team will review your details and documents. You will receive another email once your application has been approved or if we require further information.</p>
+        <p>Thank you,</p>
+        <p>The Masuma EA Team</p>
+    `;
+    await sendEmail(to, subject, html);
+};
 
-export const generateLowStockHtml = (productName: string, stock: number, partNumber: string, reorderAmount: number): string => `
-  <div style="font-family: sans-serif; padding: 20px; color: #333;">
-    <h2 style="color: #d9534f;">Low Stock Alert</h2>
-    <p>This is an automated notification that the stock for the following product is running low:</p>
-    <ul>
-      <li><strong>Product:</strong> ${productName}</li>
-      <li><strong>Part Number:</strong> ${partNumber}</li>
-      <li><strong>Current Stock:</strong> ${stock} units</li>
-      <li><strong>Recommended Reorder Quantity:</strong> ${reorderAmount} units</li>
-    </ul>
-    <p>Please take action to replenish the stock to avoid shortages.</p>
-    <p style="font-size: 0.9em; color: #777;">Masuma EA Hub - Inventory Management</p>
-  </div>
-`;
+export const sendApplicationStatusEmail = async (to: string, name: string, status: ApplicationStatus) => {
+    let subject = '';
+    let html = '';
 
-export const generateNewB2BAppHtml = (appName: string, contactName: string): string => `
-  <div style="font-family: sans-serif; padding: 20px; color: #333;">
-    <h2 style="color: #5cb85c;">New B2B Application</h2>
-    <p>A new wholesale account application has been submitted by:</p>
-    <ul>
-      <li><strong>Business Name:</strong> ${appName}</li>
-      <li><strong>Contact Person:</strong> ${contactName}</li>
-    </ul>
-    <p>Please log in to the Masuma EA Hub to review and approve/reject the application.</p>
-    <p style="font-size: 0.9em; color: #777;">Masuma EA Hub - B2B Management</p>
-  </div>
-`;
+    if (status === ApplicationStatus.APPROVED) {
+        subject = 'Your Masuma EA Wholesale Application is Approved!';
+        html = `
+            <h1>Congratulations, ${name}!</h1>
+            <p>Your application for a Masuma East Africa wholesale account has been <strong>approved</strong>.</p>
+            <p>You can now log in to the B2B portal using the email and password you provided during registration to start making stock requests.</p>
+            <p>Welcome aboard!</p>
+            <p>The Masuma EA Team</p>
+        `;
+    } else if (status === ApplicationStatus.REJECTED) {
+        subject = 'Update on Your Masuma EA Wholesale Application';
+        html = `
+            <h1>Hello ${name},</h1>
+            <p>Thank you for your interest in a Masuma East Africa wholesale account. After careful review, we regret to inform you that your application could not be approved at this time.</p>
+            <p>If you believe this is in error or have further questions, please contact our support team.</p>
+            <p>Sincerely,</p>
+            <p>The Masuma EA Team</p>
+        `;
+    }
 
-export const generateNewStockRequestHtml = (clientName: string, requestId: number): string => `
-  <div style="font-family: sans-serif; padding: 20px; color: #333;">
-    <h2 style="color: #337ab7;">New Stock Request Received</h2>
-    <p>A new stock request has been submitted by B2B client <strong>${clientName}</strong>.</p>
-    <ul>
-      <li><strong>Request ID:</strong> REQ-${String(requestId).padStart(5, '0')}</li>
-    </ul>
-    <p>Please log in to the Masuma EA Hub to review the request details and take action.</p>
-    <p style="font-size: 0.9em; color: #777;">Masuma EA Hub - Stock Request Management</p>
-  </div>
-`;
+    if (subject && html) {
+        await sendEmail(to, subject, html);
+    }
+};

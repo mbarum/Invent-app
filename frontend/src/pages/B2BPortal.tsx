@@ -8,6 +8,7 @@ import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, Search, Plus, Minus, X, CheckCircle, PackagePlus, History } from 'lucide-react';
 import { useDataStore } from '../store/dataStore';
 import { Product, Branch, StockRequest, StockRequestStatus, StockRequestItem, CreateStockRequestPayload } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { createStockRequest, getMyStockRequests, getStockRequestDetails } from '../services/api';
 import toast from 'react-hot-toast';
 

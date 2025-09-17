@@ -5,27 +5,49 @@ import { Toaster } from 'react-hot-toast';
 
 // FIX: Remove .tsx file extensions from imports for proper module resolution.
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import ProtectedRoute from './components/ProtectedRoute';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Layout from './components/Layout';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Login from './pages/Login';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Register from './pages/Register';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Dashboard from './pages/Dashboard';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Inventory from './pages/Inventory';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Sales from './pages/Sales';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Customers from './pages/Customers';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import POS from './pages/POS';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Shipping from './pages/Shipping';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import VinPicker from './pages/VinPicker';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Reports from './pages/Reports';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Settings from './pages/Settings';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Users from './pages/Users';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Profile from './pages/Profile';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Invoices from './pages/Invoices';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Quotations from './pages/Quotations';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import B2BManagement from './pages/B2BManagement';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import B2BPortal from './pages/B2BPortal';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import Branches from './pages/Branches';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import AuditLogs from './pages/AuditLogs';
+// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import MpesaTransactions from './pages/MpesaTransactions';
 
 // FIX: Remove .ts file extensions from imports for proper module resolution.

@@ -211,21 +211,30 @@ const B2BManagement: React.FC = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">B2B Management</h1>
+            <div className="border-b border-gray-700">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button
+                        onClick={() => setActiveTab('applications')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                            activeTab === 'applications' ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                        }`}
+                    >
+                        Applications
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('requests')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                            activeTab === 'requests' ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                        }`}
+                    >
+                        Stock Requests
+                    </button>
+                </nav>
+            </div>
             <Card>
-                <CardHeader>
-                    <div className="border-b border-gray-700">
-                        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                            <button onClick={() => setActiveTab('applications')} className={`${activeTab === 'applications' ? 'border-orange-500 text-orange-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}>
-                                New Applications
-                            </button>
-                            <button onClick={() => setActiveTab('requests')} className={`${activeTab === 'requests' ? 'border-orange-500 text-orange-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}>
-                                Stock Requests
-                            </button>
-                        </nav>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {activeTab === 'applications' ? <ApplicationsManager /> : <StockRequestsManager />}
+                <CardContent className="p-0">
+                    {activeTab === 'applications' && <ApplicationsManager />}
+                    {activeTab === 'requests' && <StockRequestsManager />}
                 </CardContent>
             </Card>
         </div>

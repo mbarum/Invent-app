@@ -6,6 +6,7 @@ import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import { PlusCircle, Edit, LoaderCircle } from 'lucide-react';
 import { Branch } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { createBranch, updateBranch } from '../services/api';
 import toast from 'react-hot-toast';
 import { useDataStore } from '../store/dataStore';

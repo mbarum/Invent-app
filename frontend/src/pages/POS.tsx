@@ -6,6 +6,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import { Product, Customer, Branch, Invoice, InvoiceStatus, Sale } from '@masuma-ea/types';
+// FIX: Removed .ts extension for proper module resolution.
 import { createSale, getInvoices, getInvoiceDetails, initiateMpesaPayment, getMpesaPaymentStatus, createCustomer } from '../services/api';
 import { User, Search, X, Plus, Minus, Printer, LoaderCircle, FileText, Ban, Download, CheckCircle, XCircle, UserPlus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';

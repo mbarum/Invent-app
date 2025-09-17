@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import { Search, LoaderCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import toast from 'react-hot-toast';
+// FIX: Removed .ts extension for proper module resolution.
 import { getPartsByVin } from '../services/api';
 import { VinSearchResult } from '@masuma-ea/types';
 
