@@ -340,9 +340,13 @@ const POS: React.FC = () => {
         if (!element || !completedSale) return;
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
         try {
-            const canvas = await html2canvas(element, { scale: 2, backgroundColor: null });
+            const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
             const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [80, 297] // 80mm wide (thermal receipt)
+            });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const imgProps = pdf.getImageProperties(imgData);
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -506,7 +510,7 @@ const POS: React.FC = () => {
         </Modal>
 
         {completedSale && (
-            <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
                 <Card className="max-w-md w-full animate-in fade-in-0 zoom-in-95">
                     <CardHeader>
                         <CardTitle>Sale Complete: {completedSale.saleNo}</CardTitle>
@@ -523,7 +527,13 @@ const POS: React.FC = () => {
                         <Button size="lg" className="w-full mt-4" onClick={resetSale}>Start New Sale</Button>
                     </CardContent>
                 </Card>
-                <div className="hidden print:block"><ReceiptPrint sale={completedSale} /></div>
+            </div>
+        )}
+        
+        {/* This div is only for printing */}
+        {completedSale && (
+            <div className="print-area">
+                 <ReceiptPrint sale={completedSale} />
             </div>
         )}
       </>

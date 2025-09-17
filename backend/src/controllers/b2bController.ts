@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -15,8 +14,8 @@ import { sendApplicationReceivedEmail, sendApplicationStatusEmail } from '../ser
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const registerB2B: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     if (!req.files || !('certOfInc' in req.files) || !('cr12' in req.files)) {
@@ -60,8 +59,8 @@ const registerB2B: RequestHandler = async (req: Request, res: Response, next: Ne
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getApplications: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getApplications = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const applications = await db('b2b_applications').select('*').orderBy('submittedAt', 'desc');
         res.status(200).json(applications);
@@ -70,8 +69,8 @@ const getApplications: RequestHandler = async (req: Request, res: Response, next
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateApplicationStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateApplicationStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body as { status: ApplicationStatus };
     const adminUser = req.user!;
@@ -90,16 +89,16 @@ const updateApplicationStatus: RequestHandler = async (req: Request, res: Respon
             await trx('b2b_applications').where({ id }).update({ status });
 
             if (status === ApplicationStatus.APPROVED) {
-                const newUser = {
+                const newUserData = {
                     id: uuidv4(),
                     name: application.contactName,
                     email: application.contactEmail,
                     passwordHash: application.passwordHash,
                     role: UserRole.B2B_CLIENT,
                     b2bApplicationId: application.id,
-                    status: 'Active',
+                    status: 'Active'
                 };
-                await trx('users').insert(newUser);
+                await trx('users').insert(newUserData);
             }
         });
         
@@ -112,12 +111,7 @@ const updateApplicationStatus: RequestHandler = async (req: Request, res: Respon
     }
 };
 
-const uploadFields = upload.fields([
-    { name: 'certOfInc', maxCount: 1 },
-    { name: 'cr12', maxCount: 1 }
-]);
-
-router.post('/register', uploadFields, validate(registerSchema), registerB2B);
+router.post('/register', upload.fields([{ name: 'certOfInc', maxCount: 1 }, { name: 'cr12', maxCount: 1 }]), validate(registerSchema), registerB2B);
 router.get('/applications', isAuthenticated, hasPermission(PERMISSIONS.MANAGE_B2B_APPLICATIONS), getApplications);
 router.patch('/applications/:id/status', isAuthenticated, hasPermission(PERMISSIONS.MANAGE_B2B_APPLICATIONS), validate(updateB2BStatusSchema), updateApplicationStatus);
 

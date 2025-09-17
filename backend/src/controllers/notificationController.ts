@@ -1,12 +1,11 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getNotifications: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user!.id;
     try {
         // This endpoint can be expanded to include other notification types
@@ -21,8 +20,8 @@ const getNotifications: RequestHandler = async (req: Request, res: Response, nex
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const markRead: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const markRead = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user!.id;
     const { ids } = req.body;
     

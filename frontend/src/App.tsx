@@ -52,12 +52,25 @@ import MpesaTransactions from './pages/MpesaTransactions';
 
 // FIX: Remove .ts file extensions from imports for proper module resolution.
 import { PERMISSIONS } from './config/permissions';
+import { UserRole } from '@masuma-ea/types';
 
 // A wrapper to handle redirection for authenticated users trying to access login/register
-// FIX: Explicitly typed as React.FC with children prop to fix type inference issue.
+// FIX: Updated to redirect to a role-appropriate default page instead of always '/dashboard'.
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/dashboard" /> : <>{children}</>;
+  const { user, isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+      const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
+      return <Navigate to={defaultRoute} replace />;
+  }
+  return <>{children}</>;
+};
+
+// FIX: A component to handle role-based redirection from the root path.
+const HomeRedirect = () => {
+    const { user } = useAuth();
+    // B2B clients have a different default page than staff.
+    const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
+    return <Navigate to={defaultRoute} replace />;
 };
 
 
@@ -71,7 +84,7 @@ const App: React.FC = () => {
           
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute permission={null}><Layout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<HomeRedirect />} />
             <Route path="dashboard" element={<ProtectedRoute permission={PERMISSIONS.VIEW_DASHBOARD}><Dashboard /></ProtectedRoute>} />
             <Route path="pos" element={<ProtectedRoute permission={PERMISSIONS.USE_POS}><POS /></ProtectedRoute>} />
             <Route path="inventory" element={<ProtectedRoute permission={PERMISSIONS.VIEW_INVENTORY}><Inventory /></ProtectedRoute>} />

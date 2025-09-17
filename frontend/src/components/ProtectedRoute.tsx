@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
+import { UserRole } from '@masuma-ea/types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission }) => {
-  const { isAuthenticated, isLoading, hasPermission } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -25,9 +26,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   }
   
   if (!hasPermission(permission)) {
-      // For unauthorized access, redirect to a safe default page.
-      // A dedicated "Unauthorized" page could also be created.
-      return <Navigate to="/dashboard" replace />;
+      // FIX: Redirect to a role-appropriate default page to prevent infinite loops for users without dashboard access.
+      const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
+      return <Navigate to={defaultRoute} replace />;
   }
 
   return <>{children}</>;

@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { StockRequestStatus, UserRole } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -11,8 +10,8 @@ import { createNotification } from '../services/notificationService';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createRequest: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const createRequest = async (req: Request, res: Response, next: NextFunction) => {
     const { branchId, items } = req.body;
     const b2bUserId = req.user!.id;
 
@@ -22,11 +21,13 @@ const createRequest: RequestHandler = async (req: Request, res: Response, next: 
             const products = await trx('products').whereIn('id', productIds).select('id', 'wholesalePrice');
             const productPriceMap = new Map(products.map(p => [p.id, p.wholesalePrice]));
 
-            const [request] = await trx('stock_requests').insert({
+            const [requestId] = await trx('stock_requests').insert({
                 b2bUserId,
                 branchId,
                 status: StockRequestStatus.PENDING,
-            }).returning('*');
+            });
+
+            const request = await trx('stock_requests').where({ id: requestId }).first();
 
             const requestItems = items.map((item: any) => ({
                 stockRequestId: request.id,
@@ -62,8 +63,8 @@ const createRequest: RequestHandler = async (req: Request, res: Response, next: 
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getMyRequests: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getMyRequests = async (req: Request, res: Response, next: NextFunction) => {
     const b2bUserId = req.user!.id;
     try {
         const requests = await db('stock_requests')
@@ -79,8 +80,8 @@ const getMyRequests: RequestHandler = async (req: Request, res: Response, next: 
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getAllRequests: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
      try {
         const requests = await db('stock_requests')
             .select(
@@ -99,8 +100,8 @@ const getAllRequests: RequestHandler = async (req: Request, res: Response, next:
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getRequestDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const request = await db('stock_requests').where({ id }).first();
@@ -122,13 +123,14 @@ const getRequestDetails: RequestHandler = async (req: Request, res: Response, ne
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
-        const [updatedRequest] = await db('stock_requests').where({ id }).update({ status }).returning('*');
-        if (!updatedRequest) return res.status(404).json({ message: 'Request not found.' });
+        const count = await db('stock_requests').where({ id }).update({ status });
+        if (count === 0) return res.status(404).json({ message: 'Request not found.' });
+        const updatedRequest = await db('stock_requests').where({ id }).first();
         
         await createNotification(
             updatedRequest.b2bUserId,

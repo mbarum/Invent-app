@@ -1,13 +1,12 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getLogs: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getLogs = async (req: Request, res: Response, next: NextFunction) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 15;
     const offset = (page - 1) * limit;

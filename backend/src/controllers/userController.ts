@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -11,8 +10,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getUsers: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await db('users')
             .select('id', 'name', 'email', 'role', 'status', 'b2bApplicationId', 'customerId')
@@ -23,58 +22,61 @@ const getUsers: RequestHandler = async (req: Request, res: Response, next: NextF
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createUser: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role, status } = req.body;
     try {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
+        const userId = uuidv4();
 
-        const [newUser] = await db('users').insert({
-            id: uuidv4(),
+        await db('users').insert({
+            id: userId,
             name,
             email,
             passwordHash,
             role,
             status: status || 'Active',
-        }).returning('*');
+        });
+        
+        const newUser = await db('users').where({ id: userId }).first();
 
         const { passwordHash: _, ...userToReturn } = newUser;
         await auditLog(req.user!.id, 'USER_CREATE', { createdUserId: newUser.id, email: newUser.email });
         res.status(201).json(userToReturn);
     } catch (error) {
-        if ((error as any).code === '23505') { // Unique constraint violation
+        if ((error as any).code === '23505' || (error as any).code === 'ER_DUP_ENTRY') { // Unique constraint violation
             return res.status(409).json({ message: 'User with this email already exists.' });
         }
         next(error);
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateUser: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
     try {
-        const [updatedUser] = await db('users')
+        const count = await db('users')
             .where({ id })
-            .update({ name, email, role, status })
-            .returning('*');
+            .update({ name, email, role, status });
 
-        if (!updatedUser) return res.status(404).json({ message: 'User not found.' });
+        if (count === 0) return res.status(404).json({ message: 'User not found.' });
         
+        const updatedUser = await db('users').where({ id }).first();
         const { passwordHash: _, ...userToReturn } = updatedUser;
         await auditLog(req.user!.id, 'USER_UPDATE', { updatedUserId: id, changes: req.body });
         res.status(200).json(userToReturn);
     } catch (error) {
-        if ((error as any).code === '23505') {
+        if ((error as any).code === '23505' || (error as any).code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ message: 'This email is already in use.' });
         }
         next(error);
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateCurrentUserPassword: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateCurrentUserPassword = async (req: Request, res: Response, next: NextFunction) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;
     try {

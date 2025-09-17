@@ -1,15 +1,14 @@
 import Joi from 'joi';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { RequestHandler } from 'express';
 
 /**
  * A generic middleware to validate the request body against a Joi schema.
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Explicitly typed middleware parameters to ensure correct handler signature and resolve overload errors in controllers.
-export const validate = (schema: Joi.Schema): RequestHandler => (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly type the middleware generator to return a RequestHandler. This allows TypeScript to properly infer the types of req, res, and next, fixing errors on req.body, req.params, etc.
+export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
     // We validate req.body for most POST/PUT, but some data might be in other places for multipart forms
     const dataToValidate = { ...req.body, ...req.params, ...req.query };
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Product, Customer, Branch, Sale, Invoice, ShippingLabel, AppSettings, UserNotification } from '@masuma-ea/types';
+import { Product, Customer, Branch, Sale, Invoice, ShippingLabel, AppSettings, UserNotification, User, UserRole } from '@masuma-ea/types';
 // FIX: Removed .ts extension for proper module resolution.
 import { getProducts, getCustomers, getBranches, getSales, getUnpaidInvoiceSnippets, getShippingLabels, getSettings, getNotifications, markNotificationsRead } from '../services/api';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ interface SharedDataState {
   unreadCount: number;
   isInitialDataLoaded: boolean;
   
-  fetchInitialData: () => Promise<void>;
+  fetchInitialData: (user: User) => Promise<void>;
   refetchProducts: () => Promise<void>;
   refetchCustomers: () => Promise<void>;
   refetchSales: () => Promise<void>;
@@ -44,27 +44,51 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   unreadCount: 0,
   isInitialDataLoaded: false,
 
-  fetchInitialData: async () => {
+  fetchInitialData: async (user: User) => {
     if (get().isInitialDataLoaded) return;
     try {
-      // FIX: Destructure responses and handle different API return shapes before setting state.
-      const [productsResponse, customersResponse, branches, salesResponse, legacyInvoices, shippingLabels, appSettings] = await Promise.all([
+      // FIX: Fetch data conditionally based on user role to prevent permission errors.
+      const commonPromises = [
         getProducts(),
-        getCustomers(),
         getBranches(),
+        getSettings(),
+      ];
+
+      const staffPromises = user.role !== UserRole.B2B_CLIENT ? [
+        getCustomers(),
         getSales(),
         getUnpaidInvoiceSnippets(),
         getShippingLabels(),
-        getSettings(),
-      ]);
-      // FIX: Correctly extract arrays from potentially paginated responses.
+      ] : [];
+
+      const [
+          productsResponse, 
+          branches, 
+          appSettings,
+          customersResponse, // may be undefined
+          salesResponse, // may be undefined
+          legacyInvoices, // may be undefined
+          shippingLabels, // may be undefined
+      ] = await Promise.all([...commonPromises, ...staffPromises]);
+      
       const products = Array.isArray(productsResponse) ? productsResponse : productsResponse.products;
-      const customers = customersResponse.customers;
-      const sales = Array.isArray(salesResponse) ? salesResponse : salesResponse.sales;
-      set({ products, customers, branches, sales, legacyInvoices, shippingLabels, appSettings, isInitialDataLoaded: true });
+      const customers = customersResponse ? customersResponse.customers : [];
+      const sales = salesResponse ? (Array.isArray(salesResponse) ? salesResponse : salesResponse.sales) : [];
+
+      set({ 
+          products, 
+          customers, 
+          branches, 
+          sales, 
+          legacyInvoices: legacyInvoices || [], 
+          shippingLabels: shippingLabels || [], 
+          appSettings, 
+          isInitialDataLoaded: true 
+      });
+
     } catch (error) {
       console.error("Failed to fetch initial shared data:", error);
-      // Handle error appropriately, maybe set an error state
+      toast.error("Failed to load application data. Permissions may be limited.");
     }
   },
   

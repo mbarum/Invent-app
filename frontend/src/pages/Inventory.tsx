@@ -6,9 +6,9 @@ import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
 import Pagination from '../components/ui/Pagination';
-import { PlusCircle, Edit, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
+import { PlusCircle, Edit, LoaderCircle, AlertTriangle, Download, Upload } from 'lucide-react';
 import { Product } from '@masuma-ea/types';
-import { getProducts, createProduct, updateProduct } from '../services/api';
+import { getProducts, createProduct, updateProduct, bulkImportProducts, BulkImportResponse } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/permissions';
@@ -52,6 +52,12 @@ const Inventory: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [formData, setFormData] = useState<Partial<Product> & { oemNumbersStr?: string }>({});
+    
+    // Bulk import state
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState<BulkImportResponse | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -125,11 +131,59 @@ const Inventory: React.FC = () => {
     
     const handleExport = async () => {
         try {
-            const { products: allProducts } = await getProducts(); // Fetch all for export
+            const { products: allProducts } = await getProducts({limit: 9999}); // Fetch all for export
             exportToCsv('inventory_export', ['Part Number', 'Name', 'Retail Price', 'Wholesale Price', 'Stock'], allProducts, ['partNumber', 'name', 'retailPrice', 'wholesalePrice', 'stock']);
         } catch (e) {
             toast.error("Failed to export inventory.");
         }
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = ['partNumber', 'name', 'retailPrice', 'wholesalePrice', 'stock', 'oemNumbers', 'notes'];
+        const csvContent = headers.join(',');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'inventory_template.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setImportFile(e.target.files[0]);
+        }
+    };
+
+    const handleImportSubmit = async () => {
+        if (!importFile) {
+            toast.error("Please select a file to import.");
+            return;
+        }
+        setIsImporting(true);
+        setImportResult(null);
+        try {
+            const result = await bulkImportProducts(importFile);
+            setImportResult(result);
+            toast.success(`Import complete: ${result.successCount} rows processed.`);
+            await fetchProducts();
+            await refetchProducts();
+        } catch (err: any) {
+            toast.error(`Import failed: ${err.message}`);
+            setImportResult({ successCount: 0, errorCount: 0, errors: ["An unexpected error occurred."] });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+    
+    const closeImportModal = () => {
+        setIsImportModalOpen(false);
+        setImportFile(null);
+        setImportResult(null);
+        setIsImporting(false);
     };
 
     const renderContent = () => {
@@ -185,9 +239,14 @@ const Inventory: React.FC = () => {
                             <Download className="mr-2 h-4 w-4"/> Export CSV
                         </Button>
                         {canManageInventory && (
+                           <>
+                            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)}>
+                                <Upload className="mr-2 h-4 w-4"/> Bulk Import
+                            </Button>
                             <Button onClick={() => handleOpenModal()}>
                                 <PlusCircle className="mr-2 h-5 w-5" /> Add Product
                             </Button>
+                           </>
                         )}
                     </div>
                 </div>
@@ -232,6 +291,48 @@ const Inventory: React.FC = () => {
                         <Button type="submit">Save Product</Button>
                     </div>
                 </form>
+            </Modal>
+
+            <Modal isOpen={isImportModalOpen} onClose={closeImportModal} title="Bulk Import Products">
+                <div className="space-y-4">
+                    {!importResult ? (
+                        <>
+                        <p className="text-sm text-gray-400">
+                            Upload a CSV file to add new products or update existing ones. The system will use the 
+                            <code className="bg-gray-700 text-orange-400 p-1 rounded-md text-xs mx-1">partNumber</code> column to match records.
+                        </p>
+                        <Button variant="ghost" size="sm" onClick={handleDownloadTemplate} className="text-orange-400 hover:text-orange-300">
+                            <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                        </Button>
+                        <Input type="file" name="file" accept=".csv" onChange={handleFileChange} />
+                        {importFile && <p className="text-xs text-gray-400">Selected file: {importFile.name}</p>}
+                        <div className="flex justify-end space-x-2 pt-2">
+                            <Button variant="secondary" onClick={closeImportModal}>Cancel</Button>
+                            <Button onClick={handleImportSubmit} disabled={isImporting || !importFile}>
+                                {isImporting ? <LoaderCircle className="animate-spin mr-2 h-4 w-4"/> : <Upload className="mr-2 h-4 w-4"/>}
+                                {isImporting ? "Importing..." : "Upload and Import"}
+                            </Button>
+                        </div>
+                        </>
+                    ) : (
+                        <div>
+                            <h3 className="text-lg font-semibold text-center mb-2">Import Complete</h3>
+                            <p className="text-center text-gray-300">Successfully processed: {importResult.successCount} rows.</p>
+                            <p className="text-center text-red-400">Failed or skipped: {importResult.errorCount} rows.</p>
+                            {importResult.errors && importResult.errors.length > 0 && (
+                                <div className="mt-4 p-2 bg-gray-900/50 border border-gray-700 rounded-md max-h-40 overflow-y-auto">
+                                    <h4 className="text-sm font-semibold mb-1">Error Details:</h4>
+                                    <ul className="text-xs text-red-300 list-disc list-inside">
+                                        {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+                            <div className="flex justify-center mt-4">
+                               <Button onClick={closeImportModal}>Close</Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </Modal>
         </>
     );

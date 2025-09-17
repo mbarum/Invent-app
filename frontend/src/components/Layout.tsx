@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 // FIX: Remove .tsx and .ts extensions from imports for proper module resolution.
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { Branch } from '@masuma-ea/types';
+import { Branch, User } from '@masuma-ea/types';
 import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
 import { useDataStore } from '../store/dataStore';
@@ -25,10 +25,12 @@ const Layout: React.FC = () => {
   const [currentCurrency, setCurrentCurrency] = useState<string>('KES');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   
-  // Fetch all shared data once on layout mount
+  // Fetch all shared data once on layout mount, passing the user for role-based fetching
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (user) {
+        fetchInitialData(user as User);
+    }
+  }, [fetchInitialData, user]);
 
   // Set the current branch once branch data is loaded
   useEffect(() => {
@@ -47,7 +49,7 @@ const Layout: React.FC = () => {
     };
   }, [user, startNotificationPolling, stopNotificationPolling]);
 
-  if (!isInitialDataLoaded || !currentBranch) {
+  if (!isInitialDataLoaded || (user?.role !== 'B2B Client' && !currentBranch)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-900">
         <LoaderCircle className="h-12 w-12 animate-spin text-orange-500" />
@@ -63,7 +65,7 @@ const Layout: React.FC = () => {
         <Header 
           onMenuClick={() => setSidebarOpen(true)}
           branches={branches}
-          currentBranch={currentBranch}
+          currentBranch={currentBranch!}
           onBranchChange={setCurrentBranch}
           currencies={Object.keys(exchangeRates)}
           currentCurrency={currentCurrency}

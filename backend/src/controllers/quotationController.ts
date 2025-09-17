@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -10,12 +9,12 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createQuotation: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
         const newQuotation = await db.transaction(async (trx) => {
-            const [quotation] = await trx('quotations').insert({
+            const [quotationId] = await trx('quotations').insert({
                 quotationNo: `QUO-${Date.now()}`,
                 customerId,
                 branchId,
@@ -25,7 +24,9 @@ const createQuotation: RequestHandler = async (req: Request, res: Response, next
                 taxAmount,
                 totalAmount,
                 status: QuotationStatus.DRAFT
-            }).returning('*');
+            });
+
+            const quotation = await trx('quotations').where({ id: quotationId }).first();
 
             const quotationItems = items.map((item: any) => ({
                 quotationId: quotation.id,
@@ -45,8 +46,8 @@ const createQuotation: RequestHandler = async (req: Request, res: Response, next
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getQuotations: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const quotations = await db('quotations')
             .select('quotations.*', 'customers.name as customerName')
@@ -58,8 +59,8 @@ const getQuotations: RequestHandler = async (req: Request, res: Response, next: 
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getQuotationDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
         const quotation = await db('quotations').where('quotations.id', id).first();
@@ -79,13 +80,14 @@ const getQuotationDetails: RequestHandler = async (req: Request, res: Response, 
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
-        const [updatedQuotation] = await db('quotations').where({ id }).update({ status }).returning('*');
-        if (!updatedQuotation) return res.status(404).json({ message: 'Quotation not found.' });
+        const count = await db('quotations').where({ id }).update({ status });
+        if (count === 0) return res.status(404).json({ message: 'Quotation not found.' });
+        const updatedQuotation = await db('quotations').where({ id }).first();
         await auditLog(req.user!.id, 'QUOTATION_STATUS_UPDATE', { quotationId: id, newStatus: status });
         res.status(200).json(updatedQuotation);
     } catch (error) {
@@ -93,8 +95,8 @@ const updateStatus: RequestHandler = async (req: Request, res: Response, next: N
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const convertToInvoice: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');
     const invoiceDueDays = settings.find(s => s.settingKey === 'invoiceDueDays')?.settingValue || 30;
@@ -110,7 +112,7 @@ const convertToInvoice: RequestHandler = async (req: Request, res: Response, nex
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + Number(invoiceDueDays));
 
-            const [invoice] = await trx('invoices').insert({
+            const [invoiceId] = await trx('invoices').insert({
                 invoiceNo: `INV-${Date.now()}`,
                 customerId: quotation.customerId,
                 branchId: quotation.branchId,
@@ -119,7 +121,9 @@ const convertToInvoice: RequestHandler = async (req: Request, res: Response, nex
                 totalAmount: quotation.totalAmount,
                 amountPaid: 0,
                 status: InvoiceStatus.UNPAID
-            }).returning('*');
+            });
+            
+            const invoice = await trx('invoices').where({ id: invoiceId }).first();
 
             const invoiceItems = items.map(item => ({
                 invoiceId: invoice.id,

@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
 import { Sale, InvoiceStatus } from '@masuma-ea/types';
@@ -17,7 +16,9 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
 
     const { customerId, branchId, items, discountAmount, taxAmount, totalAmount, paymentMethod, invoiceId } = saleData;
     
-    const [newSale] = await dbOrTrx('sales').insert({
+    // FIX: Knex with MySQL returns the insertId, not the full object.
+    // The `.returning()` method is not supported and was causing `newSale.id` to be undefined.
+    const [saleId] = await dbOrTrx('sales').insert({
         saleNo: `SALE-${Date.now()}`,
         customerId,
         branchId,
@@ -26,10 +27,10 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
         totalAmount,
         paymentMethod,
         invoiceId,
-    }).returning('*');
+    });
 
     const saleItems = items.map((item: any) => ({
-        saleId: newSale.id,
+        saleId: saleId, // Use the returned ID directly.
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -51,11 +52,18 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
             .update({ status: InvoiceStatus.PAID, amountPaid: totalAmount });
     }
     
+    // FIX: Fetch the newly created sale object to return it, since the insert only gives us the ID.
+    const newSale = await dbOrTrx('sales').where({ id: saleId }).first();
+    if (!newSale) {
+        // This should theoretically not happen if the insert succeeded.
+        throw new Error('Failed to retrieve newly created sale.');
+    }
+
     return newSale;
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createSale: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const createSale = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
             return createSaleInTransaction(req.body, trx);
@@ -73,8 +81,8 @@ const createSale: RequestHandler = async (req: Request, res: Response, next: Nex
 };
 
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getSales: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getSales = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -127,8 +135,8 @@ const getSaleDetailsById = async (id: number) => {
     return { ...sale, items, customer, branch };
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getSaleDetails: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const saleDetails = await getSaleDetailsById(Number(req.params.id));
         if (!saleDetails) return res.status(404).json({ message: 'Sale not found.' });

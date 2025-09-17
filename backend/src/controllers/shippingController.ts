@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { ShippingStatus } from '@masuma-ea/types';
@@ -11,8 +10,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const getLabels: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const getLabels = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const labels = await db('shipping_labels').select('*').orderBy('createdAt', 'desc');
         res.status(200).json(labels);
@@ -21,14 +20,21 @@ const getLabels: RequestHandler = async (req: Request, res: Response, next: Next
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const createLabel: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const createLabel = async (req: Request, res: Response, next: NextFunction) => {
+    const labelId = uuidv4();
     try {
-        const [newLabel] = await db('shipping_labels').insert({
-            id: uuidv4(),
+        await db('shipping_labels').insert({
+            id: labelId,
             ...req.body,
             status: ShippingStatus.DRAFT,
-        }).returning('*');
+        });
+
+        const newLabel = await db('shipping_labels').where({ id: labelId }).first();
+        if (!newLabel) {
+            // This should not happen if insert was successful, but it's a good safeguard.
+            throw new Error('Failed to create or retrieve shipping label.');
+        }
         
         await auditLog(req.user!.id, 'SHIPPING_LABEL_CREATE', { labelId: newLabel.id });
         res.status(201).json(newLabel);
@@ -37,13 +43,18 @@ const createLabel: RequestHandler = async (req: Request, res: Response, next: Ne
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const updateStatus: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
-        const [updatedLabel] = await db('shipping_labels').where({ id }).update({ status }).returning('*');
-        if (!updatedLabel) return res.status(404).json({ message: 'Label not found.' });
+        const affectedRows = await db('shipping_labels').where({ id }).update({ status });
+
+        if (affectedRows === 0) {
+            return res.status(404).json({ message: 'Label not found.' });
+        }
+
+        const updatedLabel = await db('shipping_labels').where({ id }).first();
         
         await auditLog(req.user!.id, 'SHIPPING_LABEL_STATUS_UPDATE', { labelId: id, newStatus: status });
         res.status(200).json(updatedLabel);

@@ -42,6 +42,13 @@ export interface UpdatePasswordPayload {
     newPassword: string;
 }
 
+export interface BulkImportResponse {
+    successCount: number;
+    errorCount: number;
+    errors: string[];
+}
+
+
 // --- API HELPER ---
 const apiRequest = async <T>(method: string, endpoint: string, body?: any, isFormData = false): Promise<T> => {
     const options: RequestInit = {
@@ -105,6 +112,13 @@ export const createProduct = (productData: Partial<Product>): Promise<Product> =
 
 export const updateProduct = (id: string, productData: Partial<Product>): Promise<Product> =>
     apiRequest('PUT', `/products/${id}`, productData);
+
+export const bulkImportProducts = (file: File): Promise<BulkImportResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest('POST', '/products/bulk-import', formData, true);
+};
+
 
 // --- CUSTOMERS ---
 export const getCustomers = (params?: { page?: number, limit?: number, searchTerm?: string, spendingFilter?: string, recencyFilter?: string, sortKey?: string, sortDirection?: string }): Promise<{ customers: any[], total: number }> => {

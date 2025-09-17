@@ -67,7 +67,7 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                         {appSettings.paymentDetails && (
                             <div className="mb-4">
                                 <h4 className="font-bold uppercase border-b border-black mb-1">Payment Details</h4>
-                                <pre className="font-sans whitespace-pre-wrap">{appSettings.paymentDetails}</pre>
+                                <p className="font-sans whitespace-pre-wrap">{appSettings.paymentDetails}</p>
                             </div>
                         )}
                          {appSettings.paymentTerms && (

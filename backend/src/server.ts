@@ -1,8 +1,7 @@
 // This line must be at the very top
 import 'tsconfig-paths/register';
 
-// FIX: Added RequestHandler to imports for casting middleware.
-import express, { Express, Request, Response, NextFunction, RequestHandler } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
@@ -30,7 +29,6 @@ import mpesaRoutes from './controllers/mpesaController';
 import stockRequestRoutes from './controllers/stockRequestController';
 import auditRoutes from './controllers/auditController';
 import notificationRoutes from './controllers/notificationController';
-// FIX: Added AI-powered VIN search controller
 import vinSearchRoutes from './controllers/vinSearchController';
 
 
@@ -47,25 +45,20 @@ if (!SESSION_SECRET) {
 
 // --- MIDDLEWARE ---
 
-// FIX: Cast middleware to RequestHandler to resolve "No overload matches this call" error.
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
-}) as RequestHandler);
+}));
 
-// FIX: Cast middleware to RequestHandler to resolve "No overload matches this call" error.
-app.use(express.json({ limit: '10mb' }) as RequestHandler);
-// FIX: Cast middleware to RequestHandler to resolve "No overload matches this call" error.
-app.use(express.urlencoded({ extended: true, limit: '10mb' }) as RequestHandler);
-// FIX: Cast middleware to RequestHandler to resolve "No overload matches this call" error.
-app.use(cookieParser() as RequestHandler);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Session middleware
-// FIX: Use type assertion to handle CommonJS/ESM interop issue with connect-session-knex.
+// Use type assertion to handle CommonJS/ESM interop issue with connect-session-knex.
 const KnexStore = (KnexSessionStore as any)(session);
 const store = new KnexStore({ knex: db });
 
-// FIX: Cast middleware to RequestHandler to resolve "No overload matches this call" error.
 app.use(session({
     secret: SESSION_SECRET,
     store,
@@ -77,7 +70,7 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Lax is generally safer
     }
-}) as RequestHandler);
+}));
 
 
 // Serve static files (like B2B application documents)
@@ -101,7 +94,6 @@ app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/stock-requests', stockRequestRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
-// FIX: Added AI-powered VIN search route
 app.use('/api/vin-search', vinSearchRoutes);
 
 
@@ -115,10 +107,11 @@ if (process.env.NODE_ENV === 'production') {
 
     // The "catchall" handler: for any request that doesn't
     // match one above, send back React's index.html file.
-    // FIX: Explicitly typed handler parameters to resolve "No overload matches this call" error.
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Removed explicit parameter types (req: Request, res: Response) to allow RequestHandler to correctly infer them, resolving type conflicts with res.sendFile.
+    const serveFrontend = (req: Request, res: Response) => {
         res.sendFile(path.join(frontendDistPath, 'index.html'));
-    });
+    };
+    app.get('*', serveFrontend);
 }
 
 
@@ -127,14 +120,15 @@ interface AppError extends Error {
     statusCode?: number;
 }
 
-// FIX: Explicitly typed handler parameters to resolve "No overload matches this call" error.
-app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit parameter types to let ErrorRequestHandler infer them correctly, resolving type conflicts with res.status.
+const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
         message: err.message || 'An unexpected error occurred.',
     });
-});
+};
+app.use(errorHandler);
 
 
 // --- SERVER START ---

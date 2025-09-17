@@ -1,5 +1,4 @@
-// FIX: Added Request, Response, and NextFunction to imports for explicit typing.
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db';
 import { User } from '@masuma-ea/types';
@@ -23,8 +22,8 @@ const sanitizeUser = (user: any): User => {
     return sanitizedUser as User;
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const login: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const login = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -49,8 +48,8 @@ const login: RequestHandler = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const loginWithGoogle: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
     try {
         const ticket = await client.verifyIdToken({
@@ -84,8 +83,8 @@ const loginWithGoogle: RequestHandler = async (req: Request, res: Response, next
     }
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const logout: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+const logout = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
         if (err) {
@@ -99,8 +98,8 @@ const logout: RequestHandler = (req: Request, res: Response, next: NextFunction)
     });
 };
 
-// FIX: Explicitly typed controller function parameters to resolve "No overload matches this call" errors.
-const verifyAuth: RequestHandler = (req: Request, res: Response) => {
+// FIX: Correctly typed the handler parameters to ensure proper type inference for req and res.
+const verifyAuth = (req: Request, res: Response) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);
     } else {
