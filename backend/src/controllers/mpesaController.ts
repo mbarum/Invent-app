@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import axios from 'axios';
 import db from '../db';
 import { createSaleInTransaction } from './posController';
@@ -20,8 +20,8 @@ const getMpesaToken = async () => {
     return response.data.access_token;
 };
 
-// FIX: Add explicit types to controller function parameters.
-const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const initiateStkPush = async (req, res, next) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
     try {
@@ -73,8 +73,8 @@ const initiateStkPush = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const stkCallback = async (req: Request, res: Response) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const stkCallback = async (req, res) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
 
@@ -110,8 +110,8 @@ const stkCallback = async (req: Request, res: Response) => {
     res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getPaymentStatus = async (req, res, next) => {
     const { checkoutRequestId } = req.params;
     try {
         const transaction = await db('mpesa_transactions').where({ checkoutRequestId }).first();
@@ -133,8 +133,8 @@ const getPaymentStatus = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getTransactions = async (req, res, next) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 

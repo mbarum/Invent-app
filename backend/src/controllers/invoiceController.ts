@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import db from '../db';
 import { InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -6,8 +6,8 @@ import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getInvoices = async (req, res, next) => {
     const { status } = req.query;
     try {
         const query = db('invoices')
@@ -26,8 +26,8 @@ const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getInvoiceDetails = async (req, res, next) => {
     const { id } = req.params;
     try {
         const invoice = await db('invoices').where('invoices.id', id).first();
@@ -47,8 +47,8 @@ const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getUnpaidSnippets = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getUnpaidSnippets = async (req, res, next) => {
     try {
         const snippets = await db('invoices')
             .select('id', 'invoiceNo')

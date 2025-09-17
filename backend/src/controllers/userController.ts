@@ -1,8 +1,7 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
-import { User } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 import { validate } from '../validation';
@@ -11,8 +10,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const getUsers = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getUsers = async (req, res, next) => {
     try {
         const users = await db('users')
             .select('id', 'name', 'email', 'role', 'status', 'b2bApplicationId', 'customerId')
@@ -23,8 +22,8 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const createUser = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const createUser = async (req, res, next) => {
     const { name, email, password, role, status } = req.body;
     try {
         const salt = await bcrypt.genSalt(10);
@@ -50,8 +49,8 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateUser = async (req, res, next) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
     try {
@@ -73,8 +72,8 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateCurrentUserPassword = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateCurrentUserPassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;
     try {

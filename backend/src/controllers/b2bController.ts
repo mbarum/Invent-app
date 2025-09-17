@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -14,8 +14,8 @@ import { sendApplicationReceivedEmail, sendApplicationStatusEmail } from '../ser
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const registerB2B = async (req, res, next) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     if (!req.files || !('certOfInc' in req.files) || !('cr12' in req.files)) {
@@ -59,8 +59,8 @@ const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getApplications = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getApplications = async (req, res, next) => {
     try {
         const applications = await db('b2b_applications').select('*').orderBy('submittedAt', 'desc');
         res.status(200).json(applications);
@@ -69,8 +69,8 @@ const getApplications = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateApplicationStatus = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateApplicationStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body as { status: ApplicationStatus };
     const adminUser = req.user!;

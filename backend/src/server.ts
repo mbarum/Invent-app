@@ -1,3 +1,5 @@
+
+
 // This line must be at the very top
 import 'tsconfig-paths/register';
 
@@ -36,6 +38,14 @@ import vinSearchRoutes from './controllers/vinSearchController';
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
+// --- Security: Ensure critical environment variables are set ---
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+    console.error('FATAL ERROR: SESSION_SECRET is not defined in environment variables.');
+    process.exit(1); // Exit if the session secret is not set, as it's a critical security risk.
+}
+
+
 // --- MIDDLEWARE ---
 
 app.use(cors({
@@ -48,11 +58,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Session middleware
-const KnexStore = KnexSessionStore(session);
+// FIX: Use type assertion to handle CommonJS/ESM interop issue with connect-session-knex.
+const KnexStore = (KnexSessionStore as any)(session);
 const store = new KnexStore({ knex: db });
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'a_very_secret_key_that_should_be_in_env',
+    secret: SESSION_SECRET,
     store,
     resave: false,
     saveUninitialized: false,
@@ -100,8 +111,8 @@ if (process.env.NODE_ENV === 'production') {
 
     // The "catchall" handler: for any request that doesn't
     // match one above, send back React's index.html file.
-    // FIX: Add explicit types for req and res to match Express's RequestHandler.
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Removed explicit types for req and res to allow Express to infer them correctly, resolving overload errors.
+    app.get('*', (req, res) => {
         res.sendFile(path.join(frontendDistPath, 'index.html'));
     });
 }
@@ -112,7 +123,8 @@ interface AppError extends Error {
     statusCode?: number;
 }
 
-app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types for req, res, and next to allow for correct type inference.
+app.use((err: AppError, req, res, next) => {
     console.error(err.stack);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({

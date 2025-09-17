@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import db from '../db';
 import { StockRequestStatus, UserRole } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -10,8 +10,8 @@ import { createNotification } from '../services/notificationService';
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const createRequest = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const createRequest = async (req, res, next) => {
     const { branchId, items } = req.body;
     const b2bUserId = req.user!.id;
 
@@ -61,8 +61,8 @@ const createRequest = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getMyRequests = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getMyRequests = async (req, res, next) => {
     const b2bUserId = req.user!.id;
     try {
         const requests = await db('stock_requests')
@@ -78,8 +78,8 @@ const getMyRequests = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getAllRequests = async (req, res, next) => {
      try {
         const requests = await db('stock_requests')
             .select(
@@ -98,8 +98,8 @@ const getAllRequests = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getRequestDetails = async (req, res, next) => {
     const { id } = req.params;
     try {
         const request = await db('stock_requests').where({ id }).first();
@@ -121,8 +121,8 @@ const getRequestDetails = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     try {

@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db';
 import { User } from '@masuma-ea/types';
@@ -7,7 +7,11 @@ import { validate } from '../validation';
 import { loginSchema, googleLoginSchema } from '../validation';
 import { auditLog } from '../services/auditService';
 
-const GOOGLE_CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+// The VITE_ prefix is for frontend variables. The backend should use its own non-prefixed env var.
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+if (!GOOGLE_CLIENT_ID) {
+    console.error("CRITICAL: GOOGLE_CLIENT_ID environment variable is not set for the backend. Google Sign-In will fail verification.");
+}
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const router = Router();
@@ -18,8 +22,8 @@ const sanitizeUser = (user: any): User => {
     return sanitizedUser as User;
 };
 
-// FIX: Add explicit types to controller function parameters.
-const login = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const login = async (req, res, next) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -44,8 +48,8 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const loginWithGoogle = async (req, res, next) => {
     const { token } = req.body;
     try {
         const ticket = await client.verifyIdToken({
@@ -79,8 +83,8 @@ const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const logout = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const logout = (req, res, next) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
         if (err) {
@@ -94,8 +98,8 @@ const logout = (req: Request, res: Response, next: NextFunction) => {
     });
 };
 
-// FIX: Add explicit types to controller function parameters.
-const verifyAuth = (req: Request, res: Response) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const verifyAuth = (req, res) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);
     } else {

@@ -1,12 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getDashboardStats = async (req, res, next) => {
     const { start, end, branchId } = req.query;
     try {
         const salesQuery = db('sales').whereBetween('createdAt', [`${start} 00:00:00`, `${end} 23:59:59`]);
@@ -35,8 +35,8 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateSalesTarget = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateSalesTarget = async (req, res, next) => {
     const { salesTarget } = req.body;
     try {
         await db('app_settings')
@@ -49,8 +49,8 @@ const updateSalesTarget = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getSalesChartData = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getSalesChartData = async (req, res, next) => {
     const { start, end, branchId } = req.query;
     try {
         const query = db('sales')
@@ -70,8 +70,8 @@ const getSalesChartData = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getFastMovingProducts = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getFastMovingProducts = async (req, res, next) => {
      const { start, end, branchId } = req.query;
     try {
         const query = db('sale_items')
@@ -93,8 +93,8 @@ const getFastMovingProducts = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getShipmentsReport = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getShipmentsReport = async (req, res, next) => {
     const { start, end } = req.query;
     try {
         const shipments = await db('shipping_labels')

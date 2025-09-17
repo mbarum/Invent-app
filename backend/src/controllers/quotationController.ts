@@ -1,7 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { Knex } from 'knex';
+import { Router } from 'express';
 import db from '../db';
-import { Quotation, QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
+import { QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 import { validate } from '../validation';
@@ -10,8 +9,8 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Add explicit types to controller function parameters.
-const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const createQuotation = async (req, res, next) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
         const newQuotation = await db.transaction(async (trx) => {
@@ -45,8 +44,8 @@ const createQuotation = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getQuotations = async (req, res, next) => {
     try {
         const quotations = await db('quotations')
             .select('quotations.*', 'customers.name as customerName')
@@ -58,8 +57,8 @@ const getQuotations = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const getQuotationDetails = async (req, res, next) => {
     const { id } = req.params;
     try {
         const quotation = await db('quotations').where('quotations.id', id).first();
@@ -79,8 +78,8 @@ const getQuotationDetails = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const updateStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -93,8 +92,8 @@ const updateStatus = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// FIX: Add explicit types to controller function parameters.
-const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from controller function parameters to allow for correct type inference.
+const convertToInvoice = async (req, res, next) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');
     const invoiceDueDays = settings.find(s => s.settingKey === 'invoiceDueDays')?.settingValue || 30;

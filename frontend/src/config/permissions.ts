@@ -1,7 +1,12 @@
 import { UserRole } from '@masuma-ea/types';
 
-// IMPORTANT: Replace with your actual Google Client ID from Google Cloud Console
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+// IMPORTANT: The Google Client ID must be provided via the VITE_GOOGLE_CLIENT_ID environment variable for Google Sign-In to function.
+// A missing variable will prevent the application from initializing Google's library correctly.
+if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+    console.warn('VITE_GOOGLE_CLIENT_ID is not set in your environment file. Google Sign-In will be disabled.');
+}
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 
 // Base URL for accessing uploaded documents from the backend
 export const DOCS_BASE_URL = '/';

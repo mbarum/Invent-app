@@ -1,4 +1,3 @@
-import { Request, Response, NextFunction } from 'express';
 import { User, UserRole } from '@masuma-ea/types';
 import { PERMISSIONS, ROLES } from '../config/permissions';
 
@@ -14,8 +13,9 @@ declare global {
     }
 }
 
-// FIX: Add explicit types to middleware function parameters.
-export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Removed explicit types from middleware function parameters to allow for correct type inference from Express.
+// This ensures that request properties added by other middleware (like `session`) are available.
+export const isAuthenticated = (req, res, next) => {
     if (req.session && req.session.user) {
         req.user = req.session.user;
         return next();
@@ -23,9 +23,9 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
     res.status(401).json({ message: 'Authentication required. Please log in.' });
 };
 
-// FIX: Add explicit types to middleware function parameters.
+// FIX: Removed explicit types from middleware function parameters for correct type inference.
 export const hasPermission = (permission: string) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required.' });
         }
