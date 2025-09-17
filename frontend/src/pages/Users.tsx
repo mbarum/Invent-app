@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Button from '../components/ui/Button.tsx';
-import Modal from '../components/ui/Modal.tsx';
-import Input from '../components/ui/Input.tsx';
-import Select from '../components/ui/Select.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
 import { PlusCircle, Edit, LoaderCircle, AlertTriangle } from 'lucide-react';
 import { User, UserRole } from '@masuma-ea/types';
-import { getUsers, createUser, updateUser } from '../services/api.ts';
+import { getUsers, createUser, updateUser } from '../services/api';
 import toast from 'react-hot-toast';
 
 const getStatusBadge = (status: 'Active' | 'Inactive') => {
@@ -18,8 +18,6 @@ const getStatusBadge = (status: 'Active' | 'Inactive') => {
   return <span className={`${baseClasses} bg-red-400/10 text-red-400 ring-red-400/30`}>Inactive</span>;
 };
 
-// FIX: Added explicit 'string[]' type annotation to fix type inference issue.
-// FIX: Cast Object.values result to string[] to resolve incorrect 'unknown[]' type inference.
 const staffRoles: string[] = (Object.values(UserRole) as string[]).filter(role => role !== UserRole.B2B_CLIENT);
 
 const Users: React.FC = () => {
@@ -28,7 +26,7 @@ const Users: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [formData, setFormData] = useState<Partial<User>>({});
+    const [formData, setFormData] = useState<Partial<User & { password?: string }>>({});
 
     const fetchUsers = async () => {
         try {
@@ -102,7 +100,6 @@ const Users: React.FC = () => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {/* FIX: Re-added explicit 'user: User' type to fix type inference issue. */}
                     {users.map((user: User) => (
                         <TableRow key={user.id}>
                             <TableCell className="font-medium">{user.name}</TableCell>
@@ -145,8 +142,6 @@ const Users: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <Input label="Full Name" name="name" value={formData.name || ''} onChange={handleInputChange} required />
                     <Input label="Email Address" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} required />
-                    {/* FIX: Explicitly cast formData.role to string to resolve type inference issue with enums. */}
-                    {/* FIX: Wrapped formData.role in String() to robustly convert the value and satisfy the component's prop type. */}
                     <Select label="Role" name="role" value={String(formData.role || '')} onChange={handleInputChange} required disabled={formData.role === UserRole.B2B_CLIENT}>
                         {staffRoles.map(role => <option key={role} value={role}>{role}</option>)}
                     </Select>

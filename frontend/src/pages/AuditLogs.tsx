@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle } from 'lucide-react';
 import { AuditLog } from '@masuma-ea/types';
-import { getAuditLogs } from '../services/api.ts';
+import { getAuditLogs } from '../services/api';
 import toast from 'react-hot-toast';
 
 const AuditLogs: React.FC = () => {
@@ -63,7 +62,7 @@ const AuditLogs: React.FC = () => {
                                 <TableCell>{new Date(log.createdAt).toLocaleString()}</TableCell>
                                 <TableCell>{log.userName || log.userId}</TableCell>
                                 <TableCell><span className="font-mono bg-gray-700/50 px-2 py-1 rounded text-xs">{log.action}</span></TableCell>
-                                <TableCell className="text-xs text-gray-400"><pre>{JSON.stringify(log.details, null, 2)}</pre></TableCell>
+                                <TableCell className="text-xs text-gray-400 max-w-md overflow-x-auto"><pre>{JSON.stringify(log.details, null, 2)}</pre></TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

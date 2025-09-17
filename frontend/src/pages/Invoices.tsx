@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Button from '../components/ui/Button.tsx';
-import Select from '../components/ui/Select.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
-import Modal from '../components/ui/Modal.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Select from '../components/ui/Select';
+import Pagination from '../components/ui/Pagination';
+import Modal from '../components/ui/Modal';
 import { Printer, Eye, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
 import { Invoice, InvoiceStatus, Branch } from '@masuma-ea/types';
-import { getInvoices, getInvoiceDetails } from '../services/api.ts';
+import { getInvoices, getInvoiceDetails } from '../services/api';
 import toast from 'react-hot-toast';
-import InvoicePrint from '../components/InvoicePrint.tsx';
+import InvoicePrint from '../components/InvoicePrint';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useDataStore } from '../store/dataStore.ts';
+import { useDataStore } from '../store/dataStore';
 
 interface OutletContextType {
   currentBranch: Branch;

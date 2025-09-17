@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// FIX: Remove .tsx file extensions from imports for proper module resolution.
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -9,7 +8,7 @@ import toast from 'react-hot-toast';
 import { LoaderCircle, Save } from 'lucide-react';
 
 const Profile: React.FC = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,11 +28,17 @@ const Profile: React.FC = () => {
         setIsSaving(true);
         try {
             await updateCurrentUserPassword({ currentPassword, newPassword });
-            toast.success("Password updated successfully!");
+            toast.success("Password updated successfully! Please log in again.", { duration: 4000 });
             // Clear fields after successful update
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
+            
+            // Log the user out after password change for security
+            setTimeout(() => {
+                logout();
+            }, 1500);
+
         } catch (err: any) {
             toast.error(`Failed to update password: ${err.message}`);
         } finally {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import Input from '../components/ui/Input.tsx';
-import Button from '../components/ui/Button.tsx';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
-import { registerUser } from '../services/api.ts';
+import { registerUser } from '../services/api';
 import { LoaderCircle } from 'lucide-react';
+import Logo from '../components/Logo';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
@@ -62,6 +63,9 @@ const Register: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen bg-gray-900 px-4 py-8">
             <Card className="w-full max-w-2xl bg-gray-800/50 backdrop-blur-sm border-gray-700">
                 <CardHeader className="text-center">
+                    <div className="mx-auto w-40 mb-4">
+                        <Logo />
+                    </div>
                     <CardTitle>Wholesale Account Registration</CardTitle>
                     <CardDescription>Complete the form to apply for a B2B account.</CardDescription>
                 </CardHeader>

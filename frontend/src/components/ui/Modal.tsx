@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from './Card.tsx';
-import Button from './Button.tsx';
+import { Card, CardHeader, CardContent, CardTitle } from './Card';
+import Button from './Button';
 import { X } from 'lucide-react';
 
 interface ModalProps {

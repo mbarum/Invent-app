@@ -1,5 +1,5 @@
 import React from 'react';
-import Button from './Button.tsx';
+import Button from './Button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {

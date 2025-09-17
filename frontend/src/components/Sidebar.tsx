@@ -1,6 +1,3 @@
-
-
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, ShoppingCart, Users, Truck, FileText, Wrench, BarChart2, Settings, UserCircle, LogOut, Building, Briefcase, FileClock, Smartphone } from 'lucide-react';

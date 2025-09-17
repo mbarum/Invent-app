@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Button from '../components/ui/Button.tsx';
-import Input from '../components/ui/Input.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Pagination from '../components/ui/Pagination';
 import { Upload, Download, LoaderCircle, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Product, UserRole } from '@masuma-ea/types';
-import { createProduct, importProducts, updateProduct, deleteProduct } from '../services/api.ts';
+import { getProducts, createProduct, importProducts, updateProduct, deleteProduct } from '../services/api';
 import toast from 'react-hot-toast';
-import Modal from '../components/ui/Modal.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { PERMISSIONS } from '../config/permissions.ts';
-import Select from '../components/ui/Select.tsx';
-import { useDataStore } from '../store/dataStore.ts';
-import Textarea from '../components/ui/Textarea.tsx';
+import Modal from '../components/ui/Modal';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
+import Select from '../components/ui/Select';
+import Textarea from '../components/ui/Textarea';
 
 interface OutletContextType {
   currentCurrency: string;
@@ -88,8 +87,9 @@ const Inventory: React.FC = () => {
     const canManageInventory = hasPermission(PERMISSIONS.MANAGE_INVENTORY);
     const isB2B = user?.role === UserRole.B2B_CLIENT;
     
-    // Get products and refetcher from Zustand store
-    const { products, refetchProducts, isInitialDataLoaded } = useDataStore();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [loading, setLoading] = useState(true);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('All');
@@ -105,6 +105,27 @@ const Inventory: React.FC = () => {
     const [productForm, setProductForm] = useState<ProductFormState>({ partNumber: '', oemNumbers: '', name: '', retailPrice: 0, wholesalePrice: 0, stock: 0, notes: '' });
     const [parsedData, setParsedData] = useState<Partial<Product>[]>([]);
 
+    const fetchProductsData = async () => {
+        setLoading(true);
+        try {
+            const data = await getProducts({ page: currentPage, limit: itemsPerPage, searchTerm, stockFilter }) as { products: Product[], total: number };
+            setProducts(data.products);
+            setTotalProducts(data.total);
+        } catch (error) {
+            toast.error("Failed to fetch products.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProductsData();
+    }, [currentPage, searchTerm, stockFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, stockFilter]);
+
     const formatCurrency = (amount: number) => {
         const rate = exchangeRates[currentCurrency] || 1;
         const convertedAmount = amount * rate;
@@ -114,33 +135,7 @@ const Inventory: React.FC = () => {
         }).format(convertedAmount);
     };
 
-    const filteredProducts = products.filter(product => {
-        const lowercasedTerm = searchTerm.toLowerCase();
-        const matchesSearch = (product.partNumber || '').toLowerCase().includes(lowercasedTerm) ||
-            (product.name || '').toLowerCase().includes(lowercasedTerm) ||
-            (product.oemNumbers || []).some(oem => oem.toLowerCase().includes(lowercasedTerm));
-
-
-        if (!matchesSearch) return false;
-
-        const LOW_STOCK_THRESHOLD = 10;
-        switch (stockFilter) {
-            case 'in_stock': return product.stock > LOW_STOCK_THRESHOLD;
-            case 'low_stock': return product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD;
-            case 'out_of_stock': return product.stock <= 0;
-            default: return true;
-        }
-    });
-
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-    const paginatedProducts = filteredProducts.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, stockFilter]);
+    const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -175,7 +170,7 @@ const Inventory: React.FC = () => {
                 await createProduct(payload as Omit<Product, 'id'>);
                 toast.success('Product added successfully!');
             }
-            await refetchProducts(); // Refetch all products to update the store
+            fetchProductsData();
             setProductModalOpen(false);
         } catch (err: any) {
             toast.error(`Operation failed: ${err.message}`);
@@ -235,7 +230,7 @@ const Inventory: React.FC = () => {
         try {
             await importProducts(parsedData as Omit<Product, 'id'>[]);
             toast.success(`${parsedData.length} products imported successfully!`);
-            await refetchProducts();
+            fetchProductsData();
             setImportModalOpen(false);
             setParsedData([]);
         } catch (err: any) {
@@ -243,10 +238,16 @@ const Inventory: React.FC = () => {
         }
     };
     
-    const handleExport = () => {
-        const headers = ['partNumber', 'oemNumbers', 'name', 'retailPrice', 'wholesalePrice', 'stock', 'notes'];
-        exportToCsv('inventory_export', headers, filteredProducts);
-        toast.success("Inventory exported!");
+    const handleExport = async () => {
+        try {
+            // Fetch all products for export
+            const allProductsData = await getProducts() as Product[];
+            const headers = ['partNumber', 'oemNumbers', 'name', 'retailPrice', 'wholesalePrice', 'stock', 'notes'];
+            exportToCsv('inventory_export', headers, allProductsData);
+            toast.success("Inventory exported!");
+        } catch(e) {
+            toast.error("Failed to export inventory data.")
+        }
     };
 
     const handleOpenDeleteModal = (product: Product) => {
@@ -259,7 +260,7 @@ const Inventory: React.FC = () => {
         try {
             await deleteProduct(productToDelete.id);
             toast.success('Product deleted successfully!');
-            await refetchProducts();
+            fetchProductsData();
             setDeleteModalOpen(false);
             setProductToDelete(null);
         } catch (err: any) {
@@ -268,10 +269,10 @@ const Inventory: React.FC = () => {
     };
     
     const renderContent = () => {
-        if (!isInitialDataLoaded) {
+        if (loading) {
             return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
         }
-        if (products.length > 0 && paginatedProducts.length === 0) {
+        if (totalProducts > 0 && products.length === 0) {
             return <div className="text-center p-8 text-gray-400">No products found matching your search.</div>;
         }
         return (
@@ -296,7 +297,7 @@ const Inventory: React.FC = () => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {paginatedProducts.map((product) => (
+                    {products.map((product) => (
                         <TableRow key={product.id}>
                             <TableCell className="font-mono">{product.partNumber}</TableCell>
                             <TableCell className="font-mono text-xs">{product.oemNumbers?.join(', ')}</TableCell>

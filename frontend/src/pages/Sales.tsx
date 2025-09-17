@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Input from '../components/ui/Input.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Input from '../components/ui/Input';
+import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle, Download, Eye, Printer } from 'lucide-react';
 import { Sale, Customer, Branch } from '@masuma-ea/types';
-import { getSales, getCustomers, getSaleDetails } from '../services/api.ts';
-import DateRangePicker from '../components/ui/DateRangePicker.tsx';
-import Button from '../components/ui/Button.tsx';
-import { useDataStore } from '../store/dataStore.ts';
-import Select from '../components/ui/Select.tsx';
-import Modal from '../components/ui/Modal.tsx';
-import ReceiptPrint from '../components/ReceiptPrint.tsx';
+import { getSales, getCustomers, getSaleDetails } from '../services/api';
+import DateRangePicker from '../components/ui/DateRangePicker';
+import Button from '../components/ui/Button';
+import { useDataStore } from '../store/dataStore';
+import Select from '../components/ui/Select';
+import Modal from '../components/ui/Modal';
+import ReceiptPrint from '../components/ReceiptPrint';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
@@ -54,6 +54,7 @@ const exportToCsv = (filename: string, headers: string[], data: any[], keys: str
 const Sales: React.FC = () => {
   const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [totalSales, setTotalSales] = useState(0);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const { branches } = useDataStore(); // Get branches from the global store
   const [loading, setLoading] = useState(true);
@@ -79,12 +80,21 @@ const Sales: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const [salesData, customersData] = await Promise.all([
-          getSales(dateRange),
+        
+        const [salesResponse, customersData] = await Promise.all([
+          getSales({ 
+              page: currentPage, 
+              limit: itemsPerPage, 
+              ...dateRange, 
+              searchTerm, 
+              customerId: selectedCustomerId 
+          }) as Promise<{ sales: Sale[], total: number }>,
           getCustomers(),
         ]);
-        setSales(salesData);
-        setCustomers(customersData);
+
+        setSales(salesResponse.sales);
+        setTotalSales(salesResponse.total);
+        setCustomers(customersData.customers);
       } catch (err) {
         setError("Failed to load sales data.");
       } finally {
@@ -92,7 +102,7 @@ const Sales: React.FC = () => {
       }
     };
     fetchData();
-  }, [dateRange]);
+  }, [currentPage, dateRange, searchTerm, selectedCustomerId]);
 
   const customerMap = useMemo(() => {
       return customers.reduce((acc, customer) => {
@@ -157,46 +167,31 @@ const Sales: React.FC = () => {
         window.print();
     }
   };
-
-
-  const filteredSales = useMemo(() => {
-      let allSales = [...sales];
-      
-      if (selectedCustomerId !== 'All') {
-          allSales = allSales.filter(sale => sale.customerId === parseInt(selectedCustomerId, 10));
-      }
-
-      if (searchTerm) {
-          const lowercasedTerm = searchTerm.toLowerCase();
-          allSales = allSales.filter(sale => 
-              sale.saleNo.toLowerCase().includes(lowercasedTerm) ||
-              (customerMap[sale.customerId] || '').toLowerCase().includes(lowercasedTerm) ||
-              (branchMap[sale.branchId] || '').toLowerCase().includes(lowercasedTerm)
-          );
-      }
-      return allSales;
-  }, [sales, searchTerm, customerMap, branchMap, selectedCustomerId]);
   
   useEffect(() => {
       setCurrentPage(1);
   }, [searchTerm, dateRange, selectedCustomerId]);
 
-  const handleExport = () => {
-    const data = filteredSales.map(s => ({
-        ...s,
-        customerName: customerMap[s.customerId] || 'N/A',
-        branchName: branchMap[s.branchId] || 'N/A'
-    }));
-    exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['saleNo', 'customerName', 'branchName', 'createdAt', 'totalAmount', 'paymentMethod']);
+  const handleExport = async () => {
+    try {
+        const allSalesData = await getSales({ ...dateRange, searchTerm, customerId: selectedCustomerId }) as Sale[];
+        const data = allSalesData.map(s => ({
+            ...s,
+            customerName: customerMap[s.customerId] || s.customerName || 'N/A',
+            branchName: branchMap[s.branchId] || s.branchName || 'N/A'
+        }));
+        exportToCsv(`sales_history_${dateRange.start}_to_${dateRange.end}`, ['Sale No', 'Customer', 'Branch', 'Date', 'Amount (KES)', 'Payment Method'], data, ['saleNo', 'customerName', 'branchName', 'createdAt', 'totalAmount', 'paymentMethod']);
+    } catch (e) {
+        toast.error("Failed to export sales data.");
+    }
   };
   
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
-  const paginatedSales = filteredSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(totalSales / itemsPerPage);
 
   const renderContent = () => {
     if (loading) return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
     if (error) return <div className="flex justify-center items-center p-8 text-red-400"><AlertTriangle className="w-6 h-6 mr-2" /> {error}</div>;
-    if (sales.length > 0 && paginatedSales.length === 0) return <div className="text-center p-8 text-gray-400">No sales found matching your criteria.</div>;
+    if (totalSales > 0 && sales.length === 0) return <div className="text-center p-8 text-gray-400">No sales found matching your criteria.</div>;
 
     return (
         <div className="overflow-x-auto">
@@ -213,11 +208,11 @@ const Sales: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedSales.map((sale) => (
+            {sales.map((sale) => (
               <TableRow key={sale.id}>
                 <TableCell className="font-mono">{sale.saleNo}</TableCell>
-                <TableCell>{customerMap[sale.customerId] || 'Unknown'}</TableCell>
-                <TableCell>{branchMap[sale.branchId] || 'Unknown'}</TableCell>
+                <TableCell>{sale.customerName || customerMap[sale.customerId] || 'Unknown'}</TableCell>
+                <TableCell>{sale.branchName || branchMap[sale.branchId] || 'Unknown'}</TableCell>
                 <TableCell>{new Date(sale.createdAt).toLocaleString()}</TableCell>
                 <TableCell className="text-center">{sale.itemCount || 0}</TableCell>
                 <TableCell className="font-semibold text-right">{formatCurrency(sale.totalAmount || 0)}</TableCell>

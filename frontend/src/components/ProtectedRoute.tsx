@@ -1,6 +1,5 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-// FIX: Remove .tsx file extension from import for proper module resolution.
 import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
 
@@ -15,7 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-gray-900">
         <LoaderCircle className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
@@ -26,7 +25,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   }
   
   if (!hasPermission(permission)) {
-      // You can create a dedicated "Unauthorized" page
+      // For unauthorized access, redirect to a safe default page.
+      // A dedicated "Unauthorized" page could also be created.
       return <Navigate to="/dashboard" replace />;
   }
 

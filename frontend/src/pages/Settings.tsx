@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import Input from '../components/ui/Input.tsx';
-import Button from '../components/ui/Button.tsx';
-import Textarea from '../components/ui/Textarea.tsx';
-import { updateSettings } from '../services/api.ts';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Textarea from '../components/ui/Textarea';
+import { updateSettings } from '../services/api';
 import { AppSettings } from '@masuma-ea/types';
 import toast from 'react-hot-toast';
 import { LoaderCircle, Save } from 'lucide-react';
-import { useDataStore } from '../store/dataStore.ts';
-import Select from '../components/ui/Select.tsx';
+import { useDataStore } from '../store/dataStore';
+import Select from '../components/ui/Select';
 
 const Settings: React.FC = () => {
     const { appSettings, refetchSettings, isInitialDataLoaded } = useDataStore();

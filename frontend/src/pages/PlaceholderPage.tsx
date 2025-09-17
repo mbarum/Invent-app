@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wrench } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.tsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 
 interface PlaceholderPageProps {
     title: string;

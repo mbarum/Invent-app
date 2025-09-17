@@ -4,11 +4,12 @@
   "private": true,
   "description": "A production-grade, web-based Point of Sale (POS), inventory management, and shipping sticker generation system for Masuma Autoparts East Africa.",
   "scripts": {
-    "dev": "echo \"\n\n>>> To run in development, open three separate terminals and run:\n    1. npm run dev:types\n    2. npm run dev:backend\n    3. npm run dev:frontend\n\n\" && exit 1",
+    "dev": "concurrently \"npm:dev:types\" \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:types": "npm run dev --workspace=@masuma-ea/types",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspaces"
+    "build": "npm run build --workspaces",
+    "postinstall": "npm install --workspaces"
   },
   "workspaces": [
     "frontend",
@@ -16,5 +17,8 @@
     "packages/types"
   ],
   "author": "AI Studio",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
 }

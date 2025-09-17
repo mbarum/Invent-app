@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Button from '../components/ui/Button.tsx';
-import Modal from '../components/ui/Modal.tsx';
-import Input from '../components/ui/Input.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
 import { PlusCircle, Edit, LoaderCircle } from 'lucide-react';
 import { Branch } from '@masuma-ea/types';
-import { createBranch, updateBranch } from '../services/api.ts';
+import { createBranch, updateBranch } from '../services/api';
 import toast from 'react-hot-toast';
-import { useDataStore } from '../store/dataStore.ts';
+import { useDataStore } from '../store/dataStore';
 
 const Branches: React.FC = () => {
     const { branches, isInitialDataLoaded, refetchBranches } = useDataStore();

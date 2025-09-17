@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
@@ -9,8 +9,8 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download } from 'lucide-react';
 // FIX: Import types from the types package and remove extensions from local imports.
-import { Customer, Sale, CustomerTransactions } from '@masuma-ea/types';
-import { getCustomers, getSales, createCustomer, getCustomerTransactions } from '../services/api';
+import { Customer, CustomerTransactions } from '@masuma-ea/types';
+import { getCustomers, createCustomer, getCustomerTransactions } from '../services/api';
 import toast from 'react-hot-toast';
 import { useDataStore } from '../store/dataStore';
 
@@ -67,6 +67,7 @@ const Customers: React.FC = () => {
     const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
     const { refetchCustomers } = useDataStore();
     const [customers, setCustomers] = useState<CustomerSegmentData[]>([]);
+    const [totalCustomers, setTotalCustomers] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -90,37 +91,31 @@ const Customers: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
+            setError(null);
             try {
-                setLoading(true);
-                setError(null);
-                const [customersData, salesData] = await Promise.all([getCustomers(), getSales()]);
-
-                const salesByCustomerId = salesData.reduce<Record<number, Sale[]>>((acc, sale) => {
-                    if (!acc[sale.customerId]) acc[sale.customerId] = [];
-                    acc[sale.customerId].push(sale);
-                    return acc;
-                }, {});
-
-                const enrichedCustomers = customersData.map((customer): CustomerSegmentData => {
-                    const customerSales = salesByCustomerId[customer.id] || [];
-                    const totalSpending = customerSales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
-                    const totalOrders = customerSales.length;
-                    const lastPurchaseDate = customerSales.length > 0
-                        ? new Date(Math.max(...customerSales.map(s => new Date(s.createdAt).getTime())))
-                        : null;
-
-                    return { ...customer, totalSpending, totalOrders, lastPurchaseDate };
+                const data = await getCustomers({
+                    page: currentPage,
+                    limit: itemsPerPage,
+                    searchTerm,
+                    spendingFilter,
+                    recencyFilter,
+                    sortKey: sortConfig.key,
+                    sortDirection: sortConfig.direction,
                 });
-
-                setCustomers(enrichedCustomers);
+                setCustomers(data.customers.map(c => ({...c, lastPurchaseDate: c.lastPurchaseDate ? new Date(c.lastPurchaseDate) : null})));
+                setTotalCustomers(data.total);
             } catch (err) {
                 setError("Failed to load customer data.");
+                toast.error("Failed to load customer data.");
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [currentPage, searchTerm, spendingFilter, recencyFilter, sortConfig]);
+
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, spendingFilter, recencyFilter, sortConfig]);
 
     const formatCurrency = (amount: number) => {
         const rate = exchangeRates[currentCurrency] || 1;
@@ -131,38 +126,6 @@ const Customers: React.FC = () => {
         }).format(convertedAmount);
     };
 
-    const filteredAndSortedCustomers = useMemo(() => {
-        let filtered = [...customers];
-        if (searchTerm) {
-            const lowercasedTerm = searchTerm.toLowerCase();
-            filtered = filtered.filter(c => 
-                (c.name || '').toLowerCase().includes(lowercasedTerm) || 
-                (c.phone || '').toLowerCase().includes(lowercasedTerm)
-            );
-        }
-        filtered = filtered.filter(c => {
-            switch (spendingFilter) {
-                case 'high': return c.totalSpending >= 100000; case 'mid': return c.totalSpending >= 20000 && c.totalSpending < 100000; case 'low': return c.totalSpending > 0 && c.totalSpending < 20000; case 'none': return c.totalSpending === 0; default: return true;
-            }
-        });
-        const now = new Date().getTime(); const thirtyDays = 30 * 24 * 60 * 60 * 1000; const ninetyDays = 90 * 24 * 60 * 60 * 1000;
-        filtered = filtered.filter(c => {
-            if (!c.lastPurchaseDate) return recencyFilter === 'all' || recencyFilter === 'inactive';
-            const diff = now - c.lastPurchaseDate.getTime();
-            switch (recencyFilter) {
-                case 'active': return diff <= thirtyDays; case 'at_risk': return diff > thirtyDays && diff <= ninetyDays; case 'inactive': return diff > ninetyDays; default: return true;
-            }
-        });
-        filtered.sort((a, b) => {
-            let aValue: any = a[sortConfig.key]; let bValue: any = b[sortConfig.key];
-            if (sortConfig.key === 'lastPurchaseDate') { aValue = aValue ? aValue.getTime() : 0; bValue = bValue ? bValue.getTime() : 0; }
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-            return 0;
-        });
-        return filtered;
-    }, [customers, searchTerm, spendingFilter, recencyFilter, sortConfig]);
-
     const handleSort = (key: SortKey) => {
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'descending' ? 'ascending' : 'descending' }));
     };
@@ -172,10 +135,13 @@ const Customers: React.FC = () => {
     const handleAddCustomer = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const addedCustomer = await createCustomer(newCustomer);
-            const newCustomerWithStats: CustomerSegmentData = { ...addedCustomer, totalSpending: 0, totalOrders: 0, lastPurchaseDate: null };
-            setCustomers(prev => [newCustomerWithStats, ...prev]);
-            refetchCustomers();
+            await createCustomer(newCustomer);
+            await refetchCustomers(); // Refetch global list for dropdowns
+            // Refetch current page
+            const data = await getCustomers({ page: currentPage, limit: itemsPerPage });
+            setCustomers(data.customers.map(c => ({...c, lastPurchaseDate: c.lastPurchaseDate ? new Date(c.lastPurchaseDate) : null})));
+            setTotalCustomers(data.total);
+
             setAddModalOpen(false); setNewCustomer({ name: '', phone: '', address: '', kraPin: ''});
             toast.success('Customer added successfully!');
         } catch (err: any) { toast.error(`Failed to add customer: ${err.message}`); }
@@ -192,8 +158,14 @@ const Customers: React.FC = () => {
         finally { setHistoryLoading(false); }
     };
     
-    const handleExportCustomers = () => {
-        exportToCsv('customers_export', ['ID', 'Name', 'Phone', 'Address', 'KRA PIN', 'Total Spending (KES)', 'Total Orders', 'Last Purchase Date'], filteredAndSortedCustomers, ['id', 'name', 'phone', 'address', 'kraPin', 'totalSpending', 'totalOrders', 'lastPurchaseDate']);
+    const handleExportCustomers = async () => {
+        try {
+            // Fetch all customers for export
+            const allCustomersData = await getCustomers();
+            exportToCsv('customers_export', ['ID', 'Name', 'Phone', 'Address', 'KRA PIN', 'Total Spending (KES)', 'Total Orders', 'Last Purchase Date'], allCustomersData.customers, ['id', 'name', 'phone', 'address', 'kraPin', 'totalSpending', 'totalOrders', 'lastPurchaseDate']);
+        } catch(e) {
+            toast.error("Failed to export customers.")
+        }
     };
     
     const handleExportHistory = () => {
@@ -207,10 +179,7 @@ const Customers: React.FC = () => {
         exportToCsv(`${historyCustomer.name}_history`, ['Type', 'Ref No.', 'Date', 'Amount', 'Status'], allData, ['type', 'ref', 'date', 'totalAmount', 'status']);
     };
 
-    const totalPages = Math.ceil(filteredAndSortedCustomers.length / itemsPerPage);
-    const paginatedCustomers = filteredAndSortedCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, spendingFilter, recencyFilter]);
+    const totalPages = Math.ceil(totalCustomers / itemsPerPage);
 
     const SortableHeader: React.FC<{ sortKey: SortKey; children: React.ReactNode; className?: string }> = ({ sortKey, children, className }) => (
         <TableHead className={`cursor-pointer hover:bg-gray-700 ${className}`} onClick={() => handleSort(sortKey)}>
@@ -221,7 +190,7 @@ const Customers: React.FC = () => {
     const renderContent = () => {
         if (loading) return <div className="flex justify-center items-center p-8"><LoaderCircle className="w-8 h-8 animate-spin text-orange-500" /></div>;
         if (error) return <div className="flex justify-center items-center p-8 text-red-400"><AlertTriangle className="w-6 h-6 mr-2" /> {error}</div>;
-        if (customers.length > 0 && paginatedCustomers.length === 0) return <div className="text-center p-8 text-gray-400">No customers found matching your criteria.</div>;
+        if (totalCustomers > 0 && customers.length === 0) return <div className="text-center p-8 text-gray-400">No customers found matching your criteria.</div>;
         return (<>
             <Table>
                 <TableHeader><TableRow>
@@ -233,7 +202,7 @@ const Customers: React.FC = () => {
                     <TableHead>Actions</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
-                    {paginatedCustomers.map(customer => (
+                    {customers.map(customer => (
                         <TableRow key={customer.id}>
                             <TableCell className="font-medium">{customer.name}</TableCell>
                             <TableCell><div>{customer.phone}</div><div className="text-xs text-gray-400">{customer.address}</div></TableCell>

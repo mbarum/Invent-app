@@ -1,5 +1,5 @@
 import React from 'react';
-import Input from './Input.tsx';
+import Input from './Input';
 
 interface DateRange {
     start: string;

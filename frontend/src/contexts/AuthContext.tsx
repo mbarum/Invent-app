@@ -1,96 +1,84 @@
-import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
-import { User } from '@masuma-ea/types';
-// FIX: Remove .ts extension from imports for proper module resolution.
-import { loginUser, loginWithGoogle as apiLoginWithGoogle } from '../services/api';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { User, UserRole } from '@masuma-ea/types';
+import * as api from '../services/api';
 import { ROLES } from '../config/permissions';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
-  loginWithGoogle: (googleToken: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permission: string | null) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// A simple JWT decoder
-const decodeToken = (token: string): User | null => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // Add expiry check
-    if (payload.exp * 1000 < Date.now()) {
-        sessionStorage.removeItem('authToken');
-        return null;
-    }
-    // FIX: Changed payload.userId to payload.id to match the standardized token structure.
-    return {
-      id: payload.id,
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      businessId: payload.businessId,
-      businessName: payload.businessName,
-      status: payload.status || 'Active', // The user must be active to log in.
-      customerId: payload.customerId,
-    };
-  } catch (error) {
-    console.error("Failed to decode token:", error);
-    return null;
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
+    const verifySession = useCallback(async () => {
         try {
-            const token = sessionStorage.getItem('authToken');
-            if (token) {
-                const decodedUser = decodeToken(token);
-                setUser(decodedUser);
-            }
+            // This endpoint relies on the HttpOnly cookie being sent automatically by the browser.
+            const currentUser = await api.verifyAuth();
+            setUser(currentUser);
         } catch (error) {
-            console.error("Auth initialization error", error);
+            // If the request fails (e.g., 401 Unauthorized), it means there's no valid session.
             setUser(null);
-            sessionStorage.removeItem('authToken');
         } finally {
             setIsLoading(false);
         }
     }, []);
 
-    const handleLogin = (token: string) => {
-        sessionStorage.setItem('authToken', token);
-        const decodedUser = decodeToken(token);
-        setUser(decodedUser);
+    useEffect(() => {
+        // Verify session on initial app load.
+        verifySession();
+    }, [verifySession]);
+
+    const handleLoginSuccess = (data: api.LoginResponse) => {
+        // The backend sets the HttpOnly cookie. The frontend just needs to update the user state.
+        setUser(data.user);
     };
 
-    const login = async (email: string, pass: string) => {
-        const { token } = await loginUser(email, pass);
-        handleLogin(token);
+    const login = async (email: string, password: string) => {
+        const data = await api.login(email, password);
+        handleLoginSuccess(data);
+    };
+    
+    const loginWithGoogle = async (token: string) => {
+        const data = await api.loginWithGoogle(token);
+        handleLoginSuccess(data);
     };
 
-    const loginWithGoogle = async (googleToken: string) => {
-        const { token } = await apiLoginWithGoogle(googleToken);
-        handleLogin(token);
+    const logout = async () => {
+        try {
+            // Call the backend endpoint to clear the HttpOnly cookie.
+            await api.logoutUser();
+        } catch (error) {
+            console.error("Logout API call failed, logging out client-side anyway.", error);
+        } finally {
+            // Clear the user state on the client.
+            setUser(null);
+        }
     };
+    
+    const hasPermission = useCallback((permission: string | null): boolean => {
+        if (!user) return false;
+        
+        // If permission is null, it means the route is accessible to any logged-in user.
+        if (permission === null) return true;
+        
+        const userPermissions = ROLES[user.role as UserRole] || [];
+        
+        // System Admin has all permissions implicitly.
+        if (user.role === UserRole.SYSTEM_ADMINISTRATOR) {
+            return true;
+        }
 
-    const logout = () => {
-        sessionStorage.removeItem('authToken');
-        setUser(null);
-        // Navigate to login page, usually handled in App component
-    };
-
-    const hasPermission = useMemo(() => (permission: string | null): boolean => {
-        if (permission === null) return true; // Permissions with null are public to logged-in users
-        if (!user || !user.role) return false;
-        const userPermissions = ROLES[user.role] || [];
         return userPermissions.includes(permission);
     }, [user]);
-
 
     const value = {
         user,
@@ -99,16 +87,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         loginWithGoogle,
         logout,
-        hasPermission,
+        hasPermission
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };

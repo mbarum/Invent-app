@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import Input from '../components/ui/Input.tsx';
-import Button from '../components/ui/Button.tsx';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 import { Search, LoaderCircle } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table.tsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
 import toast from 'react-hot-toast';
-import { getPartsByVin } from '../services/api.ts';
+import { getPartsByVin } from '../services/api';
 import { VinSearchResult } from '@masuma-ea/types';
 
 const VinPicker: React.FC = () => {

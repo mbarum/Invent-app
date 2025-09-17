@@ -46,7 +46,8 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   fetchInitialData: async () => {
     if (get().isInitialDataLoaded) return;
     try {
-      const [products, customers, branches, sales, legacyInvoices, shippingLabels, appSettings] = await Promise.all([
+      // FIX: Destructure responses and handle different API return shapes before setting state.
+      const [productsResponse, customersResponse, branches, salesResponse, legacyInvoices, shippingLabels, appSettings] = await Promise.all([
         getProducts(),
         getCustomers(),
         getBranches(),
@@ -55,6 +56,10 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
         getShippingLabels(),
         getSettings(),
       ]);
+      // FIX: Correctly extract arrays from potentially paginated responses.
+      const products = Array.isArray(productsResponse) ? productsResponse : productsResponse.products;
+      const customers = customersResponse.customers;
+      const sales = Array.isArray(salesResponse) ? salesResponse : salesResponse.sales;
       set({ products, customers, branches, sales, legacyInvoices, shippingLabels, appSettings, isInitialDataLoaded: true });
     } catch (error) {
       console.error("Failed to fetch initial shared data:", error);
@@ -64,8 +69,9 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   
   refetchProducts: async () => {
     try {
-      const products = await getProducts();
-      set({ products });
+      // FIX: Handle both array and object responses from the API.
+      const productsResponse = await getProducts();
+      set({ products: Array.isArray(productsResponse) ? productsResponse : productsResponse.products });
     } catch (error) {
       console.error("Failed to refetch products:", error);
     }
@@ -73,8 +79,9 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
 
   refetchCustomers: async () => {
     try {
-      const customers = await getCustomers();
-      set({ customers });
+      // FIX: Extract the 'customers' array from the API response object.
+      const customersResponse = await getCustomers();
+      set({ customers: customersResponse.customers });
     } catch (error) {
       console.error("Failed to refetch customers:", error);
     }
@@ -82,8 +89,9 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
 
   refetchSales: async () => {
     try {
-      const sales = await getSales();
-      set({ sales });
+      // FIX: Handle both array and object responses from the API.
+      const salesResponse = await getSales();
+      set({ sales: Array.isArray(salesResponse) ? salesResponse : salesResponse.sales });
     } catch (error) {
       console.error("Failed to refetch sales:", error);
     }

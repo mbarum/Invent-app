@@ -1,305 +1,144 @@
 import axios from 'axios';
 import { 
-    User, Product, Sale, Customer, Invoice, Quotation, ShippingLabel, Branch, 
-    BusinessApplication, AppSettings, DashboardStats, SalesChartDataPoint, 
-    FastMovingProduct, VinSearchResult, CustomerTransactions, QuotationPayload,
-    ApplicationStatus, ShippingStatus, QuotationStatus, StockRequest, 
-    CreateStockRequestPayload, StockRequestStatus, NotificationPayload, AuditLog,
-    // FIX: Add missing InvoiceStatus import.
-    InvoiceStatus,
-    MpesaTransaction
+    User, Product, Sale, Customer, Branch, BusinessApplication, 
+    ShippingLabel, Quotation, Invoice, AppSettings, DashboardStats, SalesChartDataPoint, 
+    FastMovingProduct, VinSearchResult, CustomerTransactions, QuotationPayload, CreateStockRequestPayload, 
+    StockRequest, AuditLog, MpesaTransaction, NotificationPayload, InvoiceStatus
 } from '@masuma-ea/types';
 
+// --- Axios Instance Setup ---
 const api = axios.create({
-  baseURL: '/api',
+    baseURL: '/api', // Proxied by Vite to the backend
+    withCredentials: true, // IMPORTANT: This allows cookies to be sent with requests
 });
 
-// Add a request interceptor to include the auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = sessionStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Add a response interceptor to handle errors globally
+// Interceptor to handle API errors globally
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.message || error.message;
-    return Promise.reject(new Error(message));
-  }
+    response => response,
+    error => {
+        const message = error.response?.data?.message || error.message || 'An unknown error occurred';
+        // You can add more robust error handling here, e.g., redirecting to login on 401
+        if (error.response?.status === 401 && window.location.pathname !== '/login') {
+            // The AuthContext will handle the logout flow
+        }
+        return Promise.reject(new Error(message));
+    }
 );
 
 
-// --- Auth ---
-export const loginUser = async (email: string, password: string): Promise<{ token: string }> => {
-    const { data } = await api.post('/auth/login', { email, password });
-    return data;
-};
+// --- TYPE DEFINITIONS ---
+// The login response from the backend no longer includes a token.
+export interface LoginResponse {
+    user: User;
+}
 
-export const loginWithGoogle = async (token: string): Promise<{ token: string }> => {
-    const { data } = await api.post('/auth/google', { token });
-    return data;
-};
+export interface RegisterPayload extends Omit<BusinessApplication, 'id' | 'status' | 'submittedAt' | 'certOfIncUrl' | 'cr12Url'> {
+    password?: string;
+    certOfInc: File;
+    cr12: File;
+}
 
-export const registerUser = async (payload: {
-    businessName: string; kraPin: string; contactName: string; contactEmail: string; contactPhone: string; password: string; certOfInc: File; cr12: File;
-}) => {
+// --- API FUNCTIONS ---
+
+// Auth
+export const login = (email: string, password: string): Promise<LoginResponse> => api.post('/auth/login', { email, password }).then(res => res.data);
+export const loginWithGoogle = (token: string): Promise<LoginResponse> => api.post('/auth/google', { token }).then(res => res.data);
+// This endpoint verifies the session cookie and returns the user.
+export const verifyAuth = (): Promise<User> => api.get('/auth/verify').then(res => res.data);
+// This endpoint clears the session cookie on the backend.
+export const logoutUser = (): Promise<void> => api.post('/auth/logout');
+
+export const registerUser = (payload: RegisterPayload) => {
     const formData = new FormData();
     Object.entries(payload).forEach(([key, value]) => {
-        formData.append(key, value);
+        if (value) {
+           formData.append(key, value);
+        }
     });
-    const { data } = await api.post('/auth/register', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return data;
+    return api.post('/auth/register', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data);
 };
 
-// --- Dashboard ---
-export const getDashboardStats = async (range: {start: string, end: string}, branchId: number): Promise<DashboardStats> => {
-    const { data } = await api.get('/dashboard/stats', { params: { ...range, branchId } });
-    return data;
-};
+// Dashboard
+export const getDashboardStats = (range: { start: string, end: string }, branchId: number): Promise<DashboardStats> => api.get('/dashboard/stats', { params: { ...range, branchId } }).then(res => res.data);
+export const getSalesChartData = (range: { start: string, end: string }, branchId: number): Promise<SalesChartDataPoint[]> => api.get('/dashboard/sales-chart', { params: { ...range, branchId } }).then(res => res.data);
+export const getFastMovingProducts = (range: { start: string, end: string }, branchId: number): Promise<FastMovingProduct[]> => api.get('/dashboard/fast-moving', { params: { ...range, branchId } }).then(res => res.data);
+export const updateSalesTarget = (salesTarget: number): Promise<{ salesTarget: number }> => api.put('/dashboard/sales-target', { salesTarget }).then(res => res.data);
 
-export const getSalesChartData = async (range: {start: string, end: string}, branchId: number): Promise<SalesChartDataPoint[]> => {
-    const { data } = await api.get('/dashboard/sales-chart', { params: { ...range, branchId } });
-    return data;
-};
+// Products
+export const getProducts = (params?: any): Promise<{products: Product[], total: number} | Product[]> => api.get('/products', { params }).then(res => res.data);
+export const createProduct = (product: Omit<Product, 'id'>): Promise<Product> => api.post('/products', product).then(res => res.data);
+export const updateProduct = (id: string, product: Partial<Product>): Promise<Product> => api.put(`/products/${id}`, product).then(res => res.data);
+export const deleteProduct = (id: string): Promise<void> => api.delete(`/products/${id}`);
+export const importProducts = (products: Omit<Product, 'id'>[]): Promise<void> => api.post('/products/import', products).then(res => res.data);
 
-export const getFastMovingProducts = async (range: {start: string, end: string}, branchId: number): Promise<FastMovingProduct[]> => {
-    const { data } = await api.get('/dashboard/fast-moving', { params: { ...range, branchId } });
-    return data;
-};
+// Customers
+export const getCustomers = (params?: any): Promise<{ customers: any[], total: number }> => api.get('/customers', { params }).then(res => res.data);
+export const createCustomer = (customer: Omit<Customer, 'id'>): Promise<Customer> => api.post('/customers', customer).then(res => res.data);
+export const getCustomerTransactions = (id: number): Promise<CustomerTransactions> => api.get(`/customers/${id}/transactions`).then(res => res.data);
 
-export const updateSalesTarget = async (target: number): Promise<{ salesTarget: number }> => {
-    const { data } = await api.put('/dashboard/sales-target', { target });
-    return data;
-};
-
-// --- Products ---
-export const getProducts = async (): Promise<Product[]> => {
-    const { data } = await api.get('/products');
-    return data;
-};
-
-export const createProduct = async (productData: Omit<Product, 'id'>): Promise<Product> => {
-    const { data } = await api.post('/products', productData);
-    return data;
-};
-
-export const updateProduct = async (id: string, productData: Partial<Product>): Promise<Product> => {
-    const { data } = await api.put(`/products/${id}`, productData);
-    return data;
-};
-
-export const deleteProduct = async (id: string): Promise<void> => {
-    await api.delete(`/products/${id}`);
-};
-
-export const importProducts = async (products: Omit<Product, 'id'>[]): Promise<{ count: number }> => {
-    const { data } = await api.post('/products/import', { products });
-    return data;
-};
-
-// --- VIN Picker ---
-export const getPartsByVin = async (vin: string): Promise<VinSearchResult[]> => {
-    const { data } = await api.get(`/vin-lookup/${vin}`);
-    return data;
-}
-
-// --- Customers ---
-export const getCustomers = async (): Promise<Customer[]> => {
-    const { data } = await api.get('/customers');
-    return data;
-};
-
-export const createCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer> => {
-    const { data } = await api.post('/customers', customerData);
-    return data;
-};
-
-export const getCustomerTransactions = async (id: number): Promise<CustomerTransactions> => {
-    const { data } = await api.get(`/customers/${id}/transactions`);
-    return data;
-};
-
-// --- Sales ---
-export const getSales = async (range?: {start: string, end: string}): Promise<Sale[]> => {
-    const { data } = await api.get('/sales', { params: range });
-    return data;
-};
-
-export const createSale = async (saleData: any): Promise<Sale> => {
-    const { data } = await api.post('/sales', saleData);
-    return data;
-};
-
-export const getSaleDetails = async (id: number): Promise<Sale> => {
-    const { data } = await api.get(`/sales/${id}`);
-    return data;
-};
-
-// --- Invoices ---
-export const getInvoices = async (status?: InvoiceStatus | 'All'): Promise<Invoice[]> => {
-    const params = status && status !== 'All' ? { status } : {};
-    const { data } = await api.get('/invoices', { params });
-    return data;
-};
-export const getUnpaidInvoiceSnippets = async (): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> => {
-    const { data } = await api.get('/invoices/snippets/unpaid');
-    return data;
-}
-export const getInvoiceDetails = async (id: number): Promise<Invoice> => {
-    const { data } = await api.get(`/invoices/${id}`);
-    return data;
-};
-
-// --- Quotations ---
-export const getQuotations = async (): Promise<Quotation[]> => {
-    const { data } = await api.get('/quotations');
-    return data;
-};
-export const getQuotationDetails = async (id: number): Promise<Quotation> => {
-    const { data } = await api.get(`/quotations/${id}`);
-    return data;
-};
-export const createQuotation = async (payload: QuotationPayload): Promise<Quotation> => {
-    const { data } = await api.post('/quotations', payload);
-    return data;
-};
-export const updateQuotationStatus = async (id: number, status: QuotationStatus): Promise<Quotation> => {
-    const { data } = await api.patch(`/quotations/${id}/status`, { status });
-    return data;
-};
-export const convertQuotationToInvoice = async (id: number): Promise<Invoice> => {
-    const { data } = await api.post(`/quotations/${id}/convert-to-invoice`);
-    return data;
-};
-
-// --- Shipping ---
-export const getShippingLabels = async (): Promise<ShippingLabel[]> => {
-    const { data } = await api.get('/shipping');
-    return data;
-};
-export const createShippingLabel = async (labelData: Partial<ShippingLabel>): Promise<ShippingLabel> => {
-    const { data } = await api.post('/shipping', labelData);
-    return data;
-};
-export const updateShippingLabelStatus = async (id: string, status: ShippingStatus): Promise<ShippingLabel> => {
-    const { data } = await api.patch(`/shipping/${id}/status`, { status });
-    return data;
-};
-export const getShipments = async (range: {start: string, end: string}): Promise<ShippingLabel[]> => {
-    const { data } = await api.get('/reports/shipments', { params: range });
-    return data;
-};
-
-// --- B2B ---
-export const getB2BApplications = async (): Promise<BusinessApplication[]> => {
-    const { data } = await api.get('/b2b/applications');
-    return data;
-};
-export const updateB2BApplicationStatus = async (id: string, status: ApplicationStatus): Promise<BusinessApplication> => {
-    const { data } = await api.patch(`/b2b/applications/${id}`, { status });
-    return data;
-};
-
-// --- Stock Requests (B2B Portal) ---
-export const createStockRequest = async (payload: CreateStockRequestPayload): Promise<StockRequest> => {
-    const { data } = await api.post('/stock-requests', payload);
-    return data;
-};
-export const getMyStockRequests = async (): Promise<StockRequest[]> => {
-    const { data } = await api.get('/stock-requests/my-requests');
-    return data;
-};
-export const getAllStockRequests = async (): Promise<StockRequest[]> => {
-    const { data } = await api.get('/stock-requests');
-    return data;
-};
-export const getStockRequestDetails = async (id: number): Promise<StockRequest> => {
-    const { data } = await api.get(`/stock-requests/${id}`);
-    return data;
-};
-export const updateStockRequestStatus = async (id: number, status: StockRequestStatus): Promise<StockRequest> => {
-    const { data } = await api.patch(`/stock-requests/${id}/status`, { status });
-    return data;
-};
-
-// --- Users ---
-export const getUsers = async (): Promise<User[]> => {
-    const { data } = await api.get('/users');
-    return data;
-};
-export const createUser = async (userData: Partial<User>): Promise<User> => {
-    const { data } = await api.post('/users', userData);
-    return data;
-};
-export const updateUser = async (id: string, userData: Partial<User>): Promise<User> => {
-    const { data } = await api.put(`/users/${id}`, userData);
-    return data;
-};
-export const updateCurrentUserPassword = async (payload: {currentPassword: string, newPassword: string}):Promise<void> => {
-    await api.patch('/users/me/password', payload);
-};
-
-// --- Branches ---
-export const getBranches = async (): Promise<Branch[]> => {
-    const { data } = await api.get('/branches');
-    return data;
-};
-export const createBranch = async (branchData: Omit<Branch, 'id'>): Promise<Branch> => {
-    const { data } = await api.post('/branches', branchData);
-    return data;
-};
-export const updateBranch = async (id: number, branchData: Partial<Branch>): Promise<Branch> => {
-    const { data } = await api.put(`/branches/${id}`, branchData);
-    return data;
-};
+// Branches
+export const getBranches = (): Promise<Branch[]> => api.get('/branches').then(res => res.data);
+export const createBranch = (branch: Omit<Branch, 'id'>): Promise<Branch> => api.post('/branches', branch).then(res => res.data);
+export const updateBranch = (id: number, branch: Partial<Branch>): Promise<Branch> => api.put(`/branches/${id}`, branch).then(res => res.data);
 
 
-// --- Settings ---
-export const getSettings = async (): Promise<AppSettings> => {
-    const { data } = await api.get('/settings');
-    return data;
-};
-export const updateSettings = async (settings: AppSettings): Promise<AppSettings> => {
-    const { data } = await api.put('/settings', settings);
-    return data;
-};
+// Sales & POS
+export const getSales = (params?: any): Promise<Sale[] | {sales: Sale[], total: number}> => api.get('/sales', { params }).then(res => res.data);
+export const getSaleDetails = (id: number): Promise<Sale> => api.get(`/sales/${id}`).then(res => res.data);
+export const createSale = (saleData: any): Promise<Sale> => api.post('/sales', saleData).then(res => res.data);
 
-// --- M-Pesa ---
-export const initiateMpesaPayment = async (payload: any): Promise<{ checkoutRequestId: string }> => {
-    const { data } = await api.post('/mpesa/stk-push', payload);
-    return data;
-};
-export const getMpesaPaymentStatus = async (checkoutRequestId: string): Promise<{ status: string, sale?: Sale, message?: string }> => {
-    const { data } = await api.get(`/mpesa/status/${checkoutRequestId}`);
-    return data;
-};
-export const getMpesaTransactions = async (page: number, limit: number, status: string): Promise<{transactions: MpesaTransaction[], total: number}> => {
-    const { data } = await api.get('/mpesa/transactions', { params: { page, limit, status } });
-    return data;
-};
+// Invoices
+export const getInvoices = (status?: InvoiceStatus): Promise<Invoice[]> => api.get('/invoices', { params: { status } }).then(res => res.data);
+export const getInvoiceDetails = (id: number): Promise<Invoice> => api.get(`/invoices/${id}`).then(res => res.data);
+export const getUnpaidInvoiceSnippets = (): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> => api.get('/invoices', { params: { status: 'Unpaid', snippets: true } }).then(res => res.data);
+export const convertQuotationToInvoice = (quotationId: number): Promise<Invoice> => api.post(`/invoices/from-quotation/${quotationId}`).then(res => res.data);
 
+// Quotations
+export const getQuotations = (): Promise<Quotation[]> => api.get('/quotations').then(res => res.data);
+export const getQuotationDetails = (id: number): Promise<Quotation> => api.get(`/quotations/${id}`).then(res => res.data);
+export const createQuotation = (payload: QuotationPayload): Promise<Quotation> => api.post('/quotations', payload).then(res => res.data);
+export const updateQuotationStatus = (id: number, status: string): Promise<Quotation> => api.patch(`/quotations/${id}/status`, { status }).then(res => res.data);
 
-// --- Notifications ---
-export const getNotifications = async (): Promise<NotificationPayload> => {
-    const { data } = await api.get('/notifications');
-    return data;
-};
+// Shipping
+export const getShippingLabels = (): Promise<ShippingLabel[]> => api.get('/shipping').then(res => res.data);
+export const createShippingLabel = (labelData: Partial<ShippingLabel>): Promise<ShippingLabel> => api.post('/shipping', labelData).then(res => res.data);
+export const updateShippingLabelStatus = (id: string, status: string): Promise<ShippingLabel> => api.patch(`/shipping/${id}/status`, { status }).then(res => res.data);
 
-export const markNotificationsRead = async (ids: number[]): Promise<void> => {
-    await api.post('/notifications/mark-read', { ids });
-};
+// VIN Picker
+export const getPartsByVin = (vin: string): Promise<VinSearchResult[]> => api.get(`/vin/${vin}`).then(res => res.data);
 
-// --- Audit Logs ---
-export const getAuditLogs = async (page: number, limit: number): Promise<{logs: AuditLog[], total: number}> => {
-    const { data } = await api.get('/audit-logs', { params: { page, limit } });
-    return data;
-};
+// Reports
+export const getShipments = (range?: { start: string, end: string }): Promise<ShippingLabel[]> => api.get('/reports/shipments', { params: range }).then(res => res.data);
+
+// B2B Management
+export const getB2BApplications = (): Promise<BusinessApplication[]> => api.get('/b2b/applications').then(res => res.data);
+export const updateB2BApplicationStatus = (id: string, status: string): Promise<BusinessApplication> => api.patch(`/b2b/applications/${id}/status`, { status }).then(res => res.data);
+
+// Stock Requests
+export const getMyStockRequests = (): Promise<StockRequest[]> => api.get('/stock-requests/my').then(res => res.data);
+export const getAllStockRequests = (): Promise<StockRequest[]> => api.get('/stock-requests/all').then(res => res.data);
+export const getStockRequestDetails = (id: number): Promise<StockRequest> => api.get(`/stock-requests/${id}`).then(res => res.data);
+export const createStockRequest = (payload: CreateStockRequestPayload): Promise<StockRequest> => api.post('/stock-requests', payload).then(res => res.data);
+export const updateStockRequestStatus = (id: number, status: string): Promise<StockRequest> => api.patch(`/stock-requests/${id}/status`, { status }).then(res => res.data);
+
+// Users
+export const getUsers = (): Promise<User[]> => api.get('/users').then(res => res.data);
+export const createUser = (userData: Partial<User>): Promise<User> => api.post('/users', userData).then(res => res.data);
+export const updateUser = (id: string, userData: Partial<User>): Promise<User> => api.put(`/users/${id}`, userData).then(res => res.data);
+export const updateCurrentUserPassword = (passwordData: any): Promise<void> => api.put('/users/me/password', passwordData).then(res => res.data);
+
+// Settings
+export const getSettings = (): Promise<AppSettings> => api.get('/settings').then(res => res.data);
+export const updateSettings = (settings: Partial<AppSettings>): Promise<AppSettings> => api.put('/settings', settings).then(res => res.data);
+
+// Audit Logs
+export const getAuditLogs = (page: number, limit: number): Promise<{ logs: AuditLog[], total: number }> => api.get('/audit-logs', { params: { page, limit } }).then(res => res.data);
+
+// Notifications
+export const getNotifications = (): Promise<NotificationPayload> => api.get('/notifications').then(res => res.data);
+export const markNotificationsRead = (ids: number[]): Promise<void> => api.post('/notifications/mark-read', { ids }).then(res => res.data);
+
+// M-Pesa
+export const initiateMpesaPayment = (payload: { amount: number, phoneNumber: string, [key: string]: any }): Promise<{ checkoutRequestId: string }> => api.post('/mpesa/stk-push', payload).then(res => res.data);
+export const getMpesaPaymentStatus = (checkoutRequestId: string): Promise<{ status: string, sale?: Sale, message?: string }> => api.get(`/mpesa/status/${checkoutRequestId}`).then(res => res.data);
+export const getMpesaTransactions = (page: number, limit: number, status: string): Promise<{ transactions: MpesaTransaction[], total: number }> => api.get('/mpesa/transactions', { params: { page, limit, status: status === 'All' ? undefined : status } }).then(res => res.data);

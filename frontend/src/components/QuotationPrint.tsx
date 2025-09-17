@@ -1,6 +1,5 @@
 import React from 'react';
 import { Quotation, AppSettings } from '@masuma-ea/types';
-// FIX: Changed import to remove file extension for proper module resolution.
 import Logo from './Logo';
 
 interface QuotationPrintProps {

@@ -5,7 +5,6 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { LoaderCircle, AlertTriangle, Check, X, FileText, Eye, Truck } from 'lucide-react';
 import { BusinessApplication, ApplicationStatus, StockRequest, StockRequestStatus } from '@masuma-ea/types';
-// FIX: Remove .ts extension from imports and import DOCS_BASE_URL from the correct config file.
 import { getB2BApplications, updateB2BApplicationStatus, getAllStockRequests, getStockRequestDetails, updateStockRequestStatus } from '../services/api';
 import { DOCS_BASE_URL } from '../config/permissions';
 import toast from 'react-hot-toast';

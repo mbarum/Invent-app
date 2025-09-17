@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
-import Pagination from '../components/ui/Pagination.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
+import Pagination from '../components/ui/Pagination';
 import { LoaderCircle, AlertTriangle } from 'lucide-react';
-import { MpesaTransaction, Branch } from '@masuma-ea/types';
-import { getMpesaTransactions } from '../services/api.ts';
+import { MpesaTransaction } from '@masuma-ea/types';
+import { getMpesaTransactions } from '../services/api';
 import toast from 'react-hot-toast';
-import Select from '../components/ui/Select.tsx';
+import Select from '../components/ui/Select';
 
 interface OutletContextType {
   currentCurrency: string;

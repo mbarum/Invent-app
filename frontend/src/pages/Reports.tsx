@@ -1,15 +1,14 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Branch, Sale, Customer, ShippingLabel, ShippingStatus } from '@masuma-ea/types';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card.tsx';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table.tsx';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import { DollarSign, ShoppingCart, Users, Truck, LoaderCircle, AlertTriangle, Download } from 'lucide-react';
-import { getSales, getCustomers, getShipments } from '../services/api.ts';
-import DateRangePicker from '../components/ui/DateRangePicker.tsx';
+import { getSales, getCustomers, getShipments } from '../services/api';
+import DateRangePicker from '../components/ui/DateRangePicker';
 import toast from 'react-hot-toast';
-import Pagination from '../components/ui/Pagination.tsx';
-import Button from '../components/ui/Button.tsx';
+import Pagination from '../components/ui/Pagination';
+import Button from '../components/ui/Button';
 
 const exportToCsv = (filename: string, headers: string[], data: any[], keys: string[]) => {
     const csvContent = [
@@ -86,8 +85,10 @@ const Reports: React.FC = () => {
           getCustomers(),
           getShipments(dateRange)
         ]);
-        setSales(salesData);
-        setCustomers(customersData);
+        // FIX: Handle the two possible return shapes from getSales
+        setSales(Array.isArray(salesData) ? salesData : salesData.sales);
+        // FIX: Extract the customers array from the response object
+        setCustomers(customersData.customers);
         setShipments(shipmentsData);
       } catch (err) {
         setError("Failed to load reports data.");
