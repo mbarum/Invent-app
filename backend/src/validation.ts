@@ -7,8 +7,8 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Explicitly typed middleware parameters to resolve type mismatch.
-export const validate = (schema: Joi.Schema): RequestHandler => (req: Request, res: Response, next: NextFunction) => {
+// FIX: Changed to return RequestHandler to ensure correct type inference for req, res, and next.
+export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
     // We validate req.body for most POST/PUT, but some data might be in other places for multipart forms
     const dataToValidate = { ...req.body, ...req.params, ...req.query };
 

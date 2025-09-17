@@ -56,8 +56,13 @@ const Shipping: React.FC = () => {
 
   useEffect(() => {
     if (labelToPrint) {
-      window.print();
-      setLabelToPrint(null);
+      // A small delay ensures the component has time to render with the new label data
+      // before the print dialog is triggered.
+      setTimeout(() => {
+        window.print();
+        // Resetting after print dialog is shown/closed
+        setLabelToPrint(null);
+      }, 500);
     }
   }, [labelToPrint]);
   

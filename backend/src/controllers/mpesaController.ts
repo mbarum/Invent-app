@@ -1,8 +1,6 @@
-
-
 /// <reference types="node" />
 
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import axios from 'axios';
 import db from '../db';
 import { createSaleInTransaction } from './posController';
@@ -24,7 +22,7 @@ const getMpesaToken = async () => {
     return response.data.access_token;
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
@@ -77,7 +75,7 @@ const initiateStkPush = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const stkCallback = async (req: Request, res: Response) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
@@ -114,7 +112,7 @@ const stkCallback = async (req: Request, res: Response) => {
     res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
@@ -137,7 +135,7 @@ const getPaymentStatus = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);

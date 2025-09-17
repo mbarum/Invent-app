@@ -1,8 +1,4 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -27,7 +23,7 @@ const manageOemNumbers = async (trx: any, productId: string, oemNumbers: string[
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, searchTerm } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -62,7 +58,7 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const createProduct = async (req: Request, res: Response, next: NextFunction) => {
     const { oemNumbers, ...productData } = req.body;
     const productId = uuidv4();
@@ -80,7 +76,7 @@ const createProduct = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { oemNumbers, ...productData } = req.body;
@@ -106,8 +102,8 @@ const updateProduct = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
-const bulkImportProducts: (req: Request, res: Response, next: NextFunction) => Promise<void> = async (req, res, next) => {
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
+const bulkImportProducts = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.file) {
         return res.status(400).json({ message: 'CSV file is required.' });
     }

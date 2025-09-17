@@ -56,6 +56,7 @@ const Quotations: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [viewingQuotation, setViewingQuotation] = useState<Quotation | null>(null);
     const [isPrintView, setIsPrintView] = useState(false);
+    const [printFormat, setPrintFormat] = useState<'a4' | 'thermal'>('a4');
 
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -110,6 +111,11 @@ const Quotations: React.FC = () => {
         } catch (err) {
             toast.error("Failed to load quotation details.");
         }
+    };
+    
+    const handlePrint = (format: 'a4' | 'thermal') => {
+        setPrintFormat(format);
+        setIsPrintView(true);
     };
 
     const formatCurrency = (amount: number) => {
@@ -346,8 +352,11 @@ const Quotations: React.FC = () => {
             
             <Modal isOpen={!!viewingQuotation} onClose={() => setViewingQuotation(null)} title={`Quotation Details: ${viewingQuotation?.quotationNo}`} className="max-w-4xl">
                  <div className="flex space-x-2 mb-4">
-                    <Button onClick={() => setIsPrintView(true)} variant="secondary">
-                        <Printer className="mr-2 h-4 w-4" /> Print
+                    <Button onClick={() => handlePrint('a4')} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print A4
+                    </Button>
+                    <Button onClick={() => handlePrint('thermal')} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print Thermal
                     </Button>
                     <Button onClick={handleDownloadPdf}>
                         <Download className="mr-2 h-4 w-4" /> Download PDF
@@ -360,9 +369,9 @@ const Quotations: React.FC = () => {
                 </div>
              </Modal>
 
-            {viewingQuotation && (
+            {viewingQuotation && isPrintView && (
                 <div id="quotation-for-pdf-and-print" className="print-area">
-                    <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} />
+                    <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} format={printFormat} />
                 </div>
             )}
         </>

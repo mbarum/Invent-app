@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission }) => {
-  const { isAuthenticated, isLoading, hasPermission, user } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission, defaultRoute } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -27,7 +27,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   
   if (!hasPermission(permission)) {
       // FIX: Redirect to a role-appropriate default page to prevent infinite loops for users without dashboard access.
-      const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
       return <Navigate to={defaultRoute} replace />;
   }
 

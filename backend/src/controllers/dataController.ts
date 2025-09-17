@@ -1,8 +1,4 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { isAuthenticated } from '../middleware/authMiddleware';
 import { validate } from '../validation';
@@ -14,7 +10,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // --- Branches ---
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getBranches = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const branches = await db('branches').select('*');
@@ -24,7 +20,7 @@ const getBranches = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const createBranch = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [branchId] = await db('branches').insert(req.body);
@@ -36,7 +32,7 @@ const createBranch = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const updateBranch = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const count = await db('branches').where({ id: req.params.id }).update(req.body);
@@ -50,7 +46,7 @@ const updateBranch = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 // --- Customers ---
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getCustomers = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 10, searchTerm, spendingFilter, recencyFilter, sortKey = 'totalSpending', sortDirection = 'descending' } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -85,7 +81,7 @@ const getCustomers = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const createCustomer = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const [customerId] = await db('customers').insert(req.body);
@@ -97,7 +93,7 @@ const createCustomer = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getCustomerTransactions = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId } = req.params;
     try {

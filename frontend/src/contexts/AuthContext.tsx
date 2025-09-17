@@ -1,8 +1,8 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { User, UserRole } from '@masuma-ea/types';
 // FIX: Removed .ts extension for proper module resolution.
 import * as api from '../services/api';
-import { ROLES } from '../config/permissions';
+import { ROLES, PERMISSIONS } from '../config/permissions';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
   loginWithGoogle: (token: string) => Promise<void>;
   logout: () => void;
   hasPermission: (permission: string | null) => boolean;
+  defaultRoute: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,6 +82,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return userPermissions.includes(permission);
     }, [user]);
 
+    // FIX: Calculate a safe default route based on user role and permissions to prevent redirect loops.
+    const defaultRoute = useMemo(() => {
+        if (!user) return '/login';
+        if (user.role === UserRole.B2B_CLIENT) return '/b2b-portal';
+        
+        // Check permissions in order of preference for staff
+        if (hasPermission(PERMISSIONS.VIEW_DASHBOARD)) return '/dashboard';
+        if (hasPermission(PERMISSIONS.USE_POS)) return '/pos';
+        if (hasPermission(PERMISSIONS.VIEW_INVENTORY)) return '/inventory';
+        
+        // Fallback for any authenticated user
+        return '/profile';
+    }, [user, hasPermission]);
+
+
     const value = {
         user,
         isAuthenticated: !!user,
@@ -88,7 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         loginWithGoogle,
         logout,
-        hasPermission
+        hasPermission,
+        defaultRoute
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

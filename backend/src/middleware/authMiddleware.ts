@@ -16,8 +16,8 @@ declare global {
     }
 }
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
-export const isAuthenticated: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Changed to use RequestHandler type to ensure correct type inference for req, res, and next.
+export const isAuthenticated: RequestHandler = (req, res, next) => {
     if (req.session && req.session.user) {
         req.user = req.session.user;
         return next();
@@ -25,9 +25,9 @@ export const isAuthenticated: RequestHandler = (req: Request, res: Response, nex
     res.status(401).json({ message: 'Authentication required. Please log in.' });
 };
 
-// FIX: Explicitly typed the inner middleware's parameters to resolve type mismatch.
+// FIX: Removed explicit types on inner function parameters; they are inferred from RequestHandler.
 export const hasPermission = (permission: string): RequestHandler => {
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required.' });
         }

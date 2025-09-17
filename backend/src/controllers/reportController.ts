@@ -1,15 +1,11 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
@@ -39,7 +35,7 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const updateSalesTarget = async (req: Request, res: Response, next: NextFunction) => {
     const { salesTarget } = req.body;
     try {
@@ -53,7 +49,7 @@ const updateSalesTarget = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getSalesChartData = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
@@ -77,7 +73,7 @@ const getSalesChartData = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getFastMovingProducts = async (req: Request, res: Response, next: NextFunction) => {
      const { start, end, branchId } = req.query;
     try {
@@ -100,7 +96,7 @@ const getFastMovingProducts = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getShipmentsReport = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end } = req.query;
     try {

@@ -1,8 +1,4 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db';
 import { ShippingStatus } from '@masuma-ea/types';
@@ -14,7 +10,7 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getLabels = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const labels = await db('shipping_labels').select('*').orderBy('createdAt', 'desc');
@@ -24,7 +20,7 @@ const getLabels = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const createLabel = async (req: Request, res: Response, next: NextFunction) => {
     const labelId = uuidv4();
     try {
@@ -47,7 +43,7 @@ const createLabel = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;

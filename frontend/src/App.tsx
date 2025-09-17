@@ -57,9 +57,8 @@ import { UserRole } from '@masuma-ea/types';
 // A wrapper to handle redirection for authenticated users trying to access login/register
 // FIX: Updated to redirect to a role-appropriate default page instead of always '/dashboard'.
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated, defaultRoute } = useAuth();
   if (isAuthenticated) {
-      const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
       return <Navigate to={defaultRoute} replace />;
   }
   return <>{children}</>;
@@ -67,9 +66,13 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 // FIX: A component to handle role-based redirection from the root path.
 const HomeRedirect = () => {
-    const { user } = useAuth();
-    // B2B clients have a different default page than staff.
-    const defaultRoute = user?.role === UserRole.B2B_CLIENT ? '/b2b-portal' : '/dashboard';
+    const { defaultRoute } = useAuth();
+    return <Navigate to={defaultRoute} replace />;
+};
+
+// FIX: A component to handle fallback redirects to a safe, role-appropriate page.
+const FallbackRedirect = () => {
+    const { defaultRoute } = useAuth();
     return <Navigate to={defaultRoute} replace />;
 };
 
@@ -104,7 +107,7 @@ const App: React.FC = () => {
             <Route path="audit-logs" element={<ProtectedRoute permission={PERMISSIONS.VIEW_AUDIT_LOGS}><AuditLogs /></ProtectedRoute>} />
             <Route path="profile" element={<ProtectedRoute permission={null}><Profile /></ProtectedRoute>} />
             {/* Fallback for any other route */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<FallbackRedirect />} />
           </Route>
         </Routes>
       </BrowserRouter>

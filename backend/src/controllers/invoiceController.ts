@@ -1,8 +1,4 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import db from '../db';
 import { InvoiceStatus } from '@masuma-ea/types';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -10,7 +6,7 @@ import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     const { status } = req.query;
     try {
@@ -30,7 +26,7 @@ const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
@@ -51,7 +47,7 @@ const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getUnpaidSnippets = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const snippets = await db('invoices')

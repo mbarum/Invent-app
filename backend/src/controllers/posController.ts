@@ -1,8 +1,4 @@
-
-
-
-
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
 import { Sale, InvoiceStatus } from '@masuma-ea/types';
@@ -66,7 +62,7 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
     return newSale;
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const createSale = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
@@ -85,7 +81,7 @@ const createSale = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getSales = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -139,7 +135,7 @@ const getSaleDetailsById = async (id: number) => {
     return { ...sale, items, customer, branch };
 };
 
-// FIX: Explicitly typed handler parameters to resolve type mismatch.
+// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
 const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const saleDetails = await getSaleDetailsById(Number(req.params.id));

@@ -6,21 +6,27 @@ interface QuotationPrintProps {
   quotation: Quotation | null;
   appSettings: Partial<AppSettings>;
   isPreview?: boolean;
+  format?: 'a4' | 'thermal';
 }
 
-const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings, isPreview = false }) => {
+const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings, isPreview = false, format = 'a4' }) => {
     if (!quotation) return null;
 
     const subtotal = (quotation.items || []).reduce((sum, item) => sum + (Number(item.unitPrice || 0) * item.quantity), 0);
-    // Use stored values if available, otherwise calculate for backward compatibility or display
     const discount = Number(quotation.discountAmount || 0);
     const tax = Number(quotation.taxAmount || 0) || ((subtotal - discount) * ((appSettings.taxRate || 16) / 100));
     
-    const containerClasses = isPreview ? "bg-white text-black p-8 font-sans w-full" : "print-area a4-page";
+    const containerClasses = isPreview 
+        ? "bg-white text-black p-8 font-sans w-full" 
+        : `print-area ${format === 'a4' ? 'a4-page' : 'thermal-page'}`;
+    
+    const contentClasses = format === 'thermal' 
+        ? 'w-[70mm] mx-auto bg-white text-black p-2 font-sans text-xs'
+        : 'bg-white text-black p-4 font-sans';
 
     return (
         <div className={containerClasses}>
-             <div className="bg-white text-black p-4 font-sans">
+             <div className={contentClasses}>
                 {/* Header */}
                 <div className="flex justify-between items-start pb-4 border-b-2 border-black">
                     <div>
@@ -61,11 +67,25 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                     </tbody>
                 </table>
                 
-                 {/* Totals & Payment Info */}
-                <div className="flex justify-between items-start mt-4">
-                    <div className="w-2/3 text-xs">
+                {/* Totals Section */}
+                <div className="flex justify-end mt-4">
+                    <div className="w-full sm:w-1/2 md:w-1/3 space-y-2">
+                         <div className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></div>
+                        {discount > 0 && (
+                            <div className="flex justify-between"><span>Discount:</span> <span>-{discount.toFixed(2)}</span></div>
+                        )}
+                        <div className="flex justify-between"><span>VAT ({(appSettings.taxRate || 16)}%):</span> <span>{tax.toFixed(2)}</span></div>
+                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2">
+                            <span>Total (KES):</span> <span>{(Number(quotation.totalAmount) || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Payment Info & Terms Section */}
+                <div className="mt-6 text-xs border-t border-gray-300 pt-4">
+                    <div className={format === 'a4' ? 'grid grid-cols-2 gap-8' : 'space-y-4'}>
                         {appSettings.paymentDetails && (
-                            <div className="mb-4">
+                            <div>
                                 <h4 className="font-bold uppercase border-b border-black mb-1">Payment Details</h4>
                                 <p className="font-sans whitespace-pre-wrap">{appSettings.paymentDetails}</p>
                             </div>
@@ -76,16 +96,6 @@ const QuotationPrint: React.FC<QuotationPrintProps> = ({ quotation, appSettings,
                                 <p>{appSettings.paymentTerms}</p>
                             </div>
                         )}
-                    </div>
-                    <div className="w-1/3 space-y-2">
-                         <div className="flex justify-between"><span>Subtotal:</span> <span>{subtotal.toFixed(2)}</span></div>
-                        {discount > 0 && (
-                            <div className="flex justify-between"><span>Discount:</span> <span>-{discount.toFixed(2)}</span></div>
-                        )}
-                        <div className="flex justify-between"><span>VAT ({(appSettings.taxRate || 16)}%):</span> <span>{tax.toFixed(2)}</span></div>
-                        <div className="flex justify-between font-bold text-lg border-t-2 border-black pt-2">
-                            <span>Total (KES):</span> <span>{(Number(quotation.totalAmount) || 0).toFixed(2)}</span>
-                        </div>
                     </div>
                 </div>
 

@@ -1,4 +1,6 @@
 
+
+
 import React from 'react';
 import { ShippingLabel } from '@masuma-ea/types';
 
@@ -18,14 +20,14 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
   if (!label) return null;
 
   const orderRef = label.saleId ? `SALE-${String(label.saleId).padStart(5, '0')}` : `INV-${String(label.invoiceId).padStart(5, '0')}`;
+  const isThermal = format === 'thermal';
 
   return (
-    <div className={`print-area hidden ${format === 'a5' ? 'a5-page' : ''}`}>
-      <div className="bg-white text-black p-4 border border-black flex flex-col font-sans h-full">
+    <div className={`print-area hidden print:block ${isThermal ? 'thermal-page' : 'a5-page'}`}>
+      <div className={`bg-white text-black p-4 border border-black flex flex-col font-sans h-full ${isThermal ? 'w-[70mm] mx-auto text-sm' : ''}`}>
         {/* Header */}
         <div className="flex justify-between items-center pb-2 border-b-2 border-black">
           <div>
-            
             <p className="text-xs font-semibold pt-4">Masuma Autoparts East Africa LTD</p>
           </div>
           <div className="text-right">
@@ -35,14 +37,14 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
         </div>
 
         {/* Addresses */}
-        <div className="flex-1 grid grid-cols-2 gap-4 py-4 border-b-2 border-black">
+        <div className={`flex-1 py-4 border-b-2 border-black ${isThermal ? 'flex flex-col space-y-4' : 'grid grid-cols-2 gap-4'}`}>
           <div>
             <p className="text-xs uppercase font-bold">FROM:</p>
             <p className="text-lg font-bold">{label.fromName}</p>
             <p className="text-sm">{label.fromAddress}</p>
             <p className="text-sm">Phone: {label.fromPhone}</p>
           </div>
-          <div className="border-l-2 border-black pl-4">
+          <div className={!isThermal ? 'border-l-2 border-black pl-4' : 'pt-4 border-t-2 border-dashed border-black'}>
             <p className="text-xs uppercase font-bold">TO:</p>
             <p className="text-xl font-bold">{label.toName}</p>
             <p className="text-base">{label.toAddress}</p>
@@ -51,7 +53,7 @@ const ShippingLabelPrint: React.FC<ShippingLabelPrintProps> = ({ label, format }
         </div>
 
         {/* Details */}
-        <div className="grid grid-cols-3 gap-4 py-2 border-b-2 border-black">
+        <div className={`py-2 border-b-2 border-black ${isThermal ? 'flex flex-col space-y-2' : 'grid grid-cols-3 gap-4'}`}>
           <div>
             <p className="text-xs uppercase">Order Ref:</p>
             <p className="font-bold text-lg">{orderRef}</p>

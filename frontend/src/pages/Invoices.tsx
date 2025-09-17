@@ -52,6 +52,7 @@ const Invoices: React.FC = () => {
     // View/Print Modal state
     const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
     const [isPrintView, setIsPrintView] = useState(false);
+    const [printFormat, setPrintFormat] = useState<'a4' | 'thermal'>('a4');
 
     // Filters and pagination
     const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
@@ -99,6 +100,11 @@ const Invoices: React.FC = () => {
         }
     };
     
+    const handlePrint = (format: 'a4' | 'thermal') => {
+        setPrintFormat(format);
+        setIsPrintView(true);
+    };
+
     const handleDownloadPdf = async () => {
         const element = document.getElementById('invoice-for-pdf-and-print');
         if (!element || !viewingInvoice) return;
@@ -204,9 +210,12 @@ const Invoices: React.FC = () => {
             </div>
 
             <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice?.invoiceNo}`} className="max-w-4xl">
-                <div className="flex space-x-2 mb-4">
-                    <Button onClick={() => setIsPrintView(true)} variant="secondary">
-                        <Printer className="mr-2 h-4 w-4" /> Print
+                 <div className="flex space-x-2 mb-4">
+                    <Button onClick={() => handlePrint('a4')} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print A4
+                    </Button>
+                    <Button onClick={() => handlePrint('thermal')} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print Thermal
                     </Button>
                     <Button onClick={handleDownloadPdf}>
                         <Download className="mr-2 h-4 w-4" /> Download PDF
@@ -219,9 +228,9 @@ const Invoices: React.FC = () => {
                 </div>
             </Modal>
             
-            {viewingInvoice && (
+            {viewingInvoice && isPrintView && (
                 <div id="invoice-for-pdf-and-print" className="print-area">
-                    <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} />
+                    <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} format={printFormat} />
                 </div>
             )}
         </>
