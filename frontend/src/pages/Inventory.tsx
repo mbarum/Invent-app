@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
@@ -7,7 +8,7 @@ import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
 import Pagination from '../components/ui/Pagination';
 import { PlusCircle, Edit, LoaderCircle, AlertTriangle, Download, Upload } from 'lucide-react';
-import { Product } from '@masuma-ea/types';
+import { Product, UserRole } from '@masuma-ea/types';
 import { getProducts, createProduct, updateProduct, bulkImportProducts, BulkImportResponse } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -41,8 +42,9 @@ const exportToCsv = (filename: string, headers: string[], data: any[], keys: str
 
 
 const Inventory: React.FC = () => {
-    const { hasPermission } = useAuth();
+    const { hasPermission, user } = useAuth();
     const canManageInventory = hasPermission(PERMISSIONS.MANAGE_INVENTORY);
+    const isB2bClient = user?.role === UserRole.B2B_CLIENT;
     const { refetchProducts } = useDataStore();
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -198,7 +200,7 @@ const Inventory: React.FC = () => {
                     <TableRow>
                         <TableHead>Part Number</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Retail Price</TableHead>
+                        {!isB2bClient && <TableHead>Retail Price</TableHead>}
                         <TableHead>Wholesale Price</TableHead>
                         <TableHead>Stock</TableHead>
                         {canManageInventory && <TableHead>Actions</TableHead>}
@@ -209,7 +211,7 @@ const Inventory: React.FC = () => {
                         <TableRow key={product.id}>
                             <TableCell className="font-mono">{product.partNumber}</TableCell>
                             <TableCell className="font-medium">{product.name}</TableCell>
-                            <TableCell>KES {Number(product.retailPrice).toLocaleString()}</TableCell>
+                            {!isB2bClient && <TableCell>KES {Number(product.retailPrice).toLocaleString()}</TableCell>}
                             <TableCell>KES {Number(product.wholesalePrice).toLocaleString()}</TableCell>
                             <TableCell>
                                 {product.stock > 0 ? `${product.stock} units` : <span className="text-red-400">Out of Stock</span>}

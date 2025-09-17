@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -5,7 +9,7 @@ import { PERMISSIONS } from '../config/permissions';
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
@@ -35,7 +39,7 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateSalesTarget = async (req: Request, res: Response, next: NextFunction) => {
     const { salesTarget } = req.body;
     try {
@@ -49,17 +53,20 @@ const updateSalesTarget = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getSalesChartData = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end, branchId } = req.query;
     try {
+        // FIX: Replaced camelCase `createdAt` with snake_case `created_at` inside raw SQL queries.
+        // The `db.raw()` function bypasses Knex's automatic camelCase-to-snake_case conversion,
+        // so the actual database column name must be used, preventing a server crash.
         const query = db('sales')
-            .select(db.raw('DATE(createdAt) as name'))
+            .select(db.raw('DATE(created_at) as name'))
             .sum('totalAmount as revenue')
             .count('id as sales')
             .whereBetween('createdAt', [`${start} 00:00:00`, `${end} 23:59:59`])
-            .groupByRaw('DATE(createdAt)')
-            .orderByRaw('DATE(createdAt)');
+            .groupByRaw('DATE(created_at)')
+            .orderByRaw('DATE(created_at)');
             
         if (branchId) query.where({ branchId });
         
@@ -70,7 +77,7 @@ const getSalesChartData = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getFastMovingProducts = async (req: Request, res: Response, next: NextFunction) => {
      const { start, end, branchId } = req.query;
     try {
@@ -93,7 +100,7 @@ const getFastMovingProducts = async (req: Request, res: Response, next: NextFunc
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getShipmentsReport = async (req: Request, res: Response, next: NextFunction) => {
     const { start, end } = req.query;
     try {

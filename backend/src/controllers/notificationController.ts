@@ -1,10 +1,14 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user!.id;
     try {
@@ -20,7 +24,7 @@ const getNotifications = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const markRead = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user!.id;
     const { ids } = req.body;

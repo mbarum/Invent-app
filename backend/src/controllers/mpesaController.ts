@@ -1,3 +1,7 @@
+
+
+/// <reference types="node" />
+
 import { Router, Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import db from '../db';
@@ -20,7 +24,7 @@ const getMpesaToken = async () => {
     return response.data.access_token;
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
@@ -73,7 +77,7 @@ const initiateStkPush = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req and res.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const stkCallback = async (req: Request, res: Response) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
@@ -110,7 +114,7 @@ const stkCallback = async (req: Request, res: Response) => {
     res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { checkoutRequestId } = req.params;
     try {
@@ -133,7 +137,7 @@ const getPaymentStatus = async (req: Request, res: Response, next: NextFunction)
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);

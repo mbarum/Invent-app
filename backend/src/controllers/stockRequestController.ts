@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { StockRequestStatus, UserRole } from '@masuma-ea/types';
@@ -10,7 +14,7 @@ import { createNotification } from '../services/notificationService';
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const createRequest = async (req: Request, res: Response, next: NextFunction) => {
     const { branchId, items } = req.body;
     const b2bUserId = req.user!.id;
@@ -63,7 +67,7 @@ const createRequest = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getMyRequests = async (req: Request, res: Response, next: NextFunction) => {
     const b2bUserId = req.user!.id;
     try {
@@ -80,7 +84,7 @@ const getMyRequests = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
      try {
         const requests = await db('stock_requests')
@@ -100,7 +104,7 @@ const getAllRequests = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
@@ -123,7 +127,7 @@ const getRequestDetails = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;

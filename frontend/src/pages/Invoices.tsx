@@ -100,7 +100,7 @@ const Invoices: React.FC = () => {
     };
     
     const handleDownloadPdf = async () => {
-        const element = document.getElementById('invoice-preview-content');
+        const element = document.getElementById('invoice-for-pdf-and-print');
         if (!element || !viewingInvoice) return;
         
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
@@ -203,25 +203,27 @@ const Invoices: React.FC = () => {
                 </Card>
             </div>
 
+            <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice?.invoiceNo}`} className="max-w-4xl">
+                <div className="flex space-x-2 mb-4">
+                    <Button onClick={() => setIsPrintView(true)} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                    <Button onClick={handleDownloadPdf}>
+                        <Download className="mr-2 h-4 w-4" /> Download PDF
+                    </Button>
+                </div>
+                <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
+                    <div id="invoice-preview-content">
+                        <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} isPreview={true} />
+                    </div>
+                </div>
+            </Modal>
+            
             {viewingInvoice && (
-                <Modal isOpen={!!viewingInvoice} onClose={() => setViewingInvoice(null)} title={`Invoice Details: ${viewingInvoice.invoiceNo}`} className="max-w-4xl">
-                    <div className="flex space-x-2 mb-4">
-                        <Button onClick={() => setIsPrintView(true)} variant="secondary">
-                            <Printer className="mr-2 h-4 w-4" /> Print
-                        </Button>
-                        <Button onClick={handleDownloadPdf}>
-                            <Download className="mr-2 h-4 w-4" /> Download PDF
-                        </Button>
-                    </div>
-                    <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
-                        <div id="invoice-preview-content">
-                            <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} isPreview={true} />
-                        </div>
-                    </div>
-                </Modal>
+                <div id="invoice-for-pdf-and-print" className="print-area">
+                    <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} />
+                </div>
             )}
-
-            {isPrintView && <InvoicePrint invoice={viewingInvoice} appSettings={appSettings} />}
         </>
     );
 };

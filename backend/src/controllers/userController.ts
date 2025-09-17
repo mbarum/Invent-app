@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
@@ -10,7 +14,7 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await db('users')
@@ -22,7 +26,7 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role, status } = req.body;
     try {
@@ -52,7 +56,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
@@ -75,7 +79,7 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateCurrentUserPassword = async (req: Request, res: Response, next: NextFunction) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;

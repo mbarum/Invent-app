@@ -1,7 +1,9 @@
+
+
 // This line must be at the very top
 import 'tsconfig-paths/register';
 
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
@@ -9,6 +11,15 @@ import KnexSessionStore from 'connect-session-knex';
 import path from 'path';
 import dotenv from 'dotenv';
 import db from './db';
+// FIX: Add url and path imports to derive __dirname in ES module context
+import { fileURLToPath } from 'url';
+// FIX: Add express-session import to augment Request type for session property
+import 'express-session';
+
+
+// FIX: __dirname is not available in ES modules. This correctly derives it.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables from .env file in the backend directory
 dotenv.config();
@@ -32,7 +43,8 @@ import notificationRoutes from './controllers/notificationController';
 import vinSearchRoutes from './controllers/vinSearchController';
 
 
-const app: Express = express();
+// FIX: Explicitly type the app as express.Express to ensure correct type inference.
+const app: express.Express = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Security: Ensure critical environment variables are set ---
@@ -107,8 +119,8 @@ if (process.env.NODE_ENV === 'production') {
 
     // The "catchall" handler: for any request that doesn't
     // match one above, send back React's index.html file.
-    // FIX: Removed explicit parameter types (req: Request, res: Response) to allow RequestHandler to correctly infer them, resolving type conflicts with res.sendFile.
-    const serveFrontend = (req: Request, res: Response) => {
+    // FIX: Typed the handler parameters explicitly to resolve type mismatch errors.
+    const serveFrontend: RequestHandler = (req: Request, res: Response) => {
         res.sendFile(path.join(frontendDistPath, 'index.html'));
     };
     app.get('*', serveFrontend);
@@ -120,8 +132,8 @@ interface AppError extends Error {
     statusCode?: number;
 }
 
-// FIX: Removed explicit parameter types to let ErrorRequestHandler infer them correctly, resolving type conflicts with res.status.
-const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
+// FIX: Typed the handler parameters explicitly to resolve type mismatch errors.
+const errorHandler: ErrorRequestHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({

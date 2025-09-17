@@ -139,7 +139,7 @@ const Sales: React.FC = () => {
   };
   
   const handleDownloadPdf = async () => {
-    const element = document.getElementById('receipt-to-print');
+    const element = document.getElementById('receipt-for-pdf-and-print');
     if (!element || !viewingSale) return;
     const toastId = toast.loading('Generating PDF...', { duration: 5000 });
     try {
@@ -291,9 +291,12 @@ const Sales: React.FC = () => {
             <ReceiptPrint sale={viewingSale} />
         </div>
     </Modal>
-    <div className="hidden print:block">
-        <ReceiptPrint sale={viewingSale} />
-    </div>
+    
+    {viewingSale && (
+        <div id="receipt-for-pdf-and-print" className="print-area">
+            <ReceiptPrint sale={viewingSale} />
+        </div>
+    )}
     </>
   );
 };

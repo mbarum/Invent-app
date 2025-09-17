@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import knex, { Knex } from 'knex';
 import dotenv from 'dotenv';
 
@@ -75,6 +77,7 @@ db.raw('SELECT 1+1 AS result').then(() => {
     console.log(`✅ Database connected successfully to '${process.env.DB_NAME}' via Knex!`);
 }).catch(err => {
     console.error('❌ Knex database connection failed:', err.message);
+    // FIX: Add reference to node types to fix error on process.exit
     process.exit(1); // Exit if DB connection fails
 });
 

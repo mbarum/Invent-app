@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import { GoogleGenAI, Type } from "@google/genai";
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -9,7 +13,7 @@ const router = Router();
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const vinSearch = async (req: Request, res: Response, next: NextFunction) => {
     const { vin } = req.body;
     if (!vin) {

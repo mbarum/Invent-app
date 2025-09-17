@@ -1,3 +1,5 @@
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db';
@@ -22,7 +24,7 @@ const sanitizeUser = (user: any): User => {
     return sanitizedUser as User;
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const login = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
     try {
@@ -48,7 +50,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
     const { token } = req.body;
     try {
@@ -83,7 +85,7 @@ const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const logout = (req: Request, res: Response, next: NextFunction) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
@@ -98,7 +100,7 @@ const logout = (req: Request, res: Response, next: NextFunction) => {
     });
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req and res.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const verifyAuth = (req: Request, res: Response) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);

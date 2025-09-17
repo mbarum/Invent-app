@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
@@ -14,7 +18,7 @@ import { sendApplicationReceivedEmail, sendApplicationStatusEmail } from '../ser
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
@@ -59,7 +63,7 @@ const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getApplications = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const applications = await db('b2b_applications').select('*').orderBy('submittedAt', 'desc');
@@ -69,7 +73,7 @@ const getApplications = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateApplicationStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body as { status: ApplicationStatus };

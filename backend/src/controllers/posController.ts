@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
@@ -62,7 +66,7 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
     return newSale;
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const createSale = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
@@ -81,7 +85,7 @@ const createSale = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getSales = async (req: Request, res: Response, next: NextFunction) => {
     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -135,7 +139,7 @@ const getSaleDetailsById = async (id: number) => {
     return { ...sale, items, customer, branch };
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const saleDetails = await getSaleDetailsById(Number(req.params.id));

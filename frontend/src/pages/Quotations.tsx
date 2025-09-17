@@ -139,7 +139,7 @@ const Quotations: React.FC = () => {
     };
     
     const handleDownloadPdf = async () => {
-        const element = document.getElementById('quotation-preview-content');
+        const element = document.getElementById('quotation-for-pdf-and-print');
         if (!element || !viewingQuotation) return;
         
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
@@ -344,26 +344,27 @@ const Quotations: React.FC = () => {
                 </div>
             </Modal>
             
+            <Modal isOpen={!!viewingQuotation} onClose={() => setViewingQuotation(null)} title={`Quotation Details: ${viewingQuotation?.quotationNo}`} className="max-w-4xl">
+                 <div className="flex space-x-2 mb-4">
+                    <Button onClick={() => setIsPrintView(true)} variant="secondary">
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                    <Button onClick={handleDownloadPdf}>
+                        <Download className="mr-2 h-4 w-4" /> Download PDF
+                    </Button>
+                </div>
+                <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
+                    <div id="quotation-preview-content">
+                        <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} isPreview={true} />
+                    </div>
+                </div>
+             </Modal>
+
             {viewingQuotation && (
-                 <Modal isOpen={!!viewingQuotation} onClose={() => setViewingQuotation(null)} title={`Quotation Details: ${viewingQuotation.quotationNo}`} className="max-w-4xl">
-                     <div className="flex space-x-2 mb-4">
-                        <Button onClick={() => setIsPrintView(true)} variant="secondary">
-                            <Printer className="mr-2 h-4 w-4" /> Print
-                        </Button>
-                        <Button onClick={handleDownloadPdf}>
-                            <Download className="mr-2 h-4 w-4" /> Download PDF
-                        </Button>
-                    </div>
-                    <div className="border border-gray-700 rounded-lg p-4 bg-gray-900/50 max-h-[70vh] overflow-y-auto">
-                        <div id="quotation-preview-content">
-                            <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} isPreview={true} />
-                        </div>
-                    </div>
-                 </Modal>
+                <div id="quotation-for-pdf-and-print" className="print-area">
+                    <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} />
+                </div>
             )}
-
-            {isPrintView && <QuotationPrint quotation={viewingQuotation} appSettings={appSettings} />}
-
         </>
     );
 };

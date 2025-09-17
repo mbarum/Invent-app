@@ -1,6 +1,8 @@
 import { User, UserRole } from '@masuma-ea/types';
 import { PERMISSIONS, ROLES } from '../config/permissions';
-import { RequestHandler } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+// FIX: Import express-session to augment the Request type with the 'session' property.
+import 'express-session';
 
 // Extend the Express Request and Session interfaces
 declare global {
@@ -14,8 +16,8 @@ declare global {
     }
 }
 
-// FIX: Correctly typed the middleware as a RequestHandler to ensure proper type inference for req, res, and next.
-export const isAuthenticated: RequestHandler = (req, res, next) => {
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
+export const isAuthenticated: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
     if (req.session && req.session.user) {
         req.user = req.session.user;
         return next();
@@ -23,9 +25,9 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
     res.status(401).json({ message: 'Authentication required. Please log in.' });
 };
 
-// FIX: Correctly typed the inner middleware as a RequestHandler to ensure proper type inference.
+// FIX: Explicitly typed the inner middleware's parameters to resolve type mismatch.
 export const hasPermission = (permission: string): RequestHandler => {
-    return (req, res, next) => {
+    return (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required.' });
         }

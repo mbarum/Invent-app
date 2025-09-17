@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { QuotationStatus, InvoiceStatus } from '@masuma-ea/types';
@@ -9,7 +13,7 @@ import { auditLog } from '../services/auditService';
 
 const router = Router();
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
@@ -46,7 +50,7 @@ const createQuotation = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const quotations = await db('quotations')
@@ -59,7 +63,7 @@ const getQuotations = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     try {
@@ -80,7 +84,7 @@ const getQuotationDetails = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -95,7 +99,7 @@ const updateStatus = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');

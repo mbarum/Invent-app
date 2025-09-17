@@ -1,3 +1,7 @@
+
+
+
+
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
@@ -22,7 +26,7 @@ const formatSettings = (rows: { settingKey: string, settingValue: string }[]): P
     }, {});
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const getSettings = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const settingsRows = await db('app_settings').select('*');
@@ -33,7 +37,7 @@ const getSettings = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-// FIX: Correctly typed the handler parameters to ensure proper type inference for req, res, and next.
+// FIX: Explicitly typed handler parameters to resolve type mismatch.
 const updateSettings = async (req: Request, res: Response, next: NextFunction) => {
     const settings: Partial<AppSettings> = req.body;
     try {

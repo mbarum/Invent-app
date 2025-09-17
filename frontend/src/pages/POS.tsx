@@ -336,11 +336,11 @@ const POS: React.FC = () => {
     };
     
     const handleDownloadPdf = async () => {
-        const element = document.getElementById('receipt-to-print');
+        const element = document.getElementById('receipt-for-pdf-and-print');
         if (!element || !completedSale) return;
         const toastId = toast.loading('Generating PDF...', { duration: 5000 });
         try {
-            const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+            const canvas = await html2canvas(element, { scale: 2, backgroundColor: null });
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -530,9 +530,9 @@ const POS: React.FC = () => {
             </div>
         )}
         
-        {/* This div is only for printing */}
+        {/* This div is for printing and PDF generation */}
         {completedSale && (
-            <div className="print-area">
+            <div id="receipt-for-pdf-and-print" className="print-area">
                  <ReceiptPrint sale={completedSale} />
             </div>
         )}
