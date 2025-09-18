@@ -4,18 +4,6 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 // FIX: Import express-session to augment the Request type with the 'session' property.
 import 'express-session';
 
-// Extend the Express Request and Session interfaces
-declare global {
-    namespace Express {
-        interface Request {
-            user?: User; 
-        }
-        interface SessionData {
-            user?: User;
-        }
-    }
-}
-
 // FIX: Changed to use RequestHandler type to ensure correct type inference for req, res, and next.
 export const isAuthenticated: RequestHandler = (req, res, next) => {
     if (req.session && req.session.user) {

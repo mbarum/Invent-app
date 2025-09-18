@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+const getDashboardStats: RequestHandler = async (req, res, next) => {
     const { start, end, branchId } = req.query;
     try {
         const salesQuery = db('sales').whereBetween('createdAt', [`${start} 00:00:00`, `${end} 23:59:59`]);
@@ -36,7 +36,7 @@ const getDashboardStats = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateSalesTarget = async (req: Request, res: Response, next: NextFunction) => {
+const updateSalesTarget: RequestHandler = async (req, res, next) => {
     const { salesTarget } = req.body;
     try {
         await db('app_settings')
@@ -50,7 +50,7 @@ const updateSalesTarget = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getSalesChartData = async (req: Request, res: Response, next: NextFunction) => {
+const getSalesChartData: RequestHandler = async (req, res, next) => {
     const { start, end, branchId } = req.query;
     try {
         // FIX: Replaced camelCase `createdAt` with snake_case `created_at` inside raw SQL queries.
@@ -74,7 +74,7 @@ const getSalesChartData = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getFastMovingProducts = async (req: Request, res: Response, next: NextFunction) => {
+const getFastMovingProducts: RequestHandler = async (req, res, next) => {
      const { start, end, branchId } = req.query;
     try {
         const query = db('sale_items')
@@ -97,7 +97,7 @@ const getFastMovingProducts = async (req: Request, res: Response, next: NextFunc
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getShipmentsReport = async (req: Request, res: Response, next: NextFunction) => {
+const getShipmentsReport: RequestHandler = async (req, res, next) => {
     const { start, end } = req.query;
     try {
         const shipments = await db('shipping_labels')

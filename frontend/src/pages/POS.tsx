@@ -32,7 +32,7 @@ const POS: React.FC = () => {
     const { products: allProducts, customers: allCustomers, isInitialDataLoaded, refetchProducts, refetchSales, refetchCustomers } = useDataStore();
 
     // Data state
-    const [unpaidInvoices, setUnpaidInvoices] = useState<Invoice[]>([]);
+    const [unpaidInvoices, setUnpaidInvoices] = useState<Pick<Invoice, 'id' | 'invoiceNo'>[]>([]);
 
     // Sale state
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -243,28 +243,6 @@ const POS: React.FC = () => {
         setPayingForInvoice(null);
         setCompletedSale(null);
     };
-    
-    const handleSelectInvoice = async (invoice: Invoice) => {
-        try {
-            const detailedInvoice = await getInvoiceDetails(invoice.id);
-            const customer = allCustomers.find(c => c.id === detailedInvoice.customerId);
-            if(customer) selectCustomer(customer);
-
-            const cartItems: CartItem[] = (detailedInvoice.items || []).map(item => ({
-                product: {
-                    id: item.productId, partNumber: item.partNumber || 'N/A', name: item.productName || 'Unknown',
-                    retailPrice: item.unitPrice, wholesalePrice: item.unitPrice, stock: item.quantity
-                },
-                quantity: item.quantity,
-            }));
-            setCart(cartItems);
-            setPayingForInvoice(detailedInvoice);
-            toast.success(`Loaded invoice ${detailedInvoice.invoiceNo}. Cart is now locked.`);
-
-        } catch (err) {
-            toast.error("Failed to load invoice details.");
-        }
-    }
     
     const handleInitiateSale = () => {
         if (!selectedCustomer) { toast.error("Please select a customer."); return; }

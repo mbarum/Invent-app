@@ -5,7 +5,7 @@ import { isAuthenticated } from '../middleware/authMiddleware';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
+const getNotifications: RequestHandler = async (req, res, next) => {
     const userId = req.user!.id;
     try {
         // This endpoint can be expanded to include other notification types
@@ -21,7 +21,7 @@ const getNotifications = async (req: Request, res: Response, next: NextFunction)
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const markRead = async (req: Request, res: Response, next: NextFunction) => {
+const markRead: RequestHandler = async (req, res, next) => {
     const userId = req.user!.id;
     const { ids } = req.body;
     

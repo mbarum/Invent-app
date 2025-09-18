@@ -52,7 +52,6 @@ import MpesaTransactions from './pages/MpesaTransactions';
 
 // FIX: Remove .ts file extensions from imports for proper module resolution.
 import { PERMISSIONS } from './config/permissions';
-import { UserRole } from '@masuma-ea/types';
 
 // A wrapper to handle redirection for authenticated users trying to access login/register
 // FIX: Updated to redirect to a role-appropriate default page instead of always '/dashboard'.

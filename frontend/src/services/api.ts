@@ -7,7 +7,6 @@ import {
     FastMovingProduct,
     VinSearchResult,
     Sale,
-    SaleItem,
     Invoice,
     Quotation,
     ShippingLabel,

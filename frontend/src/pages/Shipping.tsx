@@ -104,8 +104,8 @@ const Shipping: React.FC = () => {
     }
 
     try {
-        let branch: Branch | undefined;
-        let customer: Customer | undefined;
+        let branch: Partial<Branch> | undefined;
+        let customer: Partial<Customer> | undefined;
         let sourceSaleId: number | undefined;
         let sourceInvoiceId: number | undefined;
 
@@ -127,8 +127,8 @@ const Shipping: React.FC = () => {
             setFormData(prev => ({
                 ...prev, saleId: sourceSaleId, invoiceId: sourceInvoiceId,
                 fromBranchId: branch.id, toCustomerId: customer.id,
-                fromName: branch.name, fromAddress: branch.address, fromPhone: branch.phone,
-                toName: customer.name, toAddress: customer.address, toPhone: customer.phone,
+                fromName: branch.name || '', fromAddress: branch.address || '', fromPhone: branch.phone || '',
+                toName: customer.name || '', toAddress: customer.address || '', toPhone: customer.phone || '',
             }));
         } else {
              toast.error("Could not find complete branch or customer details.");

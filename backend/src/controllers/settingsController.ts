@@ -23,7 +23,7 @@ const formatSettings = (rows: { settingKey: string, settingValue: string }[]): P
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getSettings = async (req: Request, res: Response, next: NextFunction) => {
+const getSettings: RequestHandler = async (req, res, next) => {
     try {
         const settingsRows = await db('app_settings').select('*');
         const settings = formatSettings(settingsRows);
@@ -34,7 +34,7 @@ const getSettings = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateSettings = async (req: Request, res: Response, next: NextFunction) => {
+const updateSettings: RequestHandler = async (req, res, next) => {
     const settings: Partial<AppSettings> = req.body;
     try {
         const settingsToInsert = Object.entries(settings)

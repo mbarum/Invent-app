@@ -7,7 +7,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
+const getInvoices: RequestHandler = async (req, res, next) => {
     const { status } = req.query;
     try {
         const query = db('invoices')
@@ -27,7 +27,7 @@ const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getInvoiceDetails: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     try {
         const invoice = await db('invoices').where('invoices.id', id).first();
@@ -48,7 +48,7 @@ const getInvoiceDetails = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getUnpaidSnippets = async (req: Request, res: Response, next: NextFunction) => {
+const getUnpaidSnippets: RequestHandler = async (req, res, next) => {
     try {
         const snippets = await db('invoices')
             .select('id', 'invoiceNo')

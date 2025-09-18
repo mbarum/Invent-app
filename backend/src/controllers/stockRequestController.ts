@@ -11,7 +11,7 @@ import { createNotification } from '../services/notificationService';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createRequest = async (req: Request, res: Response, next: NextFunction) => {
+const createRequest: RequestHandler = async (req, res, next) => {
     const { branchId, items } = req.body;
     const b2bUserId = req.user!.id;
 
@@ -64,7 +64,7 @@ const createRequest = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getMyRequests = async (req: Request, res: Response, next: NextFunction) => {
+const getMyRequests: RequestHandler = async (req, res, next) => {
     const b2bUserId = req.user!.id;
     try {
         const requests = await db('stock_requests')
@@ -81,7 +81,7 @@ const getMyRequests = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getAllRequests = async (req: Request, res: Response, next: NextFunction) => {
+const getAllRequests: RequestHandler = async (req, res, next) => {
      try {
         const requests = await db('stock_requests')
             .select(
@@ -101,7 +101,7 @@ const getAllRequests = async (req: Request, res: Response, next: NextFunction) =
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getRequestDetails: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     try {
         const request = await db('stock_requests').where({ id }).first();
@@ -124,7 +124,7 @@ const getRequestDetails = async (req: Request, res: Response, next: NextFunction
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     try {

@@ -15,7 +15,7 @@ import { sendApplicationReceivedEmail, sendApplicationStatusEmail } from '../ser
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
+const registerB2B: RequestHandler = async (req, res, next) => {
     const { businessName, kraPin, contactName, contactEmail, contactPhone, password } = req.body;
     
     if (!req.files || !('certOfInc' in req.files) || !('cr12' in req.files)) {
@@ -60,7 +60,7 @@ const registerB2B = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getApplications = async (req: Request, res: Response, next: NextFunction) => {
+const getApplications: RequestHandler = async (req, res, next) => {
     try {
         const applications = await db('b2b_applications').select('*').orderBy('submittedAt', 'desc');
         res.status(200).json(applications);
@@ -70,7 +70,7 @@ const getApplications = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateApplicationStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateApplicationStatus: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body as { status: ApplicationStatus };
     const adminUser = req.user!;

@@ -11,7 +11,7 @@ const router = Router();
 
 // --- Branches ---
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getBranches = async (req: Request, res: Response, next: NextFunction) => {
+const getBranches: RequestHandler = async (req, res, next) => {
     try {
         const branches = await db('branches').select('*');
         res.status(200).json(branches);
@@ -21,7 +21,7 @@ const getBranches = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createBranch = async (req: Request, res: Response, next: NextFunction) => {
+const createBranch: RequestHandler = async (req, res, next) => {
     try {
         const [branchId] = await db('branches').insert(req.body);
         const newBranch = await db('branches').where({ id: branchId }).first();
@@ -33,7 +33,7 @@ const createBranch = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateBranch = async (req: Request, res: Response, next: NextFunction) => {
+const updateBranch: RequestHandler = async (req, res, next) => {
     try {
         const count = await db('branches').where({ id: req.params.id }).update(req.body);
         if (count === 0) return res.status(404).json({ message: 'Branch not found.' });
@@ -47,7 +47,7 @@ const updateBranch = async (req: Request, res: Response, next: NextFunction) => 
 
 // --- Customers ---
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getCustomers = async (req: Request, res: Response, next: NextFunction) => {
+const getCustomers: RequestHandler = async (req, res, next) => {
     const { page = 1, limit = 10, searchTerm, spendingFilter, recencyFilter, sortKey = 'totalSpending', sortDirection = 'descending' } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -82,7 +82,7 @@ const getCustomers = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createCustomer = async (req: Request, res: Response, next: NextFunction) => {
+const createCustomer: RequestHandler = async (req, res, next) => {
     try {
         const [customerId] = await db('customers').insert(req.body);
         const newCustomer = await db('customers').where({ id: customerId }).first();
@@ -94,7 +94,7 @@ const createCustomer = async (req: Request, res: Response, next: NextFunction) =
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getCustomerTransactions = async (req: Request, res: Response, next: NextFunction) => {
+const getCustomerTransactions: RequestHandler = async (req, res, next) => {
     const { customerId } = req.params;
     try {
         const sales = await db('sales').where({ customerId }).orderBy('createdAt', 'desc');

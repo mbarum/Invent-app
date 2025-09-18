@@ -47,29 +47,25 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   fetchInitialData: async (user: User) => {
     if (get().isInitialDataLoaded) return;
     try {
-      // FIX: Fetch data conditionally based on user role to prevent permission errors.
-      const commonPromises = [
+      const [productsResponse, branches, appSettings] = await Promise.all([
         getProducts(),
         getBranches(),
         getSettings(),
-      ];
+      ]);
 
-      const staffPromises = user.role !== UserRole.B2B_CLIENT ? [
-        getCustomers(),
-        getSales(),
-        getUnpaidInvoiceSnippets(),
-        getShippingLabels(),
-      ] : [];
+      let customersResponse: { customers: Customer[], total: number } | undefined;
+      let salesResponse: { sales: Sale[], total: number } | Sale[] | undefined;
+      let legacyInvoices: Pick<Invoice, 'id' | 'invoiceNo'>[] | undefined;
+      let shippingLabels: ShippingLabel[] | undefined;
 
-      const [
-          productsResponse, 
-          branches, 
-          appSettings,
-          customersResponse, // may be undefined
-          salesResponse, // may be undefined
-          legacyInvoices, // may be undefined
-          shippingLabels, // may be undefined
-      ] = await Promise.all([...commonPromises, ...staffPromises]);
+      if (user.role !== UserRole.B2B_CLIENT) {
+        [customersResponse, salesResponse, legacyInvoices, shippingLabels] = await Promise.all([
+          getCustomers(),
+          getSales(),
+          getUnpaidInvoiceSnippets(),
+          getShippingLabels(),
+        ]);
+      }
       
       const products = Array.isArray(productsResponse) ? productsResponse : productsResponse.products;
       const customers = customersResponse ? customersResponse.customers : [];

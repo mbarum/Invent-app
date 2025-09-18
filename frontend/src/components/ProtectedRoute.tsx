@@ -2,7 +2,6 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LoaderCircle } from 'lucide-react';
-import { UserRole } from '@masuma-ea/types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

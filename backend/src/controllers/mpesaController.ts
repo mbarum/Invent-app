@@ -23,7 +23,7 @@ const getMpesaToken = async () => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const initiateStkPush = async (req: Request, res: Response, next: NextFunction) => {
+const initiateStkPush: RequestHandler = async (req, res, next) => {
     const { amount, phoneNumber, ...saleData } = req.body;
     
     try {
@@ -76,7 +76,7 @@ const initiateStkPush = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const stkCallback = async (req: Request, res: Response) => {
+const stkCallback: RequestHandler = async (req, res) => {
     const callbackData = req.body.Body.stkCallback;
     const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = callbackData;
 
@@ -113,7 +113,7 @@ const stkCallback = async (req: Request, res: Response) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getPaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
+const getPaymentStatus: RequestHandler = async (req, res, next) => {
     const { checkoutRequestId } = req.params;
     try {
         const transaction = await db('mpesa_transactions').where({ checkoutRequestId }).first();
@@ -136,7 +136,7 @@ const getPaymentStatus = async (req: Request, res: Response, next: NextFunction)
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getTransactions = async (req: Request, res: Response, next: NextFunction) => {
+const getTransactions: RequestHandler = async (req, res, next) => {
     const { page = 1, limit = 15, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 

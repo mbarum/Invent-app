@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { LoaderCircle, AlertTriangle, Check, X, FileText, Eye, Truck } from 'lucide-react';
+import { LoaderCircle, AlertTriangle, Check, X, FileText } from 'lucide-react';
 import { BusinessApplication, ApplicationStatus, StockRequest, StockRequestStatus } from '@masuma-ea/types';
 import { getB2BApplications, updateB2BApplicationStatus, getAllStockRequests, getStockRequestDetails, updateStockRequestStatus } from '../services/api';
 import { DOCS_BASE_URL } from '../config/permissions';
@@ -195,7 +195,7 @@ const StockRequestsManager = () => {
                 }
                 {selectedRequest.status === StockRequestStatus.APPROVED &&
                      <div className="flex justify-end pt-4 border-t border-gray-700">
-                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.SHIPPED)} disabled={isUpdating === selectedRequest.id}><Truck className="h-4 w-4 mr-2"/> Mark as Shipped</Button>
+                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.SHIPPED)} disabled={isUpdating === selectedRequest.id}><Check className="h-4 w-4 mr-2"/> Mark as Shipped</Button>
                      </div>
                 }
             </div>

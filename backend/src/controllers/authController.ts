@@ -6,6 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { validate } from '../validation';
 import { loginSchema, googleLoginSchema } from '../validation';
 import { auditLog } from '../services/auditService';
+import 'express-session';
 
 // The VITE_ prefix is for frontend variables. The backend should use its own non-prefixed env var.
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -23,7 +24,7 @@ const sanitizeUser = (user: any): User => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const login = async (req: Request, res: Response, next: NextFunction) => {
+const login: RequestHandler = async (req, res, next) => {
     const { email, password } = req.body;
     try {
         const user = await db('users').where({ email }).first();
@@ -49,7 +50,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) => {
+const loginWithGoogle: RequestHandler = async (req, res, next) => {
     const { token } = req.body;
     try {
         const ticket = await client.verifyIdToken({
@@ -84,7 +85,7 @@ const loginWithGoogle = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const logout = (req: Request, res: Response, next: NextFunction) => {
+const logout: RequestHandler = (req, res, next) => {
     const userId = req.session.user?.id;
     req.session.destroy(async (err) => {
         if (err) {
@@ -99,7 +100,7 @@ const logout = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const verifyAuth = (req: Request, res: Response) => {
+const verifyAuth: RequestHandler = (req, res) => {
     if (req.session && req.session.user) {
         res.status(200).json(req.session.user);
     } else {

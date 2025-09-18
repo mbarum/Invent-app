@@ -24,7 +24,7 @@ const manageOemNumbers = async (trx: any, productId: string, oemNumbers: string[
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+const getProducts: RequestHandler = async (req, res, next) => {
     const { page = 1, limit = 15, searchTerm } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -59,7 +59,7 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createProduct = async (req: Request, res: Response, next: NextFunction) => {
+const createProduct: RequestHandler = async (req, res, next) => {
     const { oemNumbers, ...productData } = req.body;
     const productId = uuidv4();
 
@@ -77,7 +77,7 @@ const createProduct = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
+const updateProduct: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { oemNumbers, ...productData } = req.body;
 
@@ -103,7 +103,7 @@ const updateProduct = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const bulkImportProducts = async (req: Request, res: Response, next: NextFunction) => {
+const bulkImportProducts: RequestHandler = async (req, res, next) => {
     if (!req.file) {
         return res.status(400).json({ message: 'CSV file is required.' });
     }
@@ -158,7 +158,7 @@ const bulkImportProducts = async (req: Request, res: Response, next: NextFunctio
             });
             
             if (oemNumbers) {
-                oemMap.set(partNumber, oemNumbers.split(',').map(s => s.trim()).filter(Boolean));
+                oemMap.set(partNumber, oemNumbers.split(',').map((s: string) => s.trim()).filter(Boolean));
             }
             allPartNumbers.push(partNumber);
             successCount++;

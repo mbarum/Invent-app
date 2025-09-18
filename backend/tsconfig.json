@@ -11,7 +11,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@masuma-ea/types": ["../packages/types/src/index.ts"]
+      "@masuma-ea/types": ["../packages/types/dist"]
     }
   },
   "ts-node": {

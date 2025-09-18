@@ -10,7 +10,7 @@ import { auditLog } from '../services/auditService';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createQuotation = async (req: Request, res: Response, next: NextFunction) => {
+const createQuotation: RequestHandler = async (req, res, next) => {
     const { customerId, branchId, items, validUntil, subtotal, discountAmount, taxAmount, totalAmount } = req.body;
     try {
         const newQuotation = await db.transaction(async (trx) => {
@@ -47,7 +47,7 @@ const createQuotation = async (req: Request, res: Response, next: NextFunction) 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getQuotations = async (req: Request, res: Response, next: NextFunction) => {
+const getQuotations: RequestHandler = async (req, res, next) => {
     try {
         const quotations = await db('quotations')
             .select('quotations.*', 'customers.name as customerName')
@@ -60,7 +60,7 @@ const getQuotations = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getQuotationDetails = async (req: Request, res: Response, next: NextFunction) => {
+const getQuotationDetails: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     try {
         const quotation = await db('quotations').where('quotations.id', id).first();
@@ -81,7 +81,7 @@ const getQuotationDetails = async (req: Request, res: Response, next: NextFuncti
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
@@ -96,7 +96,7 @@ const updateStatus = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const convertToInvoice = async (req: Request, res: Response, next: NextFunction) => {
+const convertToInvoice: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const settings = await db('app_settings').select('*');
     const invoiceDueDays = settings.find(s => s.settingKey === 'invoiceDueDays')?.settingValue || 30;

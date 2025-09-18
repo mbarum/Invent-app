@@ -119,6 +119,8 @@ export interface Sale {
   itemCount?: number;
   customer?: Partial<Customer>;
   branch?: Partial<Branch>;
+  customerName?: string;
+  branchName?: string;
 }
 
 export interface QuotationItem {

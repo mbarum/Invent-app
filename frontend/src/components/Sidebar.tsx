@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setSidebarOpen }) => {
-  const { user, logout, hasPermission } = useAuth();
+  const { logout, hasPermission } = useAuth();
 
   const navLinkClasses = "flex items-center px-4 py-2.5 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors duration-200";
   const activeNavLinkClasses = "bg-orange-600 text-white";

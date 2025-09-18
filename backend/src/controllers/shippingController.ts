@@ -11,7 +11,7 @@ import { auditLog } from '../services/auditService';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getLabels = async (req: Request, res: Response, next: NextFunction) => {
+const getLabels: RequestHandler = async (req, res, next) => {
     try {
         const labels = await db('shipping_labels').select('*').orderBy('createdAt', 'desc');
         res.status(200).json(labels);
@@ -21,7 +21,7 @@ const getLabels = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createLabel = async (req: Request, res: Response, next: NextFunction) => {
+const createLabel: RequestHandler = async (req, res, next) => {
     const labelId = uuidv4();
     try {
         await db('shipping_labels').insert({
@@ -44,7 +44,7 @@ const createLabel = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
+const updateStatus: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     try {

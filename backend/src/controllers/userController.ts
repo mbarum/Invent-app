@@ -11,7 +11,7 @@ import { auditLog } from '../services/auditService';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getUsers = async (req: Request, res: Response, next: NextFunction) => {
+const getUsers: RequestHandler = async (req, res, next) => {
     try {
         const users = await db('users')
             .select('id', 'name', 'email', 'role', 'status', 'b2bApplicationId', 'customerId')
@@ -23,7 +23,7 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createUser = async (req: Request, res: Response, next: NextFunction) => {
+const createUser: RequestHandler = async (req, res, next) => {
     const { name, email, password, role, status } = req.body;
     try {
         const salt = await bcrypt.genSalt(10);
@@ -53,7 +53,7 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+const updateUser: RequestHandler = async (req, res, next) => {
     const { id } = req.params;
     const { name, email, role, status } = req.body;
     try {
@@ -76,7 +76,7 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const updateCurrentUserPassword = async (req: Request, res: Response, next: NextFunction) => {
+const updateCurrentUserPassword: RequestHandler = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;
     try {

@@ -6,7 +6,7 @@ import { PERMISSIONS } from '../config/permissions';
 const router = Router();
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getLogs = async (req: Request, res: Response, next: NextFunction) => {
+const getLogs: RequestHandler = async (req, res, next) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 15;
     const offset = (page - 1) * limit;

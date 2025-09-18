@@ -10,7 +10,7 @@ const router = Router();
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
 // FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const vinSearch = async (req: Request, res: Response, next: NextFunction) => {
+const vinSearch: RequestHandler = async (req, res, next) => {
     const { vin } = req.body;
     if (!vin) {
         return res.status(400).json({ message: 'VIN is required.' });
