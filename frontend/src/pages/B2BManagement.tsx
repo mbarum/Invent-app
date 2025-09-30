@@ -3,11 +3,12 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { LoaderCircle, AlertTriangle, Check, X, FileText } from 'lucide-react';
-import { BusinessApplication, ApplicationStatus, StockRequest, StockRequestStatus } from '@masuma-ea/types';
-import { getB2BApplications, updateB2BApplicationStatus, getAllStockRequests, getStockRequestDetails, updateStockRequestStatus } from '../services/api';
+import { LoaderCircle, AlertTriangle, Check, X, FileText, Truck } from 'lucide-react';
+import { BusinessApplication, ApplicationStatus, StockRequest, StockRequestStatus, StockRequestItem } from '@masuma-ea/types';
+import { getB2BApplications, updateB2BApplicationStatus, getAllStockRequests, getStockRequestDetails, updateStockRequestStatus, approveStockRequest } from '../services/api';
 import { DOCS_BASE_URL } from '../config/permissions';
 import toast from 'react-hot-toast';
+import Input from '../components/ui/Input';
 
 const getAppStatusBadge = (status: ApplicationStatus) => {
   const baseClasses = "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset";
@@ -27,7 +28,8 @@ const getReqStatusBadge = (status: StockRequestStatus) => {
     const baseClasses = "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset";
     switch (status) {
         case StockRequestStatus.PENDING: return <span className={`${baseClasses} bg-yellow-400/10 text-yellow-400 ring-yellow-400/20`}>{status}</span>;
-        case StockRequestStatus.APPROVED: return <span className={`${baseClasses} bg-blue-400/10 text-blue-400 ring-blue-400/20`}>{status}</span>;
+        case StockRequestStatus.APPROVED: return <span className={`${baseClasses} bg-blue-400/10 text-blue-400 ring-blue-400/20`}>Approved (Awaiting Payment)</span>;
+        case StockRequestStatus.PAID: return <span className={`${baseClasses} bg-purple-400/10 text-purple-400 ring-purple-400/20`}>{status}</span>;
         case StockRequestStatus.SHIPPED: return <span className={`${baseClasses} bg-green-500/10 text-green-400 ring-green-500/20`}>{status}</span>;
         case StockRequestStatus.REJECTED: return <span className={`${baseClasses} bg-red-400/10 text-red-400 ring-red-400/30`}>{status}</span>;
         default: return <span className={`${baseClasses} bg-gray-400/10 text-gray-400 ring-gray-400/20`}>{status}</span>;
@@ -57,7 +59,7 @@ const ApplicationsManager = () => {
         fetchApplications();
     }, []);
 
-    const handleUpdateStatus = async (id: string, status: ApplicationStatus) => {
+    const handleUpdateStatus = async (id: string, status: 'Approved' | 'Rejected') => {
         setIsUpdating(id);
         try {
             const updatedApp = await updateB2BApplicationStatus(id, status);
@@ -111,8 +113,8 @@ const ApplicationsManager = () => {
                     </div>
                     {selectedApp.status === ApplicationStatus.PENDING && (
                         <div className="flex justify-end space-x-2 pt-4 border-t border-gray-700">
-                            <Button variant="secondary" className="bg-red-600 hover:bg-red-700 focus:ring-red-500" onClick={() => handleUpdateStatus(selectedApp.id, ApplicationStatus.REJECTED)} disabled={isUpdating === selectedApp.id}><X className="h-4 w-4 mr-2"/> Reject</Button>
-                            <Button className="bg-green-600 hover:bg-green-700 focus:ring-green-500" onClick={() => handleUpdateStatus(selectedApp.id, ApplicationStatus.APPROVED)} disabled={isUpdating === selectedApp.id}><Check className="h-4 w-4 mr-2"/> Approve</Button>
+                            <Button variant="secondary" className="bg-red-600 hover:bg-red-700 focus:ring-red-500" onClick={() => handleUpdateStatus(selectedApp.id, 'Rejected')} disabled={isUpdating === selectedApp.id}><X className="h-4 w-4 mr-2"/> Reject</Button>
+                            <Button className="bg-green-600 hover:bg-green-700 focus:ring-green-500" onClick={() => handleUpdateStatus(selectedApp.id, 'Approved')} disabled={isUpdating === selectedApp.id}><Check className="h-4 w-4 mr-2"/> Approve</Button>
                         </div>
                     )}
                 </div>
@@ -129,6 +131,7 @@ const StockRequestsManager = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedRequest, setSelectedRequest] = useState<StockRequest | null>(null);
     const [isUpdating, setIsUpdating] = useState<number | null>(null);
+    const [editableItems, setEditableItems] = useState<StockRequestItem[]>([]);
     
     const fetchRequests = async () => {
         try { setLoading(true); setRequests(await getAllStockRequests()); }
@@ -139,8 +142,32 @@ const StockRequestsManager = () => {
     useEffect(() => { fetchRequests(); }, []);
 
     const handleViewDetails = async (request: StockRequest) => {
-        try { const details = await getStockRequestDetails(request.id); setSelectedRequest(details); }
+        try { 
+            const details = await getStockRequestDetails(request.id);
+            setSelectedRequest(details);
+            setEditableItems(details.items?.map(item => ({...item, approvedQuantity: item.approvedQuantity ?? item.quantity })) || []);
+        }
         catch { toast.error("Failed to load request details."); }
+    };
+    
+    const handleItemQuantityChange = (itemId: number, newQuantity: number) => {
+        setEditableItems(prev => prev.map(item => item.id === itemId ? { ...item, approvedQuantity: Math.max(0, newQuantity) } : item));
+    };
+    
+    const handleApprove = async () => {
+        if (!selectedRequest) return;
+        setIsUpdating(selectedRequest.id);
+        try {
+            const payload = editableItems.map(item => ({ itemId: item.id, approvedQuantity: item.approvedQuantity ?? 0 }));
+            await approveStockRequest(selectedRequest.id, payload);
+            toast.success("Request approved successfully.");
+            setSelectedRequest(null);
+            fetchRequests();
+        } catch (err: any) {
+            toast.error(`Approval failed: ${err.message}`);
+        } finally {
+            setIsUpdating(null);
+        }
     };
 
     const handleUpdateStatus = async (id: number, status: StockRequestStatus) => {
@@ -165,7 +192,7 @@ const StockRequestsManager = () => {
             <TableBody>{requests.map(req => (
                 <TableRow key={req.id}>
                     <TableCell className="font-mono">REQ-{String(req.id).padStart(5, '0')}</TableCell>
-                    <TableCell>{(req as any).userName}</TableCell>
+                    <TableCell>{req.userName}</TableCell>
                     <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-center">{req.itemCount}</TableCell>
                     <TableCell className="text-right">{Number(req.totalValue || 0).toLocaleString()}</TableCell>
@@ -174,15 +201,21 @@ const StockRequestsManager = () => {
                 </TableRow>
             ))}</TableBody>
         </Table>
-        {selectedRequest && <Modal isOpen={!!selectedRequest} onClose={() => setSelectedRequest(null)} title={`Request REQ-${String(selectedRequest.id).padStart(5, '0')}`} className="max-w-2xl">
+        {selectedRequest && <Modal isOpen={!!selectedRequest} onClose={() => setSelectedRequest(null)} title={`Request REQ-${String(selectedRequest.id).padStart(5, '0')}`} className="max-w-3xl">
             <div className="space-y-4">
-                <div className="max-h-80 overflow-y-auto pr-2 -mr-2">
+                <div className="max-h-96 overflow-y-auto pr-2 -mr-2">
                 <Table>
-                    <TableHeader><TableRow><TableHead>Part #</TableHead><TableHead>Product</TableHead><TableHead>Qty</TableHead><TableHead className="text-right">Price</TableHead></TableRow></TableHeader>
-                    <TableBody>{selectedRequest.items?.map(item => (
+                    <TableHeader><TableRow><TableHead>Product</TableHead><TableHead>Requested</TableHead><TableHead>Approved</TableHead><TableHead className="text-right">Price</TableHead></TableRow></TableHeader>
+                    <TableBody>{(selectedRequest.status === StockRequestStatus.PENDING ? editableItems : selectedRequest.items)?.map(item => (
                         <TableRow key={item.id}>
-                            <TableCell className="font-mono text-xs">{item.partNumber}</TableCell><TableCell>{item.productName}</TableCell>
-                            <TableCell>{item.quantity}</TableCell><TableCell className="text-right">KES {item.wholesalePriceAtRequest.toLocaleString()}</TableCell>
+                            <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs font-mono">{item.partNumber}</p></TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>
+                                {selectedRequest.status === StockRequestStatus.PENDING ? (
+                                    <Input type="number" value={item.approvedQuantity ?? ''} onChange={e => handleItemQuantityChange(item.id, parseInt(e.target.value) || 0)} className="w-20 h-8"/>
+                                ) : (item.approvedQuantity ?? 'N/A')}
+                            </TableCell>
+                            <TableCell className="text-right">KES {item.wholesalePriceAtRequest.toLocaleString()}</TableCell>
                         </TableRow>
                     ))}</TableBody>
                 </Table>
@@ -190,12 +223,12 @@ const StockRequestsManager = () => {
                 {selectedRequest.status === StockRequestStatus.PENDING &&
                     <div className="flex justify-end space-x-2 pt-4 border-t border-gray-700">
                         <Button variant="secondary" className="bg-red-600 hover:bg-red-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.REJECTED)} disabled={isUpdating === selectedRequest.id}><X className="h-4 w-4 mr-2"/> Reject</Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.APPROVED)} disabled={isUpdating === selectedRequest.id}><Check className="h-4 w-4 mr-2"/> Approve</Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleApprove} disabled={isUpdating === selectedRequest.id}><Check className="h-4 w-4 mr-2"/> Save & Approve</Button>
                     </div>
                 }
-                {selectedRequest.status === StockRequestStatus.APPROVED &&
+                {selectedRequest.status === StockRequestStatus.PAID &&
                      <div className="flex justify-end pt-4 border-t border-gray-700">
-                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.SHIPPED)} disabled={isUpdating === selectedRequest.id}><Check className="h-4 w-4 mr-2"/> Mark as Shipped</Button>
+                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(selectedRequest.id, StockRequestStatus.SHIPPED)} disabled={isUpdating === selectedRequest.id}><Truck className="h-4 w-4 mr-2"/> Mark as Shipped</Button>
                      </div>
                 }
             </div>

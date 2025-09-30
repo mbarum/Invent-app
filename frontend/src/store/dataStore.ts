@@ -6,6 +6,9 @@ import toast from 'react-hot-toast';
 
 let notificationInterval: number | undefined;
 
+// Define a high limit to fetch all records for the store
+const FETCH_ALL_LIMIT = 9999;
+
 interface SharedDataState {
   products: Product[];
   customers: Customer[];
@@ -48,7 +51,7 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
     if (get().isInitialDataLoaded) return;
     try {
       const [productsResponse, branches, appSettings] = await Promise.all([
-        getProducts(),
+        getProducts({ limit: FETCH_ALL_LIMIT }),
         getBranches(),
         getSettings(),
       ]);
@@ -60,8 +63,8 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
 
       if (user.role !== UserRole.B2B_CLIENT) {
         [customersResponse, salesResponse, legacyInvoices, shippingLabels] = await Promise.all([
-          getCustomers(),
-          getSales(),
+          getCustomers({ limit: FETCH_ALL_LIMIT }),
+          getSales({ limit: FETCH_ALL_LIMIT }),
           getUnpaidInvoiceSnippets(),
           getShippingLabels(),
         ]);
@@ -90,8 +93,8 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
   
   refetchProducts: async () => {
     try {
-      // FIX: Handle both array and object responses from the API.
-      const productsResponse = await getProducts();
+      // FIX: Fetch all products, not just the first page, to ensure the global store is complete.
+      const productsResponse = await getProducts({ limit: FETCH_ALL_LIMIT });
       set({ products: Array.isArray(productsResponse) ? productsResponse : productsResponse.products });
     } catch (error) {
       console.error("Failed to refetch products:", error);
@@ -100,8 +103,8 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
 
   refetchCustomers: async () => {
     try {
-      // FIX: Extract the 'customers' array from the API response object.
-      const customersResponse = await getCustomers();
+      // FIX: Fetch all customers, not just the first page, to ensure dropdowns and searches have the full list.
+      const customersResponse = await getCustomers({ limit: FETCH_ALL_LIMIT });
       set({ customers: customersResponse.customers });
     } catch (error) {
       console.error("Failed to refetch customers:", error);
@@ -110,8 +113,8 @@ export const useDataStore = create<SharedDataState>((set, get) => ({
 
   refetchSales: async () => {
     try {
-      // FIX: Handle both array and object responses from the API.
-      const salesResponse = await getSales();
+      // FIX: Fetch all sales, not just the first page, for components that rely on the full sales list.
+      const salesResponse = await getSales({ limit: FETCH_ALL_LIMIT });
       set({ sales: Array.isArray(salesResponse) ? salesResponse : salesResponse.sales });
     } catch (error) {
       console.error("Failed to refetch sales:", error);

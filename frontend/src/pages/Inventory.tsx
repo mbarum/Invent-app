@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/Table';
@@ -9,8 +7,8 @@ import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
 import Pagination from '../components/ui/Pagination';
 import { PlusCircle, Edit, LoaderCircle, AlertTriangle, Download, Upload } from 'lucide-react';
-import { Product, UserRole } from '@masuma-ea/types';
-import { getProducts, createProduct, updateProduct, bulkImportProducts, BulkImportResponse } from '../services/api';
+import { Product, UserRole, BulkImportResponse } from '@masuma-ea/types';
+import { getProducts, createProduct, updateProduct, bulkImportProducts } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { PERMISSIONS } from '../config/permissions';
@@ -63,13 +61,19 @@ const Inventory: React.FC = () => {
     const [importResult, setImportResult] = useState<BulkImportResponse | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterOutOfStock, setFilterOutOfStock] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
     
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const { products: data, total } = await getProducts({ page: currentPage, limit: itemsPerPage, searchTerm });
+            const { products: data, total } = await getProducts({ 
+                page: currentPage, 
+                limit: itemsPerPage, 
+                searchTerm,
+                outOfStock: filterOutOfStock
+            });
             setProducts(data);
             setTotalProducts(total);
         } catch (err) {
@@ -82,15 +86,21 @@ const Inventory: React.FC = () => {
 
     useEffect(() => {
         fetchProducts();
-    }, [currentPage, searchTerm]);
+    }, [currentPage, searchTerm, filterOutOfStock]);
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, filterOutOfStock]);
 
     const handleOpenModal = (product: Product | null = null) => {
         setEditingProduct(product);
-        setFormData(product ? { ...product, oemNumbersStr: (product.oemNumbers || []).join(', ') } : { partNumber: '', name: '', retailPrice: 0, wholesalePrice: 0, stock: 0, notes: '', oemNumbersStr: '' });
+        setFormData(product 
+            ? { 
+                ...product, 
+                notes: product.notes ?? '', // Ensure notes is always a string
+                oemNumbersStr: (product.oemNumbers || []).join(', ') 
+              } 
+            : { partNumber: '', name: '', retailPrice: 0, wholesalePrice: 0, stock: 0, notes: '', oemNumbersStr: '' });
         setIsModalOpen(true);
     };
 
@@ -118,7 +128,11 @@ const Inventory: React.FC = () => {
 
         try {
             if (editingProduct) {
-                await updateProduct(editingProduct.id, payload);
+                // FIX: The API sends back fields like `id`, `createdAt`, and `updatedAt`.
+                // These should not be sent back in an update payload, as the database
+                // manages them. This destructuring removes them from the object we send.
+                const { id, createdAt, updatedAt, ...updatePayload } = payload as any;
+                await updateProduct(editingProduct.id, updatePayload);
                 toast.success('Product updated successfully!');
             } else {
                 await createProduct(payload);
@@ -259,12 +273,25 @@ const Inventory: React.FC = () => {
                         <CardDescription>Browse and manage your product inventory.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                         <div className="p-4 border-b border-gray-700">
+                         <div className="p-4 border-b border-gray-700 flex flex-col md:flex-row gap-4 items-center">
                              <Input 
                                 placeholder="Search by part number or name..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
+                                className="flex-grow"
                             />
+                            <div className="flex items-center space-x-2 self-start md:self-center">
+                                <input
+                                    type="checkbox"
+                                    id="out-of-stock-filter"
+                                    checked={filterOutOfStock}
+                                    onChange={(e) => setFilterOutOfStock(e.target.checked)}
+                                    className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-orange-600 focus:ring-orange-500 focus:ring-offset-gray-900"
+                                />
+                                <label htmlFor="out-of-stock-filter" className="text-sm font-medium text-gray-300 whitespace-nowrap">
+                                    Show out of stock only
+                                </label>
+                            </div>
                         </div>
                         {renderContent()}
                          <div className="p-4 border-t border-gray-700">
@@ -326,7 +353,7 @@ const Inventory: React.FC = () => {
                                 <div className="mt-4 p-2 bg-gray-900/50 border border-gray-700 rounded-md max-h-40 overflow-y-auto">
                                     <h4 className="text-sm font-semibold mb-1">Error Details:</h4>
                                     <ul className="text-xs text-red-300 list-disc list-inside">
-                                        {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                                        {importResult.errors.map((err: string, i: number) => <li key={i}>{err}</li>)}
                                     </ul>
                                 </div>
                             )}

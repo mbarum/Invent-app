@@ -1,4 +1,7 @@
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+// FIX: Add 'import "express-session"' to ensure the Express Request type is correctly augmented with session properties.
+import 'express-session';
+// FIX: Replaced multiple/inconsistent express imports with a single import for express and its types to resolve type conflicts.
+import express, { Request, Response, NextFunction, Router } from 'express';
 import { Knex } from 'knex';
 import db from '../db';
 import { Sale, InvoiceStatus } from '@masuma-ea/types';
@@ -8,6 +11,7 @@ import { validate } from '../validation';
 import { createSaleSchema } from '../validation';
 import { auditLog } from '../services/auditService';
 
+
 const router = Router();
 
 // This function is exported to be used by M-Pesa controller within a transaction
@@ -16,8 +20,18 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
 
     const { customerId, branchId, items, discountAmount, taxAmount, totalAmount, paymentMethod, invoiceId } = saleData;
     
-    // FIX: Knex with MySQL returns the insertId, not the full object.
-    // The `.returning()` method is not supported and was causing `newSale.id` to be undefined.
+    // FIX: Added stock validation to prevent race conditions during payment processing.
+    // If stock is insufficient, this will throw an error, causing the transaction
+    // to roll back and allowing the M-Pesa callback to mark the payment as 'Failed'.
+    if (items && items.length > 0) {
+        for (const item of items) {
+            const product = await dbOrTrx('products').where({ id: item.productId }).first();
+            if (!product || product.stock < item.quantity) {
+                throw new Error(`Insufficient stock for product ${product?.name || item.productId}. Available: ${product?.stock}, Requested: ${item.quantity}`);
+            }
+        }
+    }
+    
     const [saleId] = await dbOrTrx('sales').insert({
         saleNo: `SALE-${Date.now()}`,
         customerId,
@@ -28,64 +42,74 @@ export const createSaleInTransaction = async (saleData: any, trx?: Knex.Transact
         paymentMethod,
         invoiceId,
     });
-
-    const saleItems = items.map((item: any) => ({
-        saleId: saleId, // Use the returned ID directly.
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-    }));
-
-    await dbOrTrx('sale_items').insert(saleItems);
-
-    // Update stock levels
-    for (const item of items) {
-        await dbOrTrx('products')
-            .where({ id: item.productId })
-            .decrement('stock', item.quantity);
+    
+    const newSale = await dbOrTrx('sales').where({ id: saleId }).first();
+    if (!newSale) {
+        throw new Error('Failed to create or retrieve sale after insert.');
     }
 
-    // If paying for an invoice, update its status
+    if (items && items.length > 0) {
+        const saleItems = items.map((item: any) => ({
+            saleId: newSale.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+        }));
+        await dbOrTrx('sale_items').insert(saleItems);
+
+        // Update stock levels
+        for (const item of items) {
+            await dbOrTrx('products')
+                .where({ id: item.productId })
+                .decrement('stock', item.quantity);
+        }
+    }
+    
     if (invoiceId) {
         await dbOrTrx('invoices')
             .where({ id: invoiceId })
-            .update({ status: InvoiceStatus.PAID, amountPaid: totalAmount });
+            .update({
+                status: InvoiceStatus.PAID,
+                amountPaid: db.raw(`amount_paid + ?`, [totalAmount])
+            });
     }
     
-    // FIX: Fetch the newly created sale object to return it, since the insert only gives us the ID.
-    const newSale = await dbOrTrx('sales').where({ id: saleId }).first();
-    if (!newSale) {
-        // This should theoretically not happen if the insert succeeded.
-        throw new Error('Failed to retrieve newly created sale.');
-    }
+    // Fetch and return the full sale object with items and related data
+    const saleItemsWithDetails = await dbOrTrx('sale_items')
+        .select('sale_items.*', 'products.name as productName', 'products.partNumber')
+        .leftJoin('products', 'sale_items.productId', 'products.id')
+        .where({ saleId: newSale.id });
+        
+    const customer = await dbOrTrx('customers').where({id: newSale.customerId}).first();
+    const branch = await dbOrTrx('branches').where({id: newSale.branchId}).first();
 
-    return newSale;
+    return { ...newSale, items: saleItemsWithDetails, customer, branch };
 };
 
-// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const createSale: RequestHandler = async (req, res, next) => {
+// FIX: Use specific Request, Response, and NextFunction types from the default express import to resolve property access errors.
+const createSale = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newSale = await db.transaction(async (trx) => {
-            return createSaleInTransaction(req.body, trx);
+            // FIX: Correctly access req.body by using the full express.Request type.
+            return await createSaleInTransaction(req.body, trx);
         });
         
-        await auditLog(req.user!.id, 'SALE_CREATE', { saleId: newSale.id, total: newSale.totalAmount });
+        // FIX: Correctly access req.user by using the full express.Request type.
+        await auditLog(req.user!.id, 'SALE_CREATE', { saleId: newSale.id, saleNo: newSale.saleNo });
 
-        // Refetch with details for the receipt
-        const detailedSale = await getSaleDetailsById(newSale.id);
-        res.status(201).json(detailedSale);
-
+        // FIX: Correctly access res.status by using the full express.Response type.
+        res.status(201).json(newSale);
     } catch (error) {
         next(error);
     }
 };
 
-
-// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getSales: RequestHandler = async (req, res, next) => {
-    const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
-
+// FIX: Use specific Request, Response, and NextFunction types from the default express import to resolve property access errors.
+const getSales = async (req: Request, res: Response, next: NextFunction) => {
+     // FIX: Correctly access req.query by using the full express.Request type.
+     const { page = 1, limit = 15, start, end, searchTerm, customerId } = req.query;
+     const offset = (Number(page) - 1) * Number(limit);
+     
     try {
         const query = db('sales')
             .select('sales.*', 'customers.name as customerName', 'branches.name as branchName')
@@ -93,9 +117,8 @@ const getSales: RequestHandler = async (req, res, next) => {
             .leftJoin('branches', 'sales.branchId', 'branches.id')
             .leftJoin('sale_items', 'sales.id', 'sale_items.saleId')
             .groupBy('sales.id')
-            .count('sale_items.id as itemCount')
-            .orderBy('sales.createdAt', 'desc');
-
+            .count('sale_items.id as itemCount');
+            
         if (start && end) {
             query.whereBetween('sales.createdAt', [`${start} 00:00:00`, `${end} 23:59:59`]);
         }
@@ -110,37 +133,40 @@ const getSales: RequestHandler = async (req, res, next) => {
             );
         }
         
-        const totalQuery = query.clone().clearSelect().clearOrder().count('* as total').first();
-        const dataQuery = query.limit(Number(limit)).offset(offset);
+        const totalQuery = db.from(query.as('subQuery')).count('* as total').first();
 
+        const dataQuery = query
+            .orderBy('sales.createdAt', 'desc')
+            .limit(Number(limit))
+            .offset(offset);
+            
         const [totalResult, sales] = await Promise.all([totalQuery, dataQuery]);
 
+        // FIX: Correctly access res.status by using the full express.Response type.
         res.status(200).json({ sales, total: totalResult ? Number((totalResult as any).total) : 0 });
     } catch (error) {
         next(error);
     }
 };
 
-const getSaleDetailsById = async (id: number) => {
-    const sale = await db('sales').where('sales.id', id).first();
-    if (!sale) return null;
-
-    const items = await db('sale_items')
-        .select('sale_items.*', 'products.name as productName')
-        .leftJoin('products', 'sale_items.productId', 'products.id')
-        .where({ saleId: id });
-    const customer = await db('customers').where({ id: sale.customerId }).first();
-    const branch = await db('branches').where({ id: sale.branchId }).first();
-
-    return { ...sale, items, customer, branch };
-};
-
-// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getSaleDetails: RequestHandler = async (req, res, next) => {
+// FIX: Use specific Request, Response, and NextFunction types from the default express import to resolve property access errors.
+const getSaleDetails = async (req: Request, res: Response, next: NextFunction) => {
+    // FIX: Correctly access req.params by using the full express.Request type.
+    const { id } = req.params;
     try {
-        const saleDetails = await getSaleDetailsById(Number(req.params.id));
-        if (!saleDetails) return res.status(404).json({ message: 'Sale not found.' });
-        res.status(200).json(saleDetails);
+        const sale = await db('sales').where('sales.id', id).first();
+        if (!sale) return res.status(404).json({ message: 'Sale not found.' });
+
+        const items = await db('sale_items')
+            .select('sale_items.*', 'products.partNumber', 'products.name as productName')
+            .leftJoin('products', 'sale_items.productId', 'products.id')
+            .where({ saleId: id });
+            
+        const customer = await db('customers').where({ id: sale.customerId }).first();
+        const branch = await db('branches').where({ id: sale.branchId }).first();
+
+        // FIX: Correctly access res.status by using the full express.Response type.
+        res.status(200).json({ ...sale, items, customer, branch });
     } catch (error) {
         next(error);
     }
@@ -150,4 +176,5 @@ router.post('/', isAuthenticated, hasPermission(PERMISSIONS.USE_POS), validate(c
 router.get('/', isAuthenticated, hasPermission(PERMISSIONS.VIEW_SALES), getSales);
 router.get('/:id', isAuthenticated, hasPermission(PERMISSIONS.VIEW_SALES), getSaleDetails);
 
+// FIX: Add missing default export for the router.
 export default router;

@@ -1,15 +1,20 @@
+// FIX: Add express-session import to help with type augmentation.
+import 'express-session';
+// FIX: Replaced multiple/inconsistent express imports with a single import for express and its types to resolve type conflicts.
+import express, { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { ApplicationStatus, ShippingStatus, QuotationStatus, InvoiceStatus, UserRole, StockRequestStatus } from '@masuma-ea/types';
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+
 
 /**
  * A generic middleware to validate the request body against a Joi schema.
  * @param schema The Joi schema to validate against.
  * @returns An Express middleware function.
  */
-// FIX: Changed to return RequestHandler to ensure correct type inference for req, res, and next.
-export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next) => {
+// FIX: Use specific Request, Response, and NextFunction types from the default express import to resolve property access errors.
+export const validate = (schema: Joi.Schema) => (req: Request, res: Response, next: NextFunction) => {
     // We validate req.body for most POST/PUT, but some data might be in other places for multipart forms
+    // FIX: Correctly access req.body, req.params, and req.query by using the full express.Request type.
     const dataToValidate = { ...req.body, ...req.params, ...req.query };
 
     const { error, value } = schema.validate(dataToValidate, { abortEarly: false, stripUnknown: true });
@@ -21,8 +26,10 @@ export const validate = (schema: Joi.Schema): RequestHandler => (req, res, next)
     
     // Only assign validated values back to req.body
     // This prevents query/params from overwriting the body
+    // FIX: Correctly access req.body by using the full express.Request type.
     Object.keys(req.body).forEach(key => {
       if (value[key] !== undefined) {
+        // FIX: Correctly access req.body by using the full express.Request type.
         (req.body as any)[key] = value[key];
       }
     });
@@ -93,6 +100,20 @@ export const createStockRequestSchema = Joi.object({
     branchId: id.required(),
     items: Joi.array().items(stockRequestItemSchema).min(1).required(),
 });
+
+export const approveStockRequestItemSchema = Joi.object({
+    itemId: id.required(),
+    approvedQuantity: Joi.number().integer().min(0).required(),
+});
+
+export const approveStockRequestSchema = Joi.object({
+    items: Joi.array().items(approveStockRequestItemSchema).required(),
+});
+
+export const initiateB2BPaymentSchema = Joi.object({
+    phoneNumber: Joi.string().required(),
+});
+
 
 export const updateStockRequestStatusSchema = Joi.object({
     status: Joi.string().valid(...Object.values(StockRequestStatus)).required(),
@@ -201,6 +222,14 @@ export const createCustomerSchema = Joi.object({
     kraPin: Joi.string().optional().allow(''),
 });
 
+export const updateCustomerSchema = Joi.object({
+    name: Joi.string(),
+    address: Joi.string(),
+    phone: Joi.string(),
+    kraPin: Joi.string().allow(''),
+}).min(1);
+
+
 // --- Settings ---
 export const updateSettingsSchema = Joi.object({
     companyName: Joi.string().allow('').optional(),
@@ -215,6 +244,7 @@ export const updateSettingsSchema = Joi.object({
     mpesaConsumerSecret: Joi.string().allow('').optional(),
     mpesaPasskey: Joi.string().allow('').optional(),
     mpesaEnvironment: Joi.string().valid('sandbox', 'live').allow('').optional(),
+    mpesaTransactionType: Joi.string().valid('PayBill', 'BuyGoods').optional(),
     paymentDetails: Joi.string().allow('').optional(),
     paymentTerms: Joi.string().allow('').optional(),
 });

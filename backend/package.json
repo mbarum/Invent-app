@@ -7,8 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:migrate": "knex migrate:latest --knexfile ./knexfile.ts",
-    "db:seed": "knex seed:run --knexfile ./knexfile.ts"
+    "db:migrate": "NODE_OPTIONS='--require ts-node/register --require tsconfig-paths/register' npx knex migrate:latest --knexfile ./knexfile.ts",
+    "db:seed": "NODE_OPTIONS='--require ts-node/register --require tsconfig-paths/register' npx knex seed:run --knexfile ./knexfile.ts"
   },
   "dependencies": {
     "@google/genai": "^1.19.0",
@@ -28,6 +28,7 @@
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.9.7",
     "nodemailer": "^6.9.13",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "uuid": "^9.0.1"
   },

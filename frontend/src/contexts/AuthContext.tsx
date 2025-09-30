@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { User, UserRole } from '@masuma-ea/types';
-// FIX: Removed .ts extension for proper module resolution.
+import { User, UserRole, LoginResponse } from '@masuma-ea/types';
 import * as api from '../services/api';
 import { ROLES, PERMISSIONS } from '../config/permissions';
 
@@ -39,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         verifySession();
     }, [verifySession]);
 
-    const handleLoginSuccess = (data: api.LoginResponse) => {
+    const handleLoginSuccess = (data: LoginResponse) => {
         // The backend sets the HttpOnly cookie. The frontend just needs to update the user state.
         setUser(data.user);
     };

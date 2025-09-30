@@ -1,13 +1,19 @@
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+// FIX: Add 'import "express-session"' to ensure the Express Request type is correctly augmented with session properties.
+import 'express-session';
+// FIX: Replaced multiple/inconsistent express imports with a single import for express and its types to resolve type conflicts.
+import express, { Request, Response, NextFunction, Router } from 'express';
 import db from '../db';
 import { isAuthenticated, hasPermission } from '../middleware/authMiddleware';
 import { PERMISSIONS } from '../config/permissions';
 
+
 const router = Router();
 
-// FIX: Changed handler definition to use explicit parameter types to avoid type inference issues.
-const getLogs: RequestHandler = async (req, res, next) => {
+// FIX: Use specific Request, Response, and NextFunction types from the default express import to resolve property access errors.
+const getLogs = async (req: Request, res: Response, next: NextFunction) => {
+    // FIX: Correctly access req.query by using the full express.Request type.
     const page = parseInt(req.query.page as string) || 1;
+    // FIX: Correctly access req.query by using the full express.Request type.
     const limit = parseInt(req.query.limit as string) || 15;
     const offset = (page - 1) * limit;
 
@@ -23,12 +29,14 @@ const getLogs: RequestHandler = async (req, res, next) => {
 
         const [logs, totalResult] = await Promise.all([logsQuery, totalQuery]);
 
+        // FIX: Correctly access res.status by using the full express.Response type.
         res.status(200).json({ logs, total: totalResult ? Number((totalResult as any).total) : 0 });
     } catch (error) {
         next(error);
     }
 };
 
+// Use the explicitly typed handlers with the router
 router.get('/', isAuthenticated, hasPermission(PERMISSIONS.VIEW_AUDIT_LOGS), getLogs);
 
 export default router;

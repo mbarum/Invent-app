@@ -7,17 +7,15 @@ import Select from '../components/ui/Select';
 import Pagination from '../components/ui/Pagination';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download } from 'lucide-react';
-// FIX: Import types from the types package and remove extensions from local imports.
+import { LoaderCircle, AlertTriangle, ArrowUp, ArrowDown, PlusCircle, History, Download, Edit } from 'lucide-react';
 import { Customer, CustomerTransactions } from '@masuma-ea/types';
-// FIX: Removed .ts extension for proper module resolution.
-import { getCustomers, createCustomer, getCustomerTransactions } from '../services/api';
+import { getCustomers, createCustomer, getCustomerTransactions, updateCustomer } from '../services/api';
 import toast from 'react-hot-toast';
 import { useDataStore } from '../store/dataStore';
+import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../config/permissions';
 
-// Enriched customer data type that extends the base type for component-specific stats
-// FIX: Changed from interface extension to type intersection to resolve type inference issues.
-type CustomerSegmentData = Customer & {
+type CustomerSegmentData = Omit<Customer, 'lastPurchaseDate'> & {
     totalSpending: number;
     totalOrders: number;
     lastPurchaseDate: Date | null;
@@ -67,6 +65,9 @@ const exportToCsv = (filename: string, headers: string[], data: any[], keys: str
 const Customers: React.FC = () => {
     const { currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
     const { refetchCustomers } = useDataStore();
+    const { hasPermission } = useAuth();
+    const canManageCustomers = hasPermission(PERMISSIONS.MANAGE_CUSTOMERS);
+
     const [customers, setCustomers] = useState<CustomerSegmentData[]>([]);
     const [totalCustomers, setTotalCustomers] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -84,11 +85,23 @@ const Customers: React.FC = () => {
     
     // Modal states
     const [isAddModalOpen, setAddModalOpen] = useState(false);
+    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [editingCustomer, setEditingCustomer] = useState<CustomerSegmentData | null>(null);
+    const [editFormData, setEditFormData] = useState<Partial<Omit<Customer, 'lastPurchaseDate'>>>({});
     const [isHistoryModalOpen, setHistoryModalOpen] = useState(false);
     const [historyCustomer, setHistoryCustomer] = useState<CustomerSegmentData | null>(null);
     const [historyData, setHistoryData] = useState<CustomerTransactions | null>(null);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [newCustomer, setNewCustomer] = useState<NewCustomerData>({ name: '', phone: '', address: '', kraPin: ''});
+
+    const processCustomerData = (customerData: Customer[]): CustomerSegmentData[] => {
+        return customerData.map(c => ({
+            ...c,
+            totalSpending: c.totalSpending || 0,
+            totalOrders: c.totalOrders || 0,
+            lastPurchaseDate: c.lastPurchaseDate ? new Date(c.lastPurchaseDate) : null
+        }));
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -104,7 +117,7 @@ const Customers: React.FC = () => {
                     sortKey: sortConfig.key,
                     sortDirection: sortConfig.direction,
                 });
-                setCustomers(data.customers.map(c => ({...c, lastPurchaseDate: c.lastPurchaseDate ? new Date(c.lastPurchaseDate) : null})));
+                setCustomers(processCustomerData(data.customers));
                 setTotalCustomers(data.total);
             } catch (err) {
                 setError("Failed to load customer data.");
@@ -140,12 +153,36 @@ const Customers: React.FC = () => {
             await refetchCustomers(); // Refetch global list for dropdowns
             // Refetch current page
             const data = await getCustomers({ page: currentPage, limit: itemsPerPage });
-            setCustomers(data.customers.map(c => ({...c, lastPurchaseDate: c.lastPurchaseDate ? new Date(c.lastPurchaseDate) : null})));
+            setCustomers(processCustomerData(data.customers));
             setTotalCustomers(data.total);
 
             setAddModalOpen(false); setNewCustomer({ name: '', phone: '', address: '', kraPin: ''});
             toast.success('Customer added successfully!');
         } catch (err: any) { toast.error(`Failed to add customer: ${err.message}`); }
+    };
+
+    const handleOpenEditModal = (customer: CustomerSegmentData) => {
+        setEditingCustomer(customer);
+        setEditFormData({ name: customer.name, phone: customer.phone, address: customer.address, kraPin: customer.kraPin || '' });
+        setEditModalOpen(true);
+    };
+
+    const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleUpdateCustomer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingCustomer) return;
+        try {
+            await updateCustomer(editingCustomer.id, editFormData);
+            await refetchCustomers();
+            setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...editFormData } : c));
+            setEditModalOpen(false);
+            toast.success('Customer updated successfully!');
+        } catch (err: any) {
+            toast.error(`Failed to update customer: ${err.message}`);
+        }
     };
 
     const handleViewHistory = async (customer: CustomerSegmentData) => {
@@ -162,7 +199,7 @@ const Customers: React.FC = () => {
     const handleExportCustomers = async () => {
         try {
             // Fetch all customers for export
-            const allCustomersData = await getCustomers();
+            const allCustomersData = await getCustomers({ limit: 9999 });
             exportToCsv('customers_export', ['ID', 'Name', 'Phone', 'Address', 'KRA PIN', 'Total Spending (KES)', 'Total Orders', 'Last Purchase Date'], allCustomersData.customers, ['id', 'name', 'phone', 'address', 'kraPin', 'totalSpending', 'totalOrders', 'lastPurchaseDate']);
         } catch(e) {
             toast.error("Failed to export customers.")
@@ -210,7 +247,10 @@ const Customers: React.FC = () => {
                             <TableCell className="text-center">{customer.totalOrders}</TableCell>
                             <TableCell className="font-semibold text-right"><div>{formatCurrency(customer.totalSpending)}</div>{currentCurrency !== 'KES' && <div className="text-xs text-gray-400 font-normal">KES {customer.totalSpending.toLocaleString()}</div>}</TableCell>
                             <TableCell>{customer.lastPurchaseDate ? customer.lastPurchaseDate.toLocaleDateString() : 'N/A'}</TableCell>
-                            <TableCell><Button variant="ghost" size="sm" onClick={() => handleViewHistory(customer)}><History className="h-4 w-4 mr-1"/> History</Button></TableCell>
+                            <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewHistory(customer)}><History className="h-4 w-4 mr-1"/> History</Button>
+                                {canManageCustomers && <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(customer)}><Edit className="h-4 w-4 mr-1"/> Edit</Button>}
+                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -230,11 +270,13 @@ const Customers: React.FC = () => {
                             <Download className="mr-2 h-4 w-4"/> 
                             <span className="hidden sm:inline">Export CSV</span>
                         </Button>
-                        <Button onClick={() => setAddModalOpen(true)}>
-                            <PlusCircle className="mr-2 h-5 w-5" />
-                            <span className="hidden sm:inline">Add Customer</span>
-                            <span className="sm:hidden">Add</span>
-                        </Button>
+                        {canManageCustomers && (
+                            <Button onClick={() => setAddModalOpen(true)}>
+                                <PlusCircle className="mr-2 h-5 w-5" />
+                                <span className="hidden sm:inline">Add Customer</span>
+                                <span className="sm:hidden">Add</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
                 <Card><CardHeader><CardTitle>Customer Segmentation</CardTitle><CardDescription>Filter and sort customers based on their activity.</CardDescription></CardHeader><CardContent>
@@ -254,6 +296,19 @@ const Customers: React.FC = () => {
                     <Input label="Address" name="address" value={newCustomer.address} onChange={handleInputChange} required />
                     <Input label="KRA PIN (Optional)" name="kraPin" value={newCustomer.kraPin || ''} onChange={handleInputChange} />
                     <div className="flex justify-end space-x-2 pt-2"><Button variant="secondary" type="button" onClick={() => setAddModalOpen(false)}>Cancel</Button><Button type="submit">Save Customer</Button></div>
+                </form>
+            </Modal>
+
+            <Modal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} title={`Edit ${editingCustomer?.name}`}>
+                <form onSubmit={handleUpdateCustomer} className="space-y-4">
+                    <Input label="Full Name" name="name" value={editFormData.name || ''} onChange={handleEditInputChange} required />
+                    <Input label="Phone Number" name="phone" type="tel" value={editFormData.phone || ''} onChange={handleEditInputChange} required />
+                    <Input label="Address" name="address" value={editFormData.address || ''} onChange={handleEditInputChange} required />
+                    <Input label="KRA PIN (Optional)" name="kraPin" value={editFormData.kraPin || ''} onChange={handleEditInputChange} />
+                    <div className="flex justify-end space-x-2 pt-2">
+                        <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                        <Button type="submit">Save Changes</Button>
+                    </div>
                 </form>
             </Modal>
             

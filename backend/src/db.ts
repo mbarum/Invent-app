@@ -1,5 +1,5 @@
-/// <reference types="node" />
-
+// FIX: Import process to handle potential missing Node.js global types.
+import process from 'process';
 import knex, { Knex } from 'knex';
 import dotenv from 'dotenv';
 
@@ -78,6 +78,7 @@ db.raw('SELECT 1+1 AS result').then(() => {
 }).catch(err => {
     console.error('❌ Knex database connection failed:', err.message);
     // FIX: Add reference to node types to fix error on process.exit
+    /// <reference types="node" />
     process.exit(1); // Exit if DB connection fails
 });
 

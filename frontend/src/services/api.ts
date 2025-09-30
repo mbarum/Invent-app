@@ -1,275 +1,476 @@
-import { 
-    User, 
-    Product, 
-    BusinessApplication, 
-    DashboardStats, 
-    SalesChartDataPoint,
-    FastMovingProduct,
-    VinSearchResult,
-    Sale,
-    Invoice,
-    Quotation,
-    ShippingLabel,
-    Customer,
-    Branch,
-    AppSettings,
-    CustomerTransactions,
-    QuotationPayload,
-    StockRequest,
-    CreateStockRequestPayload,
-    AuditLog,
-    MpesaTransaction,
-    NotificationPayload,
-    MpesaTransactionPayload,
+import {
+  User, LoginResponse, Product, Branch, Customer, Sale, ShippingLabel,
+  Quotation, QuotationPayload, Invoice, AppSettings, BusinessApplication,
+  BulkImportResponse, UserNotification, AuditLog, StockRequest,
+  MpesaTransaction, VinSearchResult, CustomerTransactions, StockRequestStatus, QuotationStatus, ShippingStatus, InvoiceStatus, CreateStockRequestPayload
 } from '@masuma-ea/types';
 
 
-// --- TYPES ---
+const API_BASE_URL = '/api';
 
-export interface LoginResponse {
-    user: User;
-}
-
-export interface RegisterPayload extends Omit<BusinessApplication, 'id' | 'status' | 'submittedAt' | 'certOfIncUrl' | 'cr12Url'> {
-    password?: string;
-    certOfInc: File;
-    cr12: File;
-}
-
-export interface UpdatePasswordPayload {
-    currentPassword?: string;
-    newPassword: string;
-}
-
-export interface BulkImportResponse {
-    successCount: number;
-    errorCount: number;
-    errors: string[];
+// A helper to handle API responses and errors
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    // For "No Content" responses
+    return Promise.resolve(undefined as T);
+  }
+  const data = await response.json();
+  if (!response.ok) {
+    const message = data.message || `An error occurred: ${response.statusText}`;
+    throw new Error(message);
+  }
+  return data as T;
 }
 
 
-// --- API HELPER ---
-const apiRequest = async <T>(method: string, endpoint: string, body?: any, isFormData = false): Promise<T> => {
-    const options: RequestInit = {
-        method,
-        credentials: 'include', // For HttpOnly session cookies
-    };
+// --- Auth ---
 
-    if (body) {
-        if (isFormData) {
-            options.body = body; // Let browser set Content-Type for FormData
-        } else {
-            options.headers = { 'Content-Type': 'application/json' };
-            options.body = JSON.stringify(body);
-        }
-    }
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse<LoginResponse>(response);
+}
 
-    const response = await fetch(`/api${endpoint}`, options);
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Request failed with status ${response.status}` }));
-        throw new Error(errorData.message || 'An unknown network error occurred');
-    }
-
-    if (response.status === 204) { // No Content
-        return undefined as T;
-    }
-
-    return response.json();
-};
-
-// --- AUTH ---
-export const login = (email: string, password: string): Promise<LoginResponse> => 
-    apiRequest('POST', '/auth/login', { email, password });
-    
-export const loginWithGoogle = (token: string): Promise<LoginResponse> =>
-    apiRequest('POST', '/auth/login-google', { token });
-
-export const logoutUser = (): Promise<void> => 
-    apiRequest('POST', '/auth/logout');
-
-export const verifyAuth = (): Promise<User> => 
-    apiRequest('GET', '/auth/verify');
-
-export const registerUser = (payload: RegisterPayload): Promise<BusinessApplication> => {
-    const formData = new FormData();
-    Object.entries(payload).forEach(([key, value]) => {
-        formData.append(key, value);
+export async function loginWithGoogle(token: string): Promise<LoginResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/login-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
     });
-    return apiRequest('POST', '/b2b/register', formData, true);
-};
-
-
-// --- PRODUCTS ---
-export const getProducts = (params?: { page?: number, limit?: number, searchTerm?: string }): Promise<{ products: Product[], total: number }> => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiRequest('GET', `/products?${query}`);
+    return handleResponse<LoginResponse>(response);
 }
 
-export const createProduct = (productData: Partial<Product>): Promise<Product> =>
-    apiRequest('POST', '/products', productData);
+export async function logoutUser(): Promise<void> {
+  await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST' });
+}
 
-export const updateProduct = (id: string, productData: Partial<Product>): Promise<Product> =>
-    apiRequest('PUT', `/products/${id}`, productData);
+export async function verifyAuth(): Promise<User> {
+  const response = await fetch(`${API_BASE_URL}/auth/verify`);
+  return handleResponse<User>(response);
+}
 
-export const bulkImportProducts = (file: File): Promise<BulkImportResponse> => {
+export async function registerUser(payload: {
+  businessName: string;
+  kraPin: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  password: string;
+  certOfInc: File;
+  cr12: File;
+}): Promise<BusinessApplication> {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+      formData.append(key, value);
+  });
+  
+  const response = await fetch(`${API_BASE_URL}/b2b/register`, {
+    method: 'POST',
+    body: formData,
+  });
+  return handleResponse<BusinessApplication>(response);
+}
+
+// --- Products ---
+interface GetProductsParams {
+  page?: number;
+  limit?: number;
+  searchTerm?: string;
+  outOfStock?: boolean;
+}
+
+export async function getProducts(params: GetProductsParams = {}): Promise<{ products: Product[], total: number }> {
+    const query = new URLSearchParams(params as any).toString();
+    const response = await fetch(`${API_BASE_URL}/products?${query}`);
+    return handleResponse<{ products: Product[], total: number }>(response);
+}
+
+export async function createProduct(product: Partial<Product>): Promise<Product> {
+    const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+    });
+    return handleResponse<Product>(response);
+}
+
+export async function updateProduct(id: string, product: Partial<Product>): Promise<Product> {
+    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+    });
+    return handleResponse<Product>(response);
+}
+
+export async function bulkImportProducts(file: File): Promise<BulkImportResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    return apiRequest('POST', '/products/bulk-import', formData, true);
-};
+    const response = await fetch(`${API_BASE_URL}/products/bulk-import`, {
+        method: 'POST',
+        body: formData,
+    });
+    return handleResponse<BulkImportResponse>(response);
+}
+
+// --- Customers ---
+export async function getCustomers(params: any = {}): Promise<{ customers: Customer[], total: number }> {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/customers?${query}`);
+    return handleResponse<{ customers: Customer[], total: number }>(response);
+}
+
+export async function createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
+    const response = await fetch(`${API_BASE_URL}/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer),
+    });
+    return handleResponse<Customer>(response);
+}
+
+export async function updateCustomer(id: number, customer: Partial<Customer>): Promise<Customer> {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer),
+    });
+    return handleResponse<Customer>(response);
+}
+
+export async function getCustomerTransactions(id: number): Promise<CustomerTransactions> {
+    const response = await fetch(`${API_BASE_URL}/customers/${id}/transactions`);
+    return handleResponse<CustomerTransactions>(response);
+}
 
 
-// --- CUSTOMERS ---
-export const getCustomers = (params?: { page?: number, limit?: number, searchTerm?: string, spendingFilter?: string, recencyFilter?: string, sortKey?: string, sortDirection?: string }): Promise<{ customers: any[], total: number }> => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiRequest('GET', `/customers?${query}`);
-};
+// --- Sales / POS ---
+export async function createSale(saleData: any): Promise<Sale> {
+    const response = await fetch(`${API_BASE_URL}/sales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saleData),
+    });
+    return handleResponse<Sale>(response);
+}
 
-export const createCustomer = (customerData: Omit<Customer, 'id'>): Promise<Customer> =>
-    apiRequest('POST', '/customers', customerData);
-    
-export const getCustomerTransactions = (customerId: number): Promise<CustomerTransactions> =>
-    apiRequest('GET', `/customers/${customerId}/transactions`);
+export async function getSales(params: any = {}): Promise<{ sales: Sale[], total: number } | Sale[]> {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/sales?${query}`);
+    return handleResponse<{ sales: Sale[], total: number } | Sale[]>(response);
+}
+
+export async function getSaleDetails(id: number): Promise<Sale> {
+    const response = await fetch(`${API_BASE_URL}/sales/${id}`);
+    return handleResponse<Sale>(response);
+}
+
+// --- M-Pesa ---
+export async function initiateMpesaPayment(payload: any): Promise<{ checkoutRequestId: string }> {
+    const response = await fetch(`${API_BASE_URL}/mpesa/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    return handleResponse<{ checkoutRequestId: string }>(response);
+}
+
+export async function getMpesaPaymentStatus(checkoutId: string): Promise<{ status: string, sale?: Sale, message?: string }> {
+    const response = await fetch(`${API_BASE_URL}/mpesa/status/${checkoutId}`);
+    return handleResponse<{ status: string, sale?: Sale, message?: string }>(response);
+}
+
+// --- Shipping ---
+export async function getShippingLabels(): Promise<ShippingLabel[]> {
+    const response = await fetch(`${API_BASE_URL}/shipping-labels`);
+    return handleResponse<ShippingLabel[]>(response);
+}
+
+export async function createShippingLabel(data: Partial<ShippingLabel>): Promise<ShippingLabel> {
+    const response = await fetch(`${API_BASE_URL}/shipping-labels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return handleResponse<ShippingLabel>(response);
+}
+
+export async function updateShippingLabelStatus(id: string, status: ShippingStatus): Promise<ShippingLabel> {
+    const response = await fetch(`${API_BASE_URL}/shipping-labels/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+    });
+    return handleResponse<ShippingLabel>(response);
+}
+
+// --- Quotations & Invoices ---
+export async function getQuotations(): Promise<Quotation[]> {
+    const response = await fetch(`${API_BASE_URL}/quotations`);
+    return handleResponse<Quotation[]>(response);
+}
+
+export async function getQuotationDetails(id: number): Promise<Quotation> {
+    const response = await fetch(`${API_BASE_URL}/quotations/${id}`);
+    return handleResponse<Quotation>(response);
+}
+
+export async function createQuotation(payload: QuotationPayload): Promise<Quotation> {
+    const response = await fetch(`${API_BASE_URL}/quotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    return handleResponse<Quotation>(response);
+}
+
+export async function updateQuotation(id: number, payload: QuotationPayload): Promise<Quotation> {
+    const response = await fetch(`${API_BASE_URL}/quotations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    return handleResponse<Quotation>(response);
+}
+
+export async function updateQuotationStatus(id: number, status: QuotationStatus): Promise<Quotation> {
+    const response = await fetch(`${API_BASE_URL}/quotations/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+    });
+    return handleResponse<Quotation>(response);
+}
+
+export async function convertQuotationToInvoice(id: number): Promise<Invoice> {
+    const response = await fetch(`${API_BASE_URL}/quotations/${id}/to-invoice`, { method: 'POST' });
+    return handleResponse<Invoice>(response);
+}
+
+export async function getInvoices(status?: InvoiceStatus): Promise<Invoice[]> {
+    const url = status ? `${API_BASE_URL}/invoices?status=${status}` : `${API_BASE_URL}/invoices`;
+    const response = await fetch(url);
+    return handleResponse<Invoice[]>(response);
+}
+
+export async function getInvoiceDetails(id: number): Promise<Invoice> {
+    const response = await fetch(`${API_BASE_URL}/invoices/${id}`);
+    return handleResponse<Invoice>(response);
+}
+
+export async function getUnpaidInvoiceSnippets(): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> {
+    const response = await fetch(`${API_BASE_URL}/invoices/unpaid-snippets`);
+    return handleResponse<Pick<Invoice, 'id' | 'invoiceNo'>[]>(response);
+}
+
+// --- General Data ---
+export async function getBranches(): Promise<Branch[]> {
+    const response = await fetch(`${API_BASE_URL}/branches`);
+    return handleResponse<Branch[]>(response);
+}
+
+export async function createBranch(branch: Omit<Branch, 'id'>): Promise<Branch> {
+    const response = await fetch(`${API_BASE_URL}/branches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(branch),
+    });
+    return handleResponse<Branch>(response);
+}
+
+export async function updateBranch(id: number, branch: Partial<Branch>): Promise<Branch> {
+    const response = await fetch(`${API_BASE_URL}/branches/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(branch),
+    });
+    return handleResponse<Branch>(response);
+}
+
+// --- Reports & Stats ---
+export async function getDashboardStats(range: {start: string, end: string}, branchId: number): Promise<any> {
+    const query = new URLSearchParams({ ...range, branchId: String(branchId) }).toString();
+    const response = await fetch(`${API_BASE_URL}/reports/dashboard-stats?${query}`);
+    return handleResponse<any>(response);
+}
+
+export async function updateSalesTarget(salesTarget: number): Promise<{ salesTarget: number }> {
+    const response = await fetch(`${API_BASE_URL}/reports/sales-target`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ salesTarget }),
+    });
+    return handleResponse<{ salesTarget: number }>(response);
+}
+
+export async function getSalesChartData(range: {start: string, end: string}, branchId: number): Promise<any> {
+    const query = new URLSearchParams({ ...range, branchId: String(branchId) }).toString();
+    const response = await fetch(`${API_BASE_URL}/reports/sales-chart?${query}`);
+    return handleResponse<any>(response);
+}
+
+export async function getFastMovingProducts(range: {start: string, end: string}, branchId: number): Promise<any> {
+    const query = new URLSearchParams({ ...range, branchId: String(branchId) }).toString();
+    const response = await fetch(`${API_BASE_URL}/reports/fast-moving-products?${query}`);
+    return handleResponse<any>(response);
+}
+
+export async function getShipments(range: {start: string, end: string}): Promise<ShippingLabel[]> {
+    const query = new URLSearchParams(range).toString();
+    const response = await fetch(`${API_BASE_URL}/reports/shipments?${query}`);
+    return handleResponse<ShippingLabel[]>(response);
+}
 
 
-// --- DASHBOARD & REPORTS ---
-export const getDashboardStats = (dateRange: { start: string, end: string }, branchId: number): Promise<DashboardStats> =>
-    apiRequest('GET', `/reports/dashboard-stats?start=${dateRange.start}&end=${dateRange.end}&branchId=${branchId}`);
-    
-export const updateSalesTarget = (salesTarget: number): Promise<{ salesTarget: number }> =>
-    apiRequest('POST', '/reports/sales-target', { salesTarget });
-    
-export const getSalesChartData = (dateRange: { start: string, end: string }, branchId: number): Promise<SalesChartDataPoint[]> =>
-    apiRequest('GET', `/reports/sales-chart?start=${dateRange.start}&end=${dateRange.end}&branchId=${branchId}`);
-    
-export const getFastMovingProducts = (dateRange: { start: string, end: string }, branchId: number): Promise<FastMovingProduct[]> =>
-    apiRequest('GET', `/reports/fast-moving-products?start=${dateRange.start}&end=${dateRange.end}&branchId=${branchId}`);
-    
-export const getShipments = (dateRange: { start: string, end: string }): Promise<ShippingLabel[]> =>
-     apiRequest('GET', `/reports/shipments?start=${dateRange.start}&end=${dateRange.end}`);
+// --- Admin / Settings ---
+export async function getUsers(): Promise<User[]> {
+    const response = await fetch(`${API_BASE_URL}/users`);
+    return handleResponse<User[]>(response);
+}
 
-// --- VIN SEARCH ---
-export const getPartsByVin = (vin: string): Promise<VinSearchResult[]> =>
-    apiRequest('POST', '/vin-search', { vin });
-    
-// --- SALES / POS ---
-export const createSale = (saleData: any): Promise<Sale> => 
-    apiRequest('POST', '/sales', saleData);
-    
-export const getSales = (params?: any): Promise<{ sales: Sale[], total: number } | Sale[]> => {
-    const query = new URLSearchParams(params as any).toString();
-    return apiRequest('GET', `/sales?${query}`);
-};
+export async function createUser(user: Partial<User>): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+    });
+    return handleResponse<User>(response);
+}
 
-export const getSaleDetails = (id: number): Promise<Sale> =>
-    apiRequest('GET', `/sales/${id}`);
+export async function updateUser(id: string, user: Partial<User>): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user),
+    });
+    return handleResponse<User>(response);
+}
 
+export async function updateCurrentUserPassword(data: { currentPassword?: string, newPassword?: string }): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/users/me/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    await handleResponse(response);
+}
 
-// --- INVOICES ---
-export const getInvoices = (status?: string): Promise<Invoice[]> =>
-    apiRequest('GET', `/invoices${status ? `?status=${status}`: ''}`);
+export async function getSettings(): Promise<Partial<AppSettings>> {
+    const response = await fetch(`${API_BASE_URL}/settings`);
+    return handleResponse<Partial<AppSettings>>(response);
+}
 
-export const getInvoiceDetails = (id: number): Promise<Invoice> =>
-    apiRequest('GET', `/invoices/${id}`);
-    
-export const getUnpaidInvoiceSnippets = (): Promise<Pick<Invoice, 'id' | 'invoiceNo'>[]> =>
-    apiRequest('GET', '/invoices/unpaid-snippets');
+export async function updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+    const response = await fetch(`${API_BASE_URL}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+    });
+    return handleResponse<AppSettings>(response);
+}
 
-// --- QUOTATIONS ---
-export const getQuotations = (): Promise<Quotation[]> => 
-    apiRequest('GET', '/quotations');
+// --- B2B ---
+export async function getB2BApplications(): Promise<BusinessApplication[]> {
+    const response = await fetch(`${API_BASE_URL}/b2b/applications`);
+    return handleResponse<BusinessApplication[]>(response);
+}
 
-export const createQuotation = (payload: QuotationPayload): Promise<Quotation> =>
-    apiRequest('POST', '/quotations', payload);
+export async function updateB2BApplicationStatus(id: string, status: 'Approved' | 'Rejected'): Promise<BusinessApplication> {
+    const response = await fetch(`${API_BASE_URL}/b2b/applications/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+    });
+    return handleResponse<BusinessApplication>(response);
+}
 
-export const getQuotationDetails = (id: number): Promise<Quotation> =>
-    apiRequest('GET', `/quotations/${id}`);
+export async function createStockRequest(payload: CreateStockRequestPayload): Promise<StockRequest> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    return handleResponse<StockRequest>(response);
+}
 
-export const updateQuotationStatus = (id: number, status: string): Promise<Quotation> =>
-    apiRequest('PATCH', `/quotations/${id}/status`, { status });
-    
-export const convertQuotationToInvoice = (id: number): Promise<Invoice> =>
-    apiRequest('POST', `/quotations/${id}/to-invoice`);
-    
-// --- SHIPPING ---
-export const getShippingLabels = (): Promise<ShippingLabel[]> =>
-    apiRequest('GET', '/shipping-labels');
+export async function getMyStockRequests(): Promise<StockRequest[]> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests/my`);
+    return handleResponse<StockRequest[]>(response);
+}
 
-export const createShippingLabel = (labelData: Partial<ShippingLabel>): Promise<ShippingLabel> =>
-    apiRequest('POST', '/shipping-labels', labelData);
-    
-export const updateShippingLabelStatus = (id: string, status: string): Promise<ShippingLabel> =>
-    apiRequest('PATCH', `/shipping-labels/${id}/status`, { status });
+export async function getAllStockRequests(): Promise<StockRequest[]> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests/all`);
+    return handleResponse<StockRequest[]>(response);
+}
 
-// --- B2B Management ---
-export const getB2BApplications = (): Promise<BusinessApplication[]> =>
-    apiRequest('GET', '/b2b/applications');
+export async function getStockRequestDetails(id: number): Promise<StockRequest> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests/${id}`);
+    return handleResponse<StockRequest>(response);
+}
 
-export const updateB2BApplicationStatus = (id: string, status: string): Promise<BusinessApplication> =>
-    apiRequest('PATCH', `/b2b/applications/${id}/status`, { status });
+export async function approveStockRequest(id: number, items: { itemId: number, approvedQuantity: number }[]): Promise<StockRequest> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests/${id}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+    });
+    return handleResponse<StockRequest>(response);
+}
 
-// --- Stock Requests ---
-export const getMyStockRequests = (): Promise<StockRequest[]> =>
-    apiRequest('GET', '/stock-requests/my');
-    
-export const getAllStockRequests = (): Promise<StockRequest[]> =>
-    apiRequest('GET', '/stock-requests/all');
-    
-export const getStockRequestDetails = (id: number): Promise<StockRequest> =>
-    apiRequest('GET', `/stock-requests/${id}`);
+export async function initiateStockRequestPayment(id: number, phoneNumber: string, amount: number): Promise<{ checkoutRequestId: string }> {
+    const response = await fetch(`${API_BASE_URL}/mpesa/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stockRequestId: id, phoneNumber, amount }),
+    });
+    return handleResponse<{ checkoutRequestId: string }>(response);
+}
 
-export const createStockRequest = (payload: CreateStockRequestPayload): Promise<StockRequest> =>
-    apiRequest('POST', '/stock-requests', payload);
+export async function updateStockRequestStatus(id: number, status: StockRequestStatus): Promise<StockRequest> {
+    const response = await fetch(`${API_BASE_URL}/stock-requests/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+    });
+    return handleResponse<StockRequest>(response);
+}
 
-export const updateStockRequestStatus = (id: number, status: string): Promise<StockRequest> =>
-    apiRequest('PATCH', `/stock-requests/${id}/status`, { status });
+// --- VIN Search ---
+export async function getPartsByVin(vin: string): Promise<VinSearchResult[]> {
+    const response = await fetch(`${API_BASE_URL}/vin-search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vin }),
+    });
+    return handleResponse<VinSearchResult[]>(response);
+}
 
-// --- USERS & BRANCHES ---
-export const getUsers = (): Promise<User[]> =>
-    apiRequest('GET', '/users');
-    
-export const createUser = (userData: Partial<User & {password: string}>): Promise<User> =>
-    apiRequest('POST', '/users', userData);
-    
-export const updateUser = (id: string, userData: Partial<User>): Promise<User> =>
-    apiRequest('PUT', `/users/${id}`, userData);
-    
-export const updateCurrentUserPassword = (payload: UpdatePasswordPayload): Promise<void> =>
-    apiRequest('PUT', '/users/me/password', payload);
-    
-export const getBranches = (): Promise<Branch[]> =>
-    apiRequest('GET', '/branches');
-    
-export const createBranch = (branchData: Omit<Branch, 'id'>): Promise<Branch> =>
-    apiRequest('POST', '/branches', branchData);
-    
-export const updateBranch = (id: number, branchData: Partial<Branch>): Promise<Branch> =>
-    apiRequest('PUT', `/branches/${id}`, branchData);
+// --- Audit Logs & Notifications ---
+export async function getAuditLogs(page: number, limit: number): Promise<{ logs: AuditLog[], total: number }> {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
+    const response = await fetch(`${API_BASE_URL}/audit-logs?${query}`);
+    return handleResponse<{ logs: AuditLog[], total: number }>(response);
+}
 
-// --- SETTINGS ---
-export const getSettings = (): Promise<Partial<AppSettings>> =>
-    apiRequest('GET', '/settings');
-    
-export const updateSettings = (settings: AppSettings): Promise<AppSettings> =>
-    apiRequest('PUT', '/settings', settings);
+export async function getNotifications(): Promise<{ userAlerts: UserNotification[] }> {
+    const response = await fetch(`${API_BASE_URL}/notifications`);
+    return handleResponse<{ userAlerts: UserNotification[] }>(response);
+}
 
-// --- AUDIT LOGS ---
-export const getAuditLogs = (page: number, limit: number): Promise<{ logs: AuditLog[], total: number }> =>
-    apiRequest('GET', `/audit-logs?page=${page}&limit=${limit}`);
+export async function markNotificationsRead(ids: number[]): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    await handleResponse(response);
+}
 
-// --- MPESA ---
-export const getMpesaTransactions = (page: number, limit: number, status: string): Promise<{ transactions: MpesaTransaction[], total: number }> =>
-    apiRequest('GET', `/mpesa/transactions?page=${page}&limit=${limit}&status=${status}`);
-    
-export const initiateMpesaPayment = (payload: MpesaTransactionPayload & { amount: number, phoneNumber: string }): Promise<{ checkoutRequestId: string }> =>
-    apiRequest('POST', '/mpesa/stk-push', payload);
-    
-export const getMpesaPaymentStatus = (checkoutRequestId: string): Promise<{ status: string, sale?: Sale, message?: string }> =>
-    apiRequest('GET', `/mpesa/payment-status/${checkoutRequestId}`);
-
-// --- NOTIFICATIONS ---
-export const getNotifications = (): Promise<NotificationPayload> =>
-    apiRequest('GET', '/notifications');
-
-export const markNotificationsRead = (ids: number[]): Promise<void> =>
-    apiRequest('POST', '/notifications/mark-read', { ids });
+export async function getMpesaTransactions(page: number, limit: number, status: string): Promise<{ transactions: MpesaTransaction[], total: number }> {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit), status }).toString();
+    const response = await fetch(`${API_BASE_URL}/mpesa/transactions?${query}`);
+    return handleResponse<{ transactions: MpesaTransaction[], total: number }>(response);
+}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 // FIX: Remove .tsx and .ts file extensions from imports for proper module resolution.
@@ -5,9 +6,9 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '../co
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
-import { Product, Customer, Branch, Invoice, InvoiceStatus, Sale } from '@masuma-ea/types';
+import { Product, Customer, Branch, Invoice, Sale } from '@masuma-ea/types';
 // FIX: Removed .ts extension for proper module resolution.
-import { createSale, getInvoices, getInvoiceDetails, initiateMpesaPayment, getMpesaPaymentStatus, createCustomer } from '../services/api';
+import { createSale, initiateMpesaPayment, getMpesaPaymentStatus, createCustomer, getProducts } from '../services/api';
 import { User, Search, X, Plus, Minus, Printer, LoaderCircle, FileText, Ban, Download, CheckCircle, XCircle, UserPlus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../components/ui/Modal';
@@ -29,10 +30,7 @@ interface CartItem {
 
 const POS: React.FC = () => {
     const { currentBranch, currentCurrency, exchangeRates } = useOutletContext<OutletContextType>();
-    const { products: allProducts, customers: allCustomers, isInitialDataLoaded, refetchProducts, refetchSales, refetchCustomers } = useDataStore();
-
-    // Data state
-    const [unpaidInvoices, setUnpaidInvoices] = useState<Pick<Invoice, 'id' | 'invoiceNo'>[]>([]);
+    const { customers: allCustomers, isInitialDataLoaded, refetchProducts, refetchSales, refetchCustomers } = useDataStore();
 
     // Sale state
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -50,6 +48,10 @@ const POS: React.FC = () => {
     const [customerSearch, setCustomerSearch] = useState('');
     const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
     const [newCustomerData, setNewCustomerData] = useState({ name: '', phone: '', address: '', kraPin: '' });
+    
+    // Server-side product search state
+    const [productSearchResults, setProductSearchResults] = useState<Product[]>([]);
+    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
 
     // M-Pesa state
     const [isMpesaModalOpen, setIsMpesaModalOpen] = useState(false);
@@ -63,19 +65,6 @@ const POS: React.FC = () => {
     const productSearchRef = useRef<HTMLInputElement>(null);
     const paymentMethodRef = useRef<HTMLSelectElement>(null);
     const completeSaleBtnRef = useRef<HTMLButtonElement>(null);
-
-
-    useEffect(() => {
-        const fetchInvoicesData = async () => {
-            try {
-                const invoicesData = await getInvoices(InvoiceStatus.UNPAID);
-                setUnpaidInvoices(invoicesData);
-            } catch (error) {
-                toast.error('Failed to load unpaid invoices.');
-            }
-        };
-        fetchInvoicesData();
-    }, []);
     
     // M-Pesa Polling Effect
     useEffect(() => {
@@ -90,7 +79,7 @@ const POS: React.FC = () => {
                     refetchProducts(); // Update stock
                     refetchSales(); // Update sales list
                     if(payingForInvoice) {
-                        setUnpaidInvoices(prev => prev.filter(i => i.id !== payingForInvoice.id));
+                        // Logic to update unpaid invoices list if needed
                     }
                     clearInterval(interval);
                 } else if (status === 'Failed') {
@@ -126,6 +115,29 @@ const POS: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isMpesaModalOpen, completedSale, isCustomerModalOpen]);
 
+    // Debounced server-side product search
+    useEffect(() => {
+        if (!productSearch.trim()) {
+            setProductSearchResults([]);
+            return;
+        }
+
+        const debounceTimer = setTimeout(async () => {
+            setIsSearchingProducts(true);
+            try {
+                const { products } = await getProducts({ searchTerm: productSearch, limit: 10 });
+                setProductSearchResults(products);
+            } catch (error) {
+                toast.error('Product search failed.');
+                console.error('Product search error:', error);
+            } finally {
+                setIsSearchingProducts(false);
+            }
+        }, 300); // 300ms delay after user stops typing
+
+        return () => clearTimeout(debounceTimer);
+    }, [productSearch]);
+
 
     const formatCurrency = (amount: number) => {
         const rate = exchangeRates[currentCurrency] || 1;
@@ -135,15 +147,6 @@ const POS: React.FC = () => {
             currency: currentCurrency,
         }).format(convertedAmount);
     };
-
-    const productSearchResults = useMemo(() => {
-        if (!productSearch) return [];
-        const lowercasedTerm = productSearch.toLowerCase();
-        return allProducts.filter(p =>
-            (p.partNumber || '').toLowerCase().includes(lowercasedTerm) ||
-            (p.name || '').toLowerCase().includes(lowercasedTerm)
-        ).slice(0, 10);
-    }, [productSearch, allProducts]);
 
     const customerSearchResults = useMemo(() => {
         if (!customerSearch) return [];
@@ -179,6 +182,7 @@ const POS: React.FC = () => {
             }
         });
         setProductSearch('');
+        setProductSearchResults([]); // Clear results after selection
     };
 
     const updateQuantity = (productId: string, newQuantity: number) => {
@@ -266,7 +270,9 @@ const POS: React.FC = () => {
             setCompletedSale(saleResult);
             toast.success(`Sale ${saleResult.saleNo} completed!`);
             refetchProducts(); refetchSales();
-            if(payingForInvoice) { setUnpaidInvoices(prev => prev.filter(i => i.id !== payingForInvoice.id)); }
+            if(payingForInvoice) { 
+                // Logic to update unpaid invoices list if needed
+            }
         } catch (err: any) {
             toast.error(`Failed to complete sale: ${err.message}`);
         } finally {
@@ -378,12 +384,19 @@ const POS: React.FC = () => {
                         <div className="relative mb-4">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                             <Input ref={productSearchRef} placeholder="Scan or Search Product (Ctrl+I)" className="pl-10" value={productSearch} onChange={e => setProductSearch(e.target.value)} disabled={!isInitialDataLoaded || !!payingForInvoice} />
-                            {productSearchResults.length > 0 && (
-                                <ul className="mt-2 border border-gray-700 rounded-md bg-gray-800 z-20 absolute w-full shadow-lg max-h-80 overflow-y-auto">{productSearchResults.map(p => 
-                                    <li key={p.id} onClick={() => addToCart(p)} className="p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center text-sm">
-                                        <div><p className="font-semibold">{p.name}</p><p className="text-xs text-gray-400 font-mono">{p.partNumber}</p></div>
-                                        <div className="text-right"><p className="font-medium">{formatCurrency(p.retailPrice)}</p><p className="text-xs text-gray-500">{p.stock} in stock</p></div>
-                                    </li>)}
+                            {productSearch.trim() && (
+                                <ul className="mt-2 border border-gray-700 rounded-md bg-gray-800 z-20 absolute w-full shadow-lg max-h-80 overflow-y-auto">
+                                    {isSearchingProducts ? (
+                                        <li className="p-3 text-sm text-gray-400 flex items-center"><LoaderCircle className="h-4 w-4 animate-spin mr-2" />Searching...</li>
+                                    ) : productSearchResults.length > 0 ? (
+                                        productSearchResults.map(p => 
+                                            <li key={p.id} onClick={() => addToCart(p)} className="p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center text-sm">
+                                                <div><p className="font-semibold">{p.name}</p><p className="text-xs text-gray-400 font-mono">{p.partNumber}</p></div>
+                                                <div className="text-right"><p className="font-medium">{formatCurrency(p.retailPrice)}</p><p className="text-xs text-gray-500">{p.stock} in stock</p></div>
+                                            </li>)
+                                    ) : (
+                                        <li className="p-3 text-sm text-gray-400">No products found.</li>
+                                    )}
                                 </ul>
                             )}
                         </div>

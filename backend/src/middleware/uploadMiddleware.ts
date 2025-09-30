@@ -1,9 +1,8 @@
-
-
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { Request } from 'express';
+// FIX: Replaced named express import with default import to resolve type conflicts.
+import express, { Request } from 'express';
 import fs from 'fs';
 
 const uploadDir = 'uploads/';
@@ -27,7 +26,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB file size limit
-    // FIX: Re-added explicit types to the callback to fix type resolution errors.
+    // FIX: Use specific Request type from the default express import to resolve type errors.
     fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
         // Accept PDFs only for this application
         if (file.mimetype === 'application/pdf') {

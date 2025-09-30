@@ -1,12 +1,26 @@
-/// <reference types="node" />
-
 // This line must be at the very top to ensure path aliases are registered
 // before any other modules are imported.
-import 'tsconfig-paths/register';
+import { loadConfig } from 'tsconfig-paths';
+import path from 'path';
+// FIX: Import process to handle potential missing Node.js global types.
+import process from 'process';
+
+
+// Explicitly load the tsconfig.json from the current directory to register path aliases.
+// This is a robust way to ensure that @masuma-ea/types is resolved correctly when
+// running knex commands with ts-node in any environment.
+const tsconfigPath = path.resolve(__dirname, './tsconfig.json');
+const configLoaderResult = loadConfig(tsconfigPath);
+
+if (configLoaderResult.resultType === 'failed') {
+    console.error('CRITICAL: Could not load tsconfig.json to map paths.');
+    console.error(configLoaderResult.message);
+    process.exit(1);
+}
+
 
 import type { Knex } from 'knex';
 import dotenv from 'dotenv';
-import path from 'path';
 
 // Ensure the .env file from the backend root is loaded
 // In a CommonJS module environment (as configured in tsconfig.json),

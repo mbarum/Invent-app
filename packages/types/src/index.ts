@@ -1,5 +1,4 @@
-// --- ENUMS ---
-
+// Enums
 export enum UserRole {
   SYSTEM_ADMINISTRATOR = 'System Administrator',
   BRANCH_MANAGER = 'Branch Manager',
@@ -15,10 +14,11 @@ export enum ApplicationStatus {
 }
 
 export enum StockRequestStatus {
-  PENDING = 'Pending',
-  APPROVED = 'Approved',
-  REJECTED = 'Rejected',
-  SHIPPED = 'Shipped',
+    PENDING = 'Pending',
+    APPROVED = 'Approved',
+    PAID = 'Paid',
+    REJECTED = 'Rejected',
+    SHIPPED = 'Shipped',
 }
 
 export enum ShippingStatus {
@@ -31,8 +31,8 @@ export enum QuotationStatus {
   DRAFT = 'Draft',
   SENT = 'Sent',
   ACCEPTED = 'Accepted',
-  REJECTED = 'Rejected',
   INVOICED = 'Invoiced',
+  REJECTED = 'Rejected',
   EXPIRED = 'Expired',
 }
 
@@ -42,18 +42,17 @@ export enum InvoiceStatus {
   VOID = 'Void',
 }
 
-
-// --- DATA MODELS ---
-
-export interface Product {
-  id: string; // uuid
-  partNumber: string;
-  oemNumbers?: string[];
+// Interfaces
+export interface User {
+  id: string;
   name: string;
-  retailPrice: number;
-  wholesalePrice: number;
-  stock: number;
-  notes?: string;
+  email: string;
+  role: UserRole;
+  status: 'Active' | 'Inactive';
+  b2bApplicationId?: string;
+  customerId?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Branch {
@@ -69,40 +68,33 @@ export interface Customer {
   address: string;
   phone: string;
   kraPin?: string;
+  lastPurchaseDate?: string | null; // From customer segmentation query
+  totalSpending?: number; // From customer segmentation query
+  totalOrders?: number; // From customer segmentation query
 }
 
-export interface User {
-  id: string; // uuid
+export interface Product {
+  id: string;
+  partNumber: string;
   name: string;
-  email: string;
-  role: UserRole;
-  status: 'Active' | 'Inactive';
-  businessId?: string;
-  businessName?: string;
-  customerId?: number;
-}
-
-export interface BusinessApplication {
-  id:string; // uuid
-  businessName: string;
-  kraPin: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  certOfIncUrl: string;
-  cr12Url: string;
-  status: ApplicationStatus;
-  submittedAt: string; // ISO date string
+  retailPrice: number;
+  wholesalePrice: number;
+  stock: number;
+  oemNumbers?: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SaleItem {
   id: number;
   saleId: number;
   productId: string;
-  partNumber?: string;
-  productName?: string;
   quantity: number;
   unitPrice: number;
+  // Joined properties
+  productName?: string;
+  partNumber?: string;
 }
 
 export interface Sale {
@@ -110,160 +102,156 @@ export interface Sale {
   saleNo: string;
   customerId: number;
   branchId: number;
-  taxAmount?: number;
   discountAmount?: number;
+  taxAmount: number;
   totalAmount: number;
   paymentMethod: string;
-  createdAt: string; // ISO date string
+  invoiceId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  // Joined properties
+  customer?: Customer;
+  branch?: Branch;
   items?: SaleItem[];
-  itemCount?: number;
-  customer?: Partial<Customer>;
-  branch?: Partial<Branch>;
   customerName?: string;
   branchName?: string;
+  itemCount?: number;
 }
 
 export interface QuotationItem {
   id: number;
   quotationId: number;
   productId: string;
-  partNumber?: string;
-  productName?: string;
   quantity: number;
   unitPrice: number;
+  // Joined
+  partNumber?: string;
+  productName?: string;
 }
 
 export interface Quotation {
-  id: number;
-  quotationNo: string;
-  customerId: number;
-  branchId: number;
-  validUntil: string; // ISO date string
-  subtotal?: number;
-  discountAmount?: number;
-  taxAmount?: number;
-  totalAmount: number;
-  status: QuotationStatus;
-  createdAt: string; // ISO date string
-  customerName?: string;
-  items?: QuotationItem[];
-  customer?: Partial<Customer>;
-  branch?: Partial<Branch>;
+    id: number;
+    quotationNo: string;
+    customerId: number;
+    branchId: number;
+    validUntil: string;
+    subtotal?: number;
+    discountAmount?: number;
+    taxAmount?: number;
+    totalAmount: number;
+    status: QuotationStatus;
+    createdAt: string;
+    updatedAt: string;
+    // Joined
+    customerName?: string;
+    items?: QuotationItem[];
+    customer?: Customer;
+    branch?: Branch;
 }
 
 export interface InvoiceItem {
-  id: number;
-  invoiceId: number;
-  productId: string;
-  partNumber?: string;
-  productName?: string;
-  quantity: number;
-  unitPrice: number;
+    id: number;
+    invoiceId: number;
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+    // Joined
+    partNumber?: string;
+    productName?: string;
 }
 
 export interface Invoice {
-  id: number;
-  invoiceNo: string;
-  customerId: number;
-  branchId: number;
-  quotationId?: number;
-  dueDate: string; // ISO date string
-  totalAmount: number;
-  amountPaid: number;
-  status: InvoiceStatus;
-  createdAt: string; // ISO date string
-  customerName?: string;
-  items?: InvoiceItem[];
-  customer?: Partial<Customer>;
-  branch?: Partial<Branch>;
+    id: number;
+    invoiceNo: string;
+    customerId: number;
+    branchId: number;
+    quotationId?: number | null;
+    dueDate: string;
+    totalAmount: number;
+    amountPaid: number;
+    status: InvoiceStatus;
+    createdAt: string;
+    updatedAt: string;
+    // Joined
+    customerName?: string;
+    items?: InvoiceItem[];
+    customer?: Customer;
+    branch?: Branch;
 }
 
 export interface ShippingLabel {
-  id: string; // uuid
-  saleId?: number;
-  invoiceId?: number;
-  fromBranchId: number;
-  toCustomerId: number;
-  fromName: string;
-  fromAddress: string;
-  fromPhone: string;
-  toName: string;
-  toAddress: string;
-  toPhone: string;
-  weight?: number;
-  carrier?: string;
-  status: ShippingStatus;
-  createdAt: string; // ISO date string
+    id: string;
+    saleId?: number | null;
+    invoiceId?: number | null;
+    fromBranchId: number;
+    toCustomerId: number;
+    fromName: string;
+    fromAddress: string;
+    fromPhone: string;
+    toName: string;
+    toAddress: string;
+    toPhone: string;
+    weight?: number | null;
+    carrier?: string | null;
+    status: ShippingStatus;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface AppSettings {
-  companyName: string;
-  companyAddress: string;
-  companyPhone: string;
-  companyKraPin: string;
-  taxRate: number;
-  invoiceDueDays: number;
-  lowStockThreshold: number;
-  mpesaPaybill?: string;
-  mpesaConsumerKey?: string;
-  mpesaConsumerSecret?: string;
-  mpesaPasskey?: string;
-  paymentDetails?: string;
-  paymentTerms?: string;
-  mpesaEnvironment?: 'sandbox' | 'live';
+    companyName: string;
+    companyAddress: string;
+    companyPhone: string;
+    companyKraPin: string;
+    taxRate: number;
+    invoiceDueDays: number;
+    lowStockThreshold: number;
+    mpesaPaybill: string;
+    mpesaConsumerKey: string;
+    mpesaConsumerSecret: string;
+    mpesaPasskey: string;
+    mpesaEnvironment: 'sandbox' | 'live';
+    mpesaTransactionType: 'PayBill' | 'BuyGoods';
+    paymentDetails: string;
+    paymentTerms: string;
+    salesTarget: number;
 }
 
-export interface StockRequestItem {
+export interface UserNotification {
     id: number;
-    stockRequestId: number;
-    productId: string;
-    partNumber?: string;
-    productName?: string;
-    quantity: number;
-    wholesalePriceAtRequest: number;
+    userId: string;
+    message: string;
+    link: string;
+    isRead: boolean;
+    createdAt: string;
 }
-
-export interface StockRequest {
-    id: number;
-    b2bUserId: string;
-    branchId: number;
-    status: StockRequestStatus;
-    createdAt: string; // ISO date string
-    items?: StockRequestItem[];
-    itemCount?: number;
-    totalValue?: number;
-}
-
-
-// --- API-SPECIFIC TYPES ---
 
 export interface DashboardStats {
-  totalRevenue: number;
-  totalSales: number;
-  activeCustomers: number;
-  totalShipments: number;
-  pendingShipments: number;
-  salesTarget: number;
+    totalRevenue: number;
+    totalSales: number;
+    activeCustomers: number;
+    totalShipments: number;
+    pendingShipments: number;
+    salesTarget: number;
 }
 
 export interface SalesChartDataPoint {
-  name: string; // date
-  sales: number;
-  revenue: number;
+    name: string; // date
+    sales: number;
+    revenue: number;
 }
 
 export interface FastMovingProduct {
-  id: string;
-  name: string;
-  totalSold: number;
-  currentStock: number;
+    id: string;
+    name: string;
+    totalSold: number;
+    currentStock: number;
 }
 
-export interface VinSearchResult {
-  partNumber: string;
-  name: string;
-  compatibility: string;
-  stock: number;
+export interface BulkImportResponse {
+    successCount: number;
+    errorCount: number;
+    errors: string[];
 }
 
 export interface CustomerTransactions {
@@ -275,11 +263,7 @@ export interface CustomerTransactions {
 export interface QuotationPayload {
     customerId: number;
     branchId: number;
-    items: {
-        productId: string;
-        quantity: number;
-        unitPrice: number;
-    }[];
+    items: { productId: string; quantity: number; unitPrice: number }[];
     validUntil: string;
     subtotal: number;
     discountAmount: number;
@@ -287,66 +271,87 @@ export interface QuotationPayload {
     totalAmount: number;
 }
 
+export interface VinSearchResult {
+    partNumber: string;
+    name: string;
+    compatibility: string;
+    stock: number;
+}
+
+export interface BusinessApplication {
+    id: string;
+    businessName: string;
+    kraPin: string;
+    contactName: string;
+    contactEmail: string;
+    contactPhone: string;
+    certOfIncUrl: string;
+    cr12Url: string;
+    status: ApplicationStatus;
+    submittedAt: string;
+}
+
+export interface StockRequestItem {
+    id: number;
+    stockRequestId: number;
+    productId: string;
+    quantity: number;
+    approvedQuantity?: number | null;
+    wholesalePriceAtRequest: number;
+    // Joined
+    partNumber?: string;
+    productName?: string;
+}
+
+export interface StockRequest {
+    id: number;
+    b2bUserId: string;
+    branchId: number;
+    status: StockRequestStatus;
+    createdAt: string;
+    updatedAt: string;
+    // Joined
+    itemCount?: number;
+    totalValue?: number;
+    userName?: string;
+    items?: StockRequestItem[];
+}
+
 export interface CreateStockRequestPayload {
     branchId: number;
-    items: {
-        productId: string;
-        quantity: number;
-    }[];
-}
-
-export interface UserNotification {
-  id: number;
-  message: string;
-  link: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface NotificationPayload {
-  serverTimestamp: string;
-  newApplications: { id: string; businessName: string }[];
-  lowStockProducts: { id:string; name: string; stock: number }[]; // This remains for the dashboard widget
-  userAlerts?: UserNotification[]; // For real-time, user-specific toast notifications
+    items: { productId: string; quantity: number }[];
 }
 
 export interface AuditLog {
-  id: number;
-  userId: string;
-  userName?: string;
-  action: string;
-  details: any;
-  createdAt: string;
+    id: number;
+    userId: string;
+    action: string;
+    details: any;
+    createdAt: string;
+    // Joined
+    userName?: string;
 }
-
-// --- M-PESA TYPES ---
 
 export interface MpesaTransaction {
-  id: number;
-  checkoutRequestId: string;
-  amount: number;
-  phoneNumber: string;
-  status: 'Pending' | 'Completed' | 'Failed';
-  resultDesc: string;
-  mpesaReceiptNumber?: string;
-  createdAt: string;
-  saleNo?: string;
-  invoiceNo?: string;
+    id: number;
+    checkoutRequestId: string;
+    merchantRequestId: string;
+    amount: number;
+    phoneNumber: string;
+    invoiceId?: number | null;
+    saleId?: number | null;
+    stockRequestId?: number | null;
+    transactionDetails?: any;
+    status: string;
+    resultDesc?: string | null;
+    mpesaReceiptNumber?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    // Joined
+    saleNo?: string;
+    invoiceNo?: string;
 }
 
-export interface MpesaCartItem {
-    productId: string;
-    quantity: number;
-    unitPrice: number;
-}
-
-export interface MpesaTransactionPayload {
-    customerId: number;
-    branchId: number;
-    items: MpesaCartItem[];
-    discountAmount: number;
-    taxAmount: number;
-    totalAmount: number;
-    paymentMethod: string;
-    invoiceId?: number;
+export interface LoginResponse {
+  user: User;
 }

@@ -1,25 +1,21 @@
 {
   "name": "masuma-ea-hub",
-  "version": "1.0.0",
   "private": true,
-  "description": "A production-grade, web-based Point of Sale (POS), inventory management, and shipping sticker generation system for Masuma Autoparts East Africa.",
-  "scripts": {
-    "dev": "concurrently \"npm:dev:types\" \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:types": "npm run dev --workspace=@masuma-ea/types",
-    "dev:backend": "npm run dev --workspace=backend",
-    "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspaces",
-    "db:migrate": "npm run db:migrate --workspace=backend",
-    "db:seed": "npm run db:seed --workspace=backend"
-  },
+  "version": "1.0.0",
   "workspaces": [
     "frontend",
     "backend",
-    "packages/types"
+    "packages/*"
   ],
-  "author": "AI Studio",
-  "license": "UNLICENSED",
+  "scripts": {
+    "install:all": "npm install && npm install --workspace=frontend && npm install --workspace=backend",
+    "dev": "npm run dev --workspace=frontend & npm run dev --workspace=backend",
+    "build": "npm run build --workspace=packages/types && npm run build --workspace=frontend && npm run build --workspace=backend",
+    "start": "npm run start --workspace=backend",
+    "db:migrate": "npm run build --workspace=@masuma-ea/types && npm run db:migrate --workspace=backend",
+    "db:seed": "npm run build --workspace=@masuma-ea/types && npm run db:seed --workspace=backend"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@types/node": "^20.12.12"
   }
 }

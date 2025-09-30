@@ -141,7 +141,11 @@ const Settings: React.FC = () => {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input label="Paybill / Till Number" name="mpesaPaybill" value={settings.mpesaPaybill || ''} onChange={handleInputChange} />
-                        <Input label="Lipa Na M-Pesa Passkey" name="mpesaPasskey" type="password" value={credentials.mpesaPasskey} onChange={handleInputChange} placeholder={settings.mpesaPasskey ? 'Value is set. Enter a new one to change.' : ''} />
+                        <Select label="Account Type" name="mpesaTransactionType" value={settings.mpesaTransactionType || 'PayBill'} onChange={handleInputChange}>
+                            <option value="PayBill">Paybill</option>
+                            <option value="BuyGoods">Till Number (Buy Goods)</option>
+                        </Select>
+                        <Input label="Lipa Na M-Pesa Passkey" name="mpesaPasskey" type="password" value={credentials.mpesaPasskey} onChange={handleInputChange} placeholder={settings.mpesaPasskey ? 'Value is set. Enter a new one to change.' : ''} className="md:col-span-2"/>
                         <Input label="Consumer Key" name="mpesaConsumerKey" type="password" value={credentials.mpesaConsumerKey} onChange={handleInputChange} placeholder={settings.mpesaConsumerKey ? 'Value is set. Enter a new one to change.' : ''} />
                         <Input label="Consumer Secret" name="mpesaConsumerSecret" type="password" value={credentials.mpesaConsumerSecret} onChange={handleInputChange} placeholder={settings.mpesaConsumerSecret ? 'Value is set. Enter a new one to change.' : ''} />
                         <Select label="M-Pesa Environment" name="mpesaEnvironment" value={settings.mpesaEnvironment || 'sandbox'} onChange={handleInputChange} className="md:col-span-2">
