@@ -119,7 +119,7 @@ export async function bulkImportProducts(file: File): Promise<BulkImportResponse
 // --- Customers ---
 export async function getCustomers(params: any = {}): Promise<{ customers: Customer[], total: number }> {
     const query = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_BASE_URL}/customers?${query}`);
+    const response = await fetch(`${API_BASE_URL}/customers?${query}`, { cache: 'no-store' });
     return handleResponse<{ customers: Customer[], total: number }>(response);
 }
 

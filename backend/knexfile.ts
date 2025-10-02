@@ -4,7 +4,12 @@ import { loadConfig } from 'tsconfig-paths';
 import path from 'path';
 // FIX: Import process to handle potential missing Node.js global types.
 import process from 'process';
+// FIX: Add url import to derive __dirname in ES module context
+import { fileURLToPath } from 'url';
 
+// FIX: __dirname is not available in ES modules. This correctly derives it.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Explicitly load the tsconfig.json from the current directory to register path aliases.
 // This is a robust way to ensure that @masuma-ea/types is resolved correctly when
